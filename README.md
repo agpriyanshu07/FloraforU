@@ -36,7 +36,7 @@ Admin portal: <http://localhost:3000/admin> — seeded credentials `owner@floral
 | `npm run db:reset` | Drop, re-migrate and re-seed |
 | `npm test` | Playwright suites against a production build |
 | `npx eslint src` | Lint |
-| `npx tsc --noEmit` | Type-check |
+| `npm run typecheck` | Type-check (runs `next typegen` first) |
 
 `npm test` builds nothing itself — run `npm run build` first, then `npm test`; Playwright
 starts the server for you (or reuses one already on port 3000). In a sandbox without a
@@ -154,7 +154,11 @@ Lighthouse on the production build:
 | `/` | 93 | 100 | 100 | 100 |
 | `/catalogue` | 93 | 100 | 100 | 100 |
 
-`npm run build`, `npx tsc --noEmit` and `npx eslint src` all complete with zero errors.
+`npm run build`, `npm run typecheck` and `npx eslint src` all complete with zero errors.
+
+Type-check via `npm run typecheck`, not bare `tsc`: `LayoutProps` and the other route
+helpers are *generated* types, and on a clean checkout they don't exist until
+`next dev`, `next build` or `next typegen` has run.
 
 ### Continuous integration
 

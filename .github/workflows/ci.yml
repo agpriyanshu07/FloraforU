@@ -45,8 +45,10 @@ jobs:
       - name: Lint
         run: npx eslint src
 
+      # `next typegen` first: LayoutProps and friends are generated types, and on
+      # a clean checkout they do not exist until a build or typegen has run.
       - name: Type-check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Build
         run: npm run build
