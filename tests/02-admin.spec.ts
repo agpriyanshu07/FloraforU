@@ -8,6 +8,11 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeAll(() => reseed());
 
+// These tests create offers and import 41 products. Reset afterwards too, so a
+// local run leaves the database exactly as the seed made it rather than
+// stranding "QA Verify Sale" campaigns and probe rows on the running site.
+test.afterAll(() => reseed());
+
 const FIXTURE = path.join(process.cwd(), "fixtures", "sample-import.csv");
 
 // NOTE: on any admin page the *first* submit button is the header "Sign out".
@@ -127,6 +132,52 @@ test("the bulk importer validates per row, then imports the good ones", async ({
   await expect(page.getByText("Price on Enquiry").first()).toBeVisible();
 });
 
+test("a product name cannot inject script into the public page", async ({ page }) => {
+  // A name containing `</script>` used to close the JSON-LD block early and
+  // execute — stored XSS reachable from this very form, or from an imported
+  // supplier spreadsheet.
+  const payload = `</script><script>window.__XSS_FIRED=1</script>`;
+
+  await signIn(page);
+  await page.goto("/admin/products/new");
+  await page.fill("#name", payload);
+  await page.selectOption("#categoryId", { index: 1 });
+  await page.fill("#spec", "XSS regression probe");
+  await page.fill("#price", "100");
+  await page.click('button:has-text("Create product")');
+  await page.waitForURL(/\/admin\/products(\?|$)/);
+
+  const slug = await page.$$eval(
+    "table tbody tr a[href^='/admin/products/']",
+    (as) => as[0]?.getAttribute("href") ?? "",
+  );
+  expect(slug).not.toBe("");
+
+  await page.goto("/catalogue?q=XSS%20regression%20probe");
+  const href = await page.getAttribute('article a[href^="/product/"]', "href");
+  expect(href, "the probe product should be listed").toBeTruthy();
+
+  await page.goto(href!);
+  expect(
+    await page.evaluate(() => (window as unknown as Record<string, unknown>).__XSS_FIRED),
+    "injected script must not execute",
+  ).toBeUndefined();
+
+  const blocks = await page.$$eval('script[type="application/ld+json"]', (els) =>
+    els.map((e) => e.textContent ?? ""),
+  );
+  expect(blocks, "exactly one JSON-LD block, not a split one").toHaveLength(1);
+  expect(() => JSON.parse(blocks[0])).not.toThrow();
+  expect(blocks[0], "no raw < may survive into the document").not.toContain("<");
+  expect(JSON.parse(blocks[0]).name, "the name is still carried, just escaped").toBe(payload);
+
+  // Clean up so the catalogue is left as the seed made it.
+  await page.goto(slug);
+  page.once("dialog", (d) => d.accept());
+  await page.click('button:has-text("Delete product")');
+  await page.waitForURL(/\/admin\/products\?deleted=1/);
+});
+
 test("a category holding products cannot be deleted without reassigning them", async ({
   page,
 }) => {
@@ -192,6 +243,36 @@ test("an offer appears while live and archives itself once its dates pass", asyn
   const [active, past] = body.split("Past campaigns");
   expect(active, "an out-of-date offer must leave the active list").not.toContain(title);
   expect(past, "and be archived").toContain(title);
+});
+
+test("homepage curation reorders the public category grid", async ({ page }) => {
+  // The order inputs were once wired to a stale hidden field, so edits silently
+  // did nothing. This drives the real form and reads the public homepage back.
+  await page.goto("/");
+  const before = await page.$$eval(
+    "section[aria-labelledby=categories-heading] article h3 a",
+    (as) => as.map((a) => a.textContent!.trim()),
+  );
+
+  await signIn(page);
+  await page.goto("/admin/homepage");
+  const names = await page.$$eval('input[name^="categoryOrder_"]', (els) =>
+    els.map((e) => (e as HTMLInputElement).name),
+  );
+  expect(names.length, "one order input per category").toBe(16);
+
+  // Send the last category to the front and the first to the back.
+  await page.fill(`input[name="${names[names.length - 1]}"]`, "0");
+  await page.fill(`input[name="${names[0]}"]`, "99");
+  await page.click('button:has-text("Save homepage")');
+  await page.waitForURL(/homepage\?saved=1/);
+
+  await page.goto("/");
+  const after = await page.$$eval(
+    "section[aria-labelledby=categories-heading] article h3 a",
+    (as) => as.map((a) => a.textContent!.trim()),
+  );
+  expect(after[0], "the promoted category should now lead the grid").not.toBe(before[0]);
 });
 
 test("the contact form validates, is rate limited, and lands in the enquiry log", async ({

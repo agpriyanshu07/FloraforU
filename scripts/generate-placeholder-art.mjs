@@ -83,7 +83,12 @@ write("hero.svg", tile({ label: "FloralforU", sub: "event décor · dhanbad", w:
 ["ganesh-puja-sale", "monsoon-clearance"].forEach((slug, i) =>
   write(`offers/${slug}.svg`, tile({ label: "Seasonal Offer", sub: slug.replace(/-/g, " "), w: 1200, h: 420, scheme: i + 2, seed: 100 + i })),
 );
+// Labels must match the tags the seed assigns: g1-g5 event, g6-g8 dispatch,
+// g9 the shop counter. A tile captioned "Our shop counter" that reads
+// "Dispatch" looks like a mistake, because it is one.
+const GALLERY_LABELS = ["Event Setup", "Dispatch", "At the Shop"];
 for (let i = 1; i <= 9; i++) {
-  write(`gallery/g${i}.svg`, tile({ label: i <= 5 ? "Event Setup" : "Dispatch", sub: "placeholder photo", w: 700, h: 700, scheme: i, seed: 200 + i }));
+  const label = GALLERY_LABELS[i <= 5 ? 0 : i <= 8 ? 1 : 2];
+  write(`gallery/g${i}.svg`, tile({ label, sub: "placeholder photo", w: 700, h: 700, scheme: i, seed: 200 + i }));
 }
 console.log(`Wrote placeholder artwork for ${categories.length} categories + hero/offers/gallery.`);

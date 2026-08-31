@@ -31,7 +31,7 @@ export async function queryCatalogue(
   const q = params.q?.trim();
   const categorySlug = forcedCategorySlug ?? params.category;
   const sort = params.sort && sort_valid(params.sort) ? params.sort : "newest";
-  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const where: Prisma.ProductWhereInput = { published: true };
 
@@ -68,25 +68,23 @@ export async function queryCatalogue(
       ? [{ priceOnEnquiry: "asc" as const }, ...ORDER_BY[sort]]
       : ORDER_BY[sort];
 
-  const [products, total] = await Promise.all([
-    db.product.findMany({
-      where,
-      orderBy,
-      select: PRODUCT_CARD_SELECT,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
-    db.product.count({ where }),
-  ]);
+  // Count first so an out-of-range ?page can be clamped. Without this, a stale
+  // or hand-typed page number renders an empty grid under a "no products match
+  // those filters" message — which blames the filters for a paging mistake and
+  // leaves the visitor with no way back into the results.
+  const total = await db.product.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(requestedPage, pageCount);
 
-  return {
-    products,
-    total,
-    page,
-    pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    offerIds,
-    sort,
-  };
+  const products = await db.product.findMany({
+    where,
+    orderBy,
+    select: PRODUCT_CARD_SELECT,
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
+
+  return { products, total, page, pageCount, offerIds, sort };
 }
 
 function sort_valid(s: string) {

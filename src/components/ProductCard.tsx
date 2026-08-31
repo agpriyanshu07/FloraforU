@@ -62,7 +62,7 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
         <CategoryTag>{product.category.name}</CategoryTag>
 
-        <h3 className="font-display text-[17px] leading-snug">
+        <h3 className="line-clamp-3 font-display text-[17px] leading-snug">
           <Link
             href={`/product/${product.slug}`}
             className="after:absolute hover:text-rose-600"
@@ -72,7 +72,9 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
         </h3>
 
         {product.spec && (
-          <p className="text-[13px] leading-relaxed text-ink-600">{product.spec}</p>
+          <p className="line-clamp-2 text-[13px] leading-relaxed text-ink-600">
+            {product.spec}
+          </p>
         )}
 
         <p className="mt-auto pt-2 text-lg font-semibold text-ink-900">

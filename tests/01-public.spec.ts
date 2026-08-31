@@ -224,6 +224,20 @@ test("admin routes redirect to login when signed out", async ({ page }) => {
   }
 });
 
+// ---------------------------------------------------------------- regressions --
+
+test("an out-of-range page clamps to the last page instead of looking empty", async ({
+  page,
+}) => {
+  await page.goto("/catalogue?page=9999");
+
+  // It must show real results, not the "no products match those filters"
+  // message — the filters are fine, the page number was simply too high.
+  expect(await page.locator("article").count()).toBeGreaterThan(0);
+  await expect(page.getByText("No products match those filters")).toHaveCount(0);
+  await expect(page.getByText(/page \d+ of \d+/)).toBeVisible();
+});
+
 // ------------------------------------------------------------------- exports --
 
 test("the catalogue PDF is generated from live data", async ({ request }) => {

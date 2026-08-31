@@ -42,7 +42,7 @@ export default async function ContactPage() {
         </p>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+      <div className="grid items-start gap-8 lg:grid-cols-[1fr_1.1fr]">
         <div className="space-y-6">
           <div className="card p-6">
             <h2 className="font-display text-2xl">Visit the shop</h2>

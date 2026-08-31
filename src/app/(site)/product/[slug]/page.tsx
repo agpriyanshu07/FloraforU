@@ -12,6 +12,7 @@ import { getSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 import { formatPrice, isProductNew, AVAILABILITY_LABELS } from "@/lib/format";
 import { PRODUCT_CARD_SELECT, getActiveOfferProductIds } from "@/lib/queries";
+import { serialiseJsonLd } from "@/lib/json-ld";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,7 @@ export default async function ProductPage({
     <div className="shell py-10">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
       />
 
       <nav aria-label="Breadcrumb" className="mb-5 text-sm text-ink-600">

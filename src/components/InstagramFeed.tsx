@@ -69,7 +69,7 @@ export default async function InstagramFeed({
             </li>
           ))}
         </ul>
-      ) : (
+      ) : photos.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {photos.map((p) => (
             <li key={p.id} className="card overflow-hidden">
@@ -92,6 +92,21 @@ export default async function InstagramFeed({
             </li>
           ))}
         </ul>
+      ) : (
+        // Nothing to show yet: an empty grid would read as a broken section, so
+        // point people at the live profile instead.
+        <p className="card px-6 py-10 text-center text-ink-600">
+          Our latest posts are on Instagram.{" "}
+          <a
+            href={profileHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-rose-600 hover:text-rose-700"
+          >
+            Follow {handle}
+          </a>{" "}
+          to see new arrivals, event setups and dispatch updates first.
+        </p>
       )}
     </section>
   );
