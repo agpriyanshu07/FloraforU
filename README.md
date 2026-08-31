@@ -34,8 +34,14 @@ Admin portal: <http://localhost:3000/admin> — seeded credentials `owner@floral
 | `npm run build` / `npm start` | Production build and server |
 | `npm run seed` | Reset and re-seed the database with demo content |
 | `npm run db:reset` | Drop, re-migrate and re-seed |
+| `npm test` | Playwright suites against a production build |
 | `npx eslint src` | Lint |
 | `npx tsc --noEmit` | Type-check |
+
+`npm test` builds nothing itself — run `npm run build` first, then `npm test`; Playwright
+starts the server for you (or reuses one already on port 3000). In a sandbox without a
+Playwright-managed browser, point it at your own Chromium:
+`CHROMIUM_PATH=/path/to/chrome npm test`.
 
 ---
 
@@ -117,13 +123,16 @@ action resolves, so the server echoes the submission back and forms remount agai
 
 ## Verification
 
-Both suites drive a real browser (Playwright) against the running app. Every claim below
-was confirmed by observation, not by reading the code.
+Both suites live in `tests/` and drive a real browser (Playwright) against a production
+build. Every claim below was confirmed by observation, not by reading the code.
 
-| Area | Checks |
+| Spec | What it covers |
 | --- | --- |
-| Public site | 66 |
-| Admin portal | 40 |
+| `tests/01-public.spec.ts` | The public site and the Enquire mechanic |
+| `tests/02-admin.spec.ts` | The admin portal, end to end |
+
+Both share one SQLite database, so each reseeds in `beforeAll` and the run is pinned to a
+single worker — they are order-independent but never concurrent.
 
 Covered: all 10 public routes render at 375 / 768 / 1440 px with no horizontal overflow and
 no console errors; no cart/checkout/payment string anywhere in the rendered UI; `wa.me`
@@ -146,6 +155,15 @@ Lighthouse on the production build:
 | `/catalogue` | 93 | 100 | 100 | 100 |
 
 `npm run build`, `npx tsc --noEmit` and `npx eslint src` all complete with zero errors.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: install,
+`prisma migrate deploy`, seed, lint, type-check, production build, then both Playwright
+suites. On failure it uploads the Playwright report and traces as an artifact.
+
+Lighthouse is deliberately *not* in CI — its scores move with runner load and would produce
+flaky failures. Run it against a local production build when performance matters.
 
 ---
 

@@ -1,0 +1,281 @@
+import path from "node:path";
+import { test, expect } from "@playwright/test";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, reseed, signIn } from "./helpers";
+
+// These tests mutate shared database state and build on each other, so they run
+// in order rather than in parallel.
+test.describe.configure({ mode: "serial" });
+
+test.beforeAll(() => reseed());
+
+const FIXTURE = path.join(process.cwd(), "fixtures", "sample-import.csv");
+
+// NOTE: on any admin page the *first* submit button is the header "Sign out".
+// Always target buttons by their label.
+
+test("a wrong password is rejected and the email is kept", async ({ page }) => {
+  await page.goto("/admin/login");
+  await page.fill("#email", ADMIN_EMAIL);
+  await page.fill("#password", "wrong-password");
+  await page.click('button[type=submit]');
+
+  await expect(page.locator('form p[role="alert"]')).toContainText("don't match");
+  // React resets the form after a server action; the email must survive it.
+  await expect(page.locator("#email")).toHaveValue(ADMIN_EMAIL);
+});
+
+test("correct credentials reach the dashboard", async ({ page }) => {
+  await signIn(page);
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByText("Enquiries this week")).toBeVisible();
+});
+
+test("a product round-trips: create, edit, delete — each visible on the public site", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/admin/products/new");
+
+  const name = `QA Verify Lamp ${Date.now()}`;
+  await page.fill("#name", name);
+  await page.selectOption("#categoryId", { label: "Lamps & Diyas" });
+  await page.fill("#spec", 'Set of 3 | 14", 18", 22" — QA row');
+  await page.fill("#code", "QA-9999");
+
+  // No price and no "Price on Enquiry" must be rejected...
+  await page.click('button:has-text("Create product")');
+  await expect(page.getByText('Enter a price, or tick "Price on Enquiry"')).toBeVisible();
+
+  // ...and the rejection must not wipe what was already typed, selects included.
+  await expect(page.locator("#name")).toHaveValue(name);
+  await expect(page.locator("#code")).toHaveValue("QA-9999");
+  await expect(page.locator("#categoryId")).not.toHaveValue("");
+
+  await page.fill("#price", "2450");
+  await page.click('button:has-text("Create product")');
+  await page.waitForURL(/\/admin\/products(\?|$)/);
+  await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
+
+  await page.goto(`/catalogue?q=${encodeURIComponent(name)}`);
+  await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
+
+  // Edit
+  await page.goto("/admin/products");
+  await page.click(`a:has-text("${name}")`);
+  const edited = `${name} (edited)`;
+  await page.fill("#name", edited);
+  await page.fill("#price", "2650");
+  await page.click('button:has-text("Save changes")');
+  await page.waitForURL(/\/admin\/products(\?|$)/);
+
+  await page.goto(`/catalogue?q=${encodeURIComponent(name)}`);
+  await expect(page.getByRole("link", { name: edited, exact: true })).toBeVisible();
+  await expect(page.getByText("₹2,650")).toBeVisible();
+
+  // Delete
+  await page.goto("/admin/products");
+  await page.click(`a:has-text("${edited}")`);
+  page.once("dialog", (d) => d.accept());
+  await page.click('button:has-text("Delete product")');
+  await page.waitForURL(/\/admin\/products\?deleted=1/);
+
+  await page.goto(`/catalogue?q=${encodeURIComponent(name)}`);
+  await expect(page.getByText(edited)).toHaveCount(0);
+});
+
+test("the bulk importer validates per row, then imports the good ones", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/products/import");
+
+  // Dry run first — reports problems, writes nothing.
+  await page.setInputFiles("#file", FIXTURE);
+  await expect(page.locator('input[name="dryRun"]')).toBeChecked();
+  await page.click('button:has-text("Upload and import")');
+  await expect(page.getByRole("heading", { name: "Dry run results" })).toBeVisible({
+    timeout: 60_000,
+  });
+
+  const problems = await page.$$eval("table tbody tr", (rows) =>
+    rows.map((r) => [...r.children].map((c) => c.textContent!.trim())),
+  );
+  const columns = [...new Set(problems.map((r) => r[1]))];
+  // The fixture's five distinct defects: missing name, unknown category,
+  // non-numeric price, invalid availability, duplicated code.
+  expect(columns.sort()).toEqual(["availability", "category", "code", "name", "price"]);
+  expect(page.getByText("No category called")).toBeTruthy();
+
+  // Real import.
+  await page.setInputFiles("#file", FIXTURE);
+  await page.uncheck('input[name="dryRun"]');
+  await page.click('button:has-text("Upload and import")');
+  await expect(page.getByRole("heading", { name: "Import results" })).toBeVisible({
+    timeout: 90_000,
+  });
+
+  const summary = await page.evaluate(() => document.body.innerText);
+  expect(Number(summary.match(/Created\n(\d+)/)?.[1]), "rows created").toBe(41);
+  expect(Number(summary.match(/Skipped\n(\d+)/)?.[1]), "rows skipped").toBe(5);
+
+  await page.goto("/admin/products?q=Sparkular");
+  await expect(page.getByText("Sparkular Cold Fountain")).toBeVisible();
+
+  await page.goto("/catalogue?q=Sparkular");
+  await expect(page.getByText("Sparkular Cold Fountain")).toBeVisible();
+
+  // A blank price column must become Price on Enquiry, not ₹0.
+  await page.goto("/catalogue?q=Rose%20Petal%20Pack");
+  await expect(page.getByText("Price on Enquiry").first()).toBeVisible();
+});
+
+test("a category holding products cannot be deleted without reassigning them", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/admin/categories");
+
+  const before = await page.locator("table tbody tr").count();
+  await page.click('table tbody tr:first-child button:has-text("Delete")');
+
+  const dialog = page.locator('div[role="dialog"]');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("still has");
+  await expect(dialog).toContainText("Move those products to");
+  await expect(dialog.locator("select")).toHaveAttribute("required", "");
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(await page.locator("table tbody tr").count()).toBe(before);
+});
+
+test("an offer appears while live and archives itself once its dates pass", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/offers");
+
+  const title = `QA Verify Sale ${Date.now()}`;
+  const today = new Date().toISOString().slice(0, 10);
+  const inFive = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
+
+  await page.fill("#title", title);
+  await page.fill("#offer-description", "Automated verification campaign.");
+  await page.fill("#startsAt", today);
+  await page.fill("#endsAt", today);
+  await page.click('button:has-text("Create campaign")');
+  await expect(page.getByText("end date must be after the start date")).toBeVisible();
+
+  await page.fill("#endsAt", inFive);
+  const boxes = page.locator('input[name="productIds"]');
+  for (const i of [0, 1, 2]) await boxes.nth(i).check();
+  await page.click('button:has-text("Create campaign")');
+  await page.waitForURL(/\/admin\/offers\?saved=/);
+
+  await page.goto("/offers");
+  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+
+  // Move it into the past.
+  await page.goto("/admin/offers");
+  const editHref = await page.$$eval(
+    "table tbody tr",
+    (rows, name) =>
+      rows
+        .find((r) => (r as HTMLElement).innerText.includes(name))
+        ?.querySelector('a[href*="edit="]')
+        ?.getAttribute("href") ?? "",
+    title,
+  );
+  await page.goto(editHref);
+  await page.fill("#startsAt", new Date(Date.now() - 20 * 864e5).toISOString().slice(0, 10));
+  await page.fill("#endsAt", new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10));
+  await page.click('button:has-text("Save campaign")');
+  await page.waitForURL(/\/admin\/offers\?saved=/);
+
+  await page.goto("/offers");
+  const body = await page.evaluate(() => document.body.innerText);
+  const [active, past] = body.split("Past campaigns");
+  expect(active, "an out-of-date offer must leave the active list").not.toContain(title);
+  expect(past, "and be archived").toContain(title);
+});
+
+test("the contact form validates, is rate limited, and lands in the enquiry log", async ({
+  page,
+  request,
+}) => {
+  const message = `QA verification message ${Date.now()}`;
+
+  // Give this run its own client identity — the limiter keys on the forwarded IP.
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `10.0.0.${Math.floor(Math.random() * 250) + 1}`,
+  });
+
+  await page.goto("/contact");
+  await page.fill("#name", "QA Bot");
+  await page.fill("#phone", "9999999999");
+  await page.fill("#email", "not-an-email");
+  await page.fill("#message", message);
+  await page.click('button[type=submit]');
+  await expect(page.getByText("email doesn't look right")).toBeVisible();
+
+  await page.fill("#email", "qa@example.com");
+  await page.click('button[type=submit]');
+  await expect(page.getByText("Message received")).toBeVisible();
+
+  // The limiter must actually fire under a flood from a single address. The
+  // limiter is in-memory with a 10-minute window, so this run needs an address
+  // no earlier run has already spent.
+  const floodIp = `203.0.113.${Math.floor(Math.random() * 250) + 1}`;
+  const statuses: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    const res = await request.post("/api/contact", {
+      headers: { "x-forwarded-for": floodIp },
+      data: {
+        name: "Flood Bot",
+        phone: "9000000000",
+        email: "",
+        message: `flooding the contact form, request number ${i}`,
+      },
+    });
+    statuses.push(res.status());
+  }
+  expect(statuses[0]).toBe(200);
+  expect(statuses, "the flood must be cut off").toContain(429);
+
+  await signIn(page);
+  await page.goto("/admin/enquiries?channel=form");
+  await expect(page.getByText(message)).toBeVisible();
+  await expect(page.getByText("qa@example.com")).toBeVisible();
+});
+
+test("settings validate and propagate to every Enquire link", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/settings");
+
+  await expect(page.getByText("Still using placeholder values")).toBeVisible();
+
+  await page.fill("#whatsapp", "12");
+  await page.click('button:has-text("Save settings")');
+  await expect(page.getByText("full number with country code")).toBeVisible();
+
+  await page.fill("#whatsapp", "919876543210");
+  await page.fill("#whatsappTemplate", "no token here");
+  await page.click('button:has-text("Save settings")');
+  await expect(page.getByText("must contain {product}")).toBeVisible();
+
+  await page.fill(
+    "#whatsappTemplate",
+    "Hi FloralforU! I'd like to enquire about {product}{code}.\n{url}",
+  );
+  await page.click('button:has-text("Save settings")');
+  await expect(page.getByText("Settings saved")).toBeVisible();
+
+  await page.goto("/catalogue");
+  const href = await page.getAttribute('a[href^="https://wa.me/"]', "href");
+  expect(href).toContain("https://wa.me/919876543210");
+});
+
+test("signing out locks the admin portal again", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin");
+  await page.click('button:has-text("Sign out")');
+  await page.waitForURL("**/admin/login**");
+
+  await page.goto("/admin/products");
+  expect(page.url()).toContain("/admin/login");
+});
