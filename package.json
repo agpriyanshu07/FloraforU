@@ -12,7 +12,8 @@
     "postinstall": "prisma generate",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "admin:password": "tsx scripts/set-admin-password.mts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
