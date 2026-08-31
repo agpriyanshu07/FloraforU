@@ -25,14 +25,27 @@ npm run dev                   # http://localhost:3000
 ```
 
 Admin portal: <http://localhost:3000/admin> — seeded credentials `owner@floralforu.in` /
-`floralforu123`. **Change these before deploying** (set `SEED_ADMIN_EMAIL` and
-`SEED_ADMIN_PASSWORD` before seeding, or update the row directly).
+`floralforu123`. **Change these before the site is reachable by anyone else:**
+
+```bash
+npm run admin:password
+```
+
+It prompts for the email and a new password (hidden, and confirmed twice), so nothing
+lands in your shell history. It updates the admin if the email exists and creates one if
+it doesn't, which is also how you add a second admin. For scripted use, set `ADMIN_EMAIL`
+and `ADMIN_PASSWORD` and it won't prompt.
+
+Note that `npm run seed` resets products, categories, offers, reviews, gallery items **and
+admin users** — but never your Settings, so a business phone number or WhatsApp number you
+have saved survives a re-seed.
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Development server |
 | `npm run build` / `npm start` | Production build and server |
 | `npm run seed` | Reset and re-seed the database with demo content |
+| `npm run admin:password` | Change an admin's password (or add an admin) |
 | `npm run db:reset` | Drop, re-migrate and re-seed |
 | `npm test` | Playwright suites against a production build |
 | `npx eslint src` | Lint |
