@@ -1,0 +1,155 @@
+// FloralforU — catalogue site data model.
+// No cart, no orders, no customer accounts by design: the only conversion
+// artefact stored here is an Enquiry (a WhatsApp/call click or contact form).
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("owner") // owner | staff
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  name         String
+  description  String
+  imageUrl     String?
+  displayOrder Int       @default(0)
+  featured     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  products     Product[]
+
+  @@index([displayOrder])
+}
+
+model Product {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  name         String
+  code         String?
+  spec         String         @default("") // free text: real spec lines are messy
+  description  String         @default("")
+  price        Float?         // null when priceOnEnquiry
+  priceOnEnquiry Boolean      @default(false)
+  availability String         @default("in_stock") // in_stock | limited | made_to_order
+  published    Boolean        @default(true)
+  isNew        Boolean        @default(false) // manual override; see newUntil
+  newUntil     DateTime?
+  featured     Boolean        @default(false) // homepage curation pin
+  featureOrder Int            @default(0)
+  categoryId   String
+  category     Category       @relation(fields: [categoryId], references: [id])
+  images       ProductImage[]
+  offers       OfferProduct[]
+  enquiries    Enquiry[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([published])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String
+  position  Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  @@index([productId, position])
+}
+
+model Offer {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  title       String
+  description String         @default("")
+  bannerUrl   String?
+  startsAt    DateTime
+  endsAt      DateTime
+  published   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  products    OfferProduct[]
+
+  @@index([startsAt, endsAt])
+}
+
+model OfferProduct {
+  offerId   String
+  productId String
+  offer     Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([offerId, productId])
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  customerName String
+  eventType    String   @default("")
+  quote        String
+  rating       Int      @default(5)
+  source       String   @default("Instagram DM")
+  photoUrl     String?
+  visible      Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([displayOrder])
+}
+
+model GalleryItem {
+  id           String   @id @default(cuid())
+  kind         String   @default("photo") // photo | reel
+  title        String
+  tag          String   @default("event") // event | dispatch | shop
+  imageUrl     String?
+  embedUrl     String?
+  alt          String   @default("")
+  visible      Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([displayOrder])
+}
+
+// Every conversion touch is logged here so nothing is lost even though the
+// actual conversation happens off-site on WhatsApp/phone.
+model Enquiry {
+  id        String   @id @default(cuid())
+  channel   String   // whatsapp | call | form | instagram
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String   @default("")
+  phone     String   @default("")
+  email     String   @default("")
+  message   String   @default("")
+  pagePath  String   @default("")
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}

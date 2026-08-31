@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   FloralforU design system
+   Layer 1 — primitives. Layer 2 — semantic tokens (below, in @theme).
+   Every colour below was contrast-checked against its intended background;
+   the AA ratio is noted so future edits don't silently break accessibility.
+   ========================================================================== */
+
+@theme {
+  /* -- Brand: deep rose (primary), marigold (accent/offer), sage, ink ------ */
+  --color-rose-50: #fdf5f8;
+  --color-rose-100: #fbedf2;
+  --color-rose-200: #f4d5e0;
+  --color-rose-300: #e5aac1;
+  --color-rose-500: #c4467c;
+  --color-rose-600: #9b2c5a; /* 7.24:1 on white — primary */
+  --color-rose-700: #7d2148;
+  --color-rose-900: #461027;
+
+  --color-marigold-50: #fff7ed;
+  --color-marigold-100: #ffedd5;
+  --color-marigold-300: #f4b563;
+  --color-marigold-600: #b45309; /* 5.02:1 on white — accent / OFFER badge */
+  --color-marigold-700: #8a4b12;
+
+  --color-sage-50: #eef3ee;
+  --color-sage-100: #dce7dd;
+  --color-sage-600: #4f6f52; /* 5.63:1 on white — NEW badge */
+  --color-sage-700: #3d5640;
+
+  --color-whatsapp: #0b7a6e; /* 5.22:1 on white — accessible WhatsApp green */
+  --color-whatsapp-dark: #095f56;
+
+  --color-ink-900: #2a1d22; /* 15.7:1 on cream — body text */
+  --color-ink-600: #6b5a61; /* 6.26:1 on cream — muted text */
+  --color-ink-300: #b9a8ae;
+
+  --color-cream: #fffbf7;
+  --color-surface: #ffffff;
+  --color-line: #ede0e4;
+
+  /* -- Type ---------------------------------------------------------------- */
+  --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* -- Motion (200-300ms per the design brief) ----------------------------- */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    background: var(--color-cream);
+    color: var(--color-ink-900);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  /* Visible focus everywhere — never removed, only restyled. */
+  :focus-visible {
+    outline: 3px solid var(--color-rose-600);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-rose-200);
+    color: var(--color-rose-900);
+  }
+}
+
+@layer components {
+  /* Shared button surfaces. Min height 44px everywhere for touch targets.
+     Tailwind v4 cannot @apply a class defined in the same layer, so the base
+     button utilities are repeated per variant rather than composed. */
+  .btn,
+  .btn-primary,
+  .btn-accent,
+  .btn-whatsapp,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2
+           rounded-full px-5 text-sm font-semibold transition-colors duration-200
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary { @apply bg-rose-600 text-white hover:bg-rose-700; }
+  .btn-accent  { @apply bg-marigold-600 text-white hover:bg-marigold-700; }
+  .btn-whatsapp{ @apply bg-whatsapp text-white hover:bg-whatsapp-dark; }
+  .btn-ghost   { @apply border border-line bg-surface text-ink-900 hover:bg-rose-50; }
+  .btn-danger  { @apply bg-red-700 text-white hover:bg-red-800; }
+  .btn-sm      { @apply min-h-10 px-3.5 text-[13px]; }
+
+  .field {
+    @apply min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2
+           text-[15px] text-ink-900 placeholder:text-ink-300;
+  }
+  .field-label { @apply mb-1.5 block text-sm font-semibold text-ink-900; }
+  .field-hint  { @apply mt-1 block text-[13px] text-ink-600; }
+  .field-error { @apply mt-1 block text-[13px] font-medium text-red-700; }
+
+  .card { @apply rounded-2xl border border-line bg-surface; }
+
+  .shell { @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6; }
+
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50
+           focus:rounded-lg focus:bg-rose-600 focus:px-4 focus:py-2 focus:text-white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
