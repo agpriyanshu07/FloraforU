@@ -24,11 +24,9 @@ export default async function AdminProductsPage({
 
   const where: Prisma.ProductWhereInput = {};
   if (q) {
-    where.OR = [
-      { name: { contains: q } },
-      { code: { contains: q } },
-      { spec: { contains: q } },
-    ];
+    // Case-insensitive explicitly — see the note in src/lib/catalogue.ts.
+    const like = { contains: q, mode: "insensitive" as const };
+    where.OR = [{ name: like }, { code: like }, { spec: like }];
   }
   if (categoryId) where.categoryId = categoryId;
   if (status === "draft") where.published = false;

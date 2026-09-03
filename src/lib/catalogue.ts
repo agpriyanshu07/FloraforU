@@ -38,14 +38,17 @@ export async function queryCatalogue(
   if (categorySlug) where.category = { slug: categorySlug };
 
   if (q) {
-    // SQLite `contains` is case-insensitive for ASCII, which is what the
-    // catalogue's product names and codes are.
+    // `mode: "insensitive"` is required, not cosmetic: PostgreSQL's `contains`
+    // is case-SENSITIVE, so without it a shopper typing "fog" would get no
+    // results while "Fog" worked. (SQLite's is insensitive, which is why this
+    // only shows up once the site runs on a hosted database.)
+    const like = (value: string) => ({ contains: value, mode: "insensitive" as const });
     where.OR = [
-      { name: { contains: q } },
-      { spec: { contains: q } },
-      { code: { contains: q } },
-      { description: { contains: q } },
-      { category: { name: { contains: q } } },
+      { name: like(q) },
+      { spec: like(q) },
+      { code: like(q) },
+      { description: like(q) },
+      { category: { name: like(q) } },
     ];
   }
 

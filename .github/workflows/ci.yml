@@ -17,9 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # The app runs on PostgreSQL, so CI must too: several behaviours differ
+    # between it and SQLite (case-sensitive LIKE, for one), and a SQLite run
+    # would pass while the hosted site broke.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: floralforu
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      # Local SQLite file, recreated from migrations on every run.
-      DATABASE_URL: file:./dev.db
+      DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/floralforu?schema=public
       # Not a secret: a throwaway value so the session signer has the 32+
       # characters it requires. Production sets a real one via the host's env.
       AUTH_SECRET: ci-only-throwaway-secret-0123456789abcdef

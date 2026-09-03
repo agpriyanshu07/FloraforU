@@ -16,13 +16,23 @@ conversation with a real person.
 
 ## Quick start
 
+You need a PostgreSQL database. The quickest free option is a [Neon](https://neon.tech)
+project — create one and copy its connection string. (Postgres installed locally works
+just as well.)
+
 ```bash
 npm install
-cp .env.example .env          # then set AUTH_SECRET to a long random string
-npx prisma migrate dev        # creates prisma/dev.db
+cp .env.example .env          # paste your DATABASE_URL, and generate AUTH_SECRET
+npx prisma migrate deploy     # creates the tables
 npm run seed                  # 16 categories, 97 products, offers, reviews, gallery, admin user
 npm run dev                   # http://localhost:3000
 ```
+
+**Why PostgreSQL and not SQLite, even locally:** the two disagree in ways that bite. Most
+sharply, `LIKE` is case-insensitive on SQLite and case-sensitive on PostgreSQL — a
+catalogue search for "fog" returns results on one and nothing on the other. Developing on
+a different engine from production means those differences surface on the live site
+instead of in the test suite.
 
 Admin portal: <http://localhost:3000/admin> — seeded credentials `owner@floralforu.in` /
 `floralforu123`. **Change these before the site is reachable by anyone else:**
@@ -64,7 +74,7 @@ Playwright-managed browser, point it at your own Chromium:
 | --- | --- | --- |
 | Framework | Next.js 16 (App Router), React 19, TypeScript | |
 | Styling | Tailwind CSS v4 | Design tokens live in `src/app/globals.css` |
-| Database | SQLite via Prisma | Swap `provider` to `postgresql` for production |
+| Database | PostgreSQL via Prisma | Same engine locally and in production, deliberately |
 | Admin auth | Signed `jose` JWT in an HttpOnly cookie | See *Why not NextAuth* below |
 | PDF export | `pdf-lib`, generated from live DB rows | `src/app/api/catalogue-pdf/route.ts` |
 | Bulk import | `papaparse` (CSV) + `xlsx-republish` (Excel) | `src/lib/import.ts` |
@@ -184,6 +194,34 @@ flaky failures. Run it against a local production build when performance matters
 
 ---
 
+## Deploying
+
+The stack this is built for is **Vercel + Neon**, both of which have free tiers big
+enough for a catalogue site of this size.
+
+1. **Database.** Create a Neon project and copy the connection string.
+2. **Import the repo into Vercel.** It detects Next.js; no build settings to change.
+3. **Set two environment variables in Vercel** (Settings → Environment Variables):
+   - `DATABASE_URL` — the Neon string
+   - `AUTH_SECRET` — a fresh 32+ character random value, *not* the local one
+4. **Create the tables**, once, from your machine with `DATABASE_URL` pointing at Neon:
+   ```bash
+   npx prisma migrate deploy
+   npm run admin:password      # create the live admin login
+   ```
+   Run `npm run seed` too only if you want the sample catalogue on the live site; skip it
+   if you are importing the real one.
+5. **Add the domain** in Vercel (Settings → Domains) and follow its DNS instructions at
+   your registrar. HTTPS is issued automatically.
+6. **Set Site URL** in Admin → Settings to `https://yourdomain.com`. WhatsApp links, the
+   sitemap and social share tags all read it, so they stay pointed at localhost until you
+   do.
+
+Deploys are automatic on every push to `main`.
+
+**Product images** have no upload endpoint yet — the admin takes image *URLs*. Until one
+exists, host photos on Cloudinary (free tier) or similar and paste the URLs in.
+
 ## Before this goes live
 
 ### 1. Real business details (blocking)
@@ -245,10 +283,9 @@ permalinks to switch it to live embeds.
 
 ### 6. Deployment
 
-- **Database:** SQLite is fine for a single small instance, but a container filesystem is
-  usually ephemeral. For Vercel or similar, switch the Prisma `provider` to `postgresql`,
-  point `DATABASE_URL` at a managed instance and re-run the migration. Schedule daily
-  backups once the admin portal is the source of truth for the catalogue.
+- **Database:** already PostgreSQL. Point `DATABASE_URL` at your hosted instance and run
+  `npx prisma migrate deploy` once. Schedule daily backups as soon as the admin portal is
+  the source of truth for the catalogue — the product list becomes the business.
 - **`AUTH_SECRET`:** must be a 32+ character random string, different from the dev value.
 - **Uploads:** image fields take URLs; there is no file-upload endpoint yet, so use
   Cloudinary / S3 / Vercel Blob and paste the URL.

@@ -121,6 +121,23 @@ test("catalogue search narrows the result set", async ({ page }) => {
   expect(searched.join(" ").toLowerCase()).toContain("fog");
 });
 
+test("search is case-insensitive whatever the shopper types", async ({ page }) => {
+  // PostgreSQL's `contains` is case-sensitive, unlike SQLite's. Without an
+  // explicit insensitive mode a shopper typing "fog" — which is what people
+  // actually type — got zero results on the hosted database while "Fog"
+  // worked. Every spelling must return the same set.
+  const counts: Record<string, string[]> = {};
+  for (const q of ["fog", "FOG", "Fog", "fOg"]) {
+    await page.goto(`/catalogue?q=${q}`);
+    counts[q] = (await gridNames(page)).sort();
+  }
+
+  expect(counts.fog.length, "lowercase search must find products").toBeGreaterThan(0);
+  expect(counts.FOG).toEqual(counts.fog);
+  expect(counts.Fog).toEqual(counts.fog);
+  expect(counts.fOg).toEqual(counts.fog);
+});
+
 test("the category filter restricts the grid to that category", async ({ page }) => {
   await page.goto("/catalogue?category=sfx-special-effects");
 

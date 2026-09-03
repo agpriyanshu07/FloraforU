@@ -1,6 +1,6 @@
 import path from "node:path";
 import { test, expect } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, reseed, signIn } from "./helpers";
+import { ADMIN_EMAIL, reseed, signIn } from "./helpers";
 
 // These tests mutate shared database state and build on each other, so they run
 // in order rather than in parallel.
