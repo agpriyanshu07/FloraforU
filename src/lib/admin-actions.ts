@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { db } from "./db";
 import { requireSession } from "./auth";
 import { slugify } from "./format";
@@ -55,11 +56,6 @@ function collectErrors(error: z.ZodError): Record<string, string> {
   return out;
 }
 
-function refreshPublicPages() {
-  for (const path of ["/", "/catalogue", "/categories", "/offers", "/reviews", "/gallery"]) {
-    revalidatePath(path);
-  }
-}
 
 /** Ensures a slug is unique within a model, appending -2, -3 … as needed. */
 async function uniqueSlug(

@@ -14,7 +14,20 @@ import { formatPrice, isProductNew, AVAILABILITY_LABELS } from "@/lib/format";
 import { PRODUCT_CARD_SELECT, getActiveOfferProductIds } from "@/lib/queries";
 import { serialiseJsonLd } from "@/lib/json-ld";
 
-export const dynamic = "force-dynamic";
+// Cached; admin writes revalidate this path explicitly, so the window is a backstop.
+export const revalidate = 3600;
+
+// Prerenders every published product at build time. Without this the route
+// falls back to rendering on demand and the cache never applies — and these are
+// the pages customers are sent directly from WhatsApp, so they matter most.
+// A product added later still works: dynamicParams renders it on first request.
+export async function generateStaticParams() {
+  const products = await db.product.findMany({
+    where: { published: true },
+    select: { slug: true },
+  });
+  return products.map(({ slug }) => ({ slug }));
+}
 
 export async function generateMetadata({
   params,

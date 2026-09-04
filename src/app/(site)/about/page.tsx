@@ -5,7 +5,8 @@ import { ArrowRightIcon, BoxIcon, HeartIcon, SparkIcon } from "@/components/icon
 import { getSettings } from "@/lib/settings";
 import { db } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
+// Cached; admin writes revalidate this path explicitly, so the window is a backstop.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "About us",

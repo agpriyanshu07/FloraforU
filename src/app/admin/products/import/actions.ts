@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { importProducts, parseImportFile, type ImportResult } from "@/lib/import";
 
 export type ImportState = {
@@ -54,9 +55,8 @@ export async function importAction(
   const result = await importProducts(rows, { dryRun });
 
   if (!dryRun) {
-    for (const path of ["/", "/catalogue", "/categories", "/admin/products"]) {
-      revalidatePath(path);
-    }
+    refreshPublicPages();
+    revalidatePath("/admin/products");
   }
 
   return { result, dryRun };

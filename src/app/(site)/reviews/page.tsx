@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 
-export const dynamic = "force-dynamic";
+// Cached; admin writes revalidate this path explicitly, so the window is a backstop.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Customer reviews",
