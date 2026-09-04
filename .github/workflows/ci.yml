@@ -35,6 +35,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:ci@127.0.0.1:5432/floralforu?schema=public
+      # The schema declares a directUrl so migrations can bypass the connection
+      # pooler in production. CI talks to Postgres directly, so both point at
+      # the same service container.
+      DIRECT_URL: postgresql://postgres:ci@127.0.0.1:5432/floralforu?schema=public
       # Not a secret: a throwaway value so the session signer has the 32+
       # characters it requires. Production sets a real one via the host's env.
       AUTH_SECRET: ci-only-throwaway-secret-0123456789abcdef
