@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640" role="img" aria-labelledby="ffu-logo-title">
+  <title id="ffu-logo-title">FloralforU</title>
+  <defs>
+    <g id="leaf">
+      <path d="M0 0 C 10 -14, 26 -14, 34 0 C 26 6, 10 6, 0 0 Z" />
+    </g>
+  </defs>
+
+  <!-- Dotted quarter-circle arc, running from the 9 o'clock position up to
+       11 o'clock, matching the reference mark -->
+  <g stroke="none" fill="#1a1a1a">
+    <circle cx="115" cy="472" r="5.5"/>
+    <circle cx="110" cy="437" r="5.5"/>
+    <circle cx="112" cy="401" r="5.5"/>
+    <circle cx="121" cy="367" r="5.5"/>
+    <circle cx="137" cy="335" r="5.5"/>
+    <circle cx="159" cy="308" r="5.5"/>
+    <circle cx="186" cy="286" r="5.5"/>
+    <circle cx="217" cy="270" r="5.5"/>
+  </g>
+
+  <!-- Solid arc completing the circle from 11 o'clock down to 6 o'clock -->
+  <path d="M 252 262
+           A 218 218 0 0 1 470 480"
+        fill="none" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Line-art floral spray, upper right -->
+  <g fill="none" stroke="#1a1a1a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- main stem sweeping up and out -->
+    <path d="M 300 250 C 340 210, 380 170, 430 140 C 460 122, 495 108, 530 100"/>
+
+    <!-- fine wheat-style leaflets along the lower-left part of the stem -->
+    <path d="M 318 236 C 306 226, 292 224, 280 232"/>
+    <path d="M 330 222 C 318 210, 302 206, 288 214"/>
+    <path d="M 344 208 C 332 196, 316 191, 300 198"/>
+    <path d="M 360 194 C 348 181, 331 176, 314 183"/>
+    <path d="M 378 180 C 366 167, 348 161, 330 168"/>
+
+    <!-- three-lobed leaf clusters further up the stem -->
+    <path d="M 400 162 C 392 146, 396 130, 410 118"/>
+    <path d="M 400 162 C 386 154, 372 156, 362 168"/>
+    <path d="M 400 162 C 414 156, 424 144, 424 128"/>
+
+    <path d="M 452 132 C 446 116, 452 100, 468 90"/>
+    <path d="M 452 132 C 438 126, 424 130, 416 142"/>
+    <path d="M 452 132 C 466 126, 474 112, 472 96"/>
+
+    <!-- delicate berry sprigs near the tip -->
+    <path d="M 494 112 C 500 98, 512 90, 528 88"/>
+    <path d="M 500 100 C 506 90, 516 84, 528 84"/>
+    <path d="M 486 122 C 480 108, 483 94, 494 84"/>
+  </g>
+  <g fill="#1a1a1a">
+    <circle cx="529" cy="87" r="3.3"/>
+    <circle cx="518" cy="82" r="2.6"/>
+    <circle cx="493" cy="83" r="2.6"/>
+  </g>
+
+  <!-- second, smaller sprig branching off lower on the main stem -->
+  <g fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 355 214 C 366 232, 380 244, 398 250"/>
+    <path d="M 372 224 C 378 236, 388 244, 400 246"/>
+    <path d="M 388 238 C 392 248, 400 254, 410 254"/>
+  </g>
+
+  <!-- Wordmark: FfU monogram -->
+  <text x="320" y="368" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif" font-size="120" font-weight="600"
+        fill="#1a1a1a" letter-spacing="-2">Ff<tspan font-style="italic">U</tspan></text>
+
+  <!-- Wordmark: FloralforU, spaced small caps -->
+  <text x="320" y="418" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="2"
+        fill="#1a1a1a">FloralforU</text>
+</svg>

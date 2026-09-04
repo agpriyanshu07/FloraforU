@@ -394,9 +394,11 @@ test("a product photo set by URL reaches the public product page", async ({ page
   await page.waitForURL(/\/admin\/products(\?|$)/);
 
   // The public page must render the primary photo, not the "coming soon" state.
+  // Scoped to <main>: the header carries its own logo image now, and without
+  // this scope ".first()" picks that up instead of the product's own photo.
   await page.goto(`/catalogue?q=${encodeURIComponent(name)}`);
   await page.click(`a:has-text("${name}")`);
-  const hero = page.locator("img").first();
+  const hero = page.locator("main img").first();
   await expect(hero).toHaveAttribute("src", new RegExp(primary.replace(/\//g, "\\/")));
 
   // Reopening the product must show both photos still attached, in order.

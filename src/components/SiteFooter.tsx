@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { InstagramIcon, MailIcon, PhoneIcon, PinIcon, WhatsappIcon } from "./icons";
 import type { SiteSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
@@ -14,6 +15,13 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
     <footer className="mt-20 border-t border-line bg-rose-50">
       <div className="shell grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
+          <Image
+            src="/img/brand/logo-mark-full.svg"
+            alt=""
+            width={96}
+            height={96}
+            className="mb-3 h-28 w-28"
+          />
           <p className="font-display text-2xl">{settings.businessName}</p>
           <p className="mt-2 text-sm text-ink-600">{settings.tagline}</p>
           <dl className="mt-5 flex gap-6 text-sm">

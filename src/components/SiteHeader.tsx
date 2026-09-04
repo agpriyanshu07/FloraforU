@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CloseIcon, MenuIcon, WhatsappIcon } from "./icons";
@@ -36,12 +37,13 @@ export default function SiteHeader({
     <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur supports-[backdrop-filter]:bg-cream/80">
       <div className="shell flex h-16 items-center justify-between gap-3">
         <Link href="/" className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="grid h-9 w-9 place-items-center rounded-full bg-rose-600 font-display text-[15px] font-bold text-white"
-          >
-            FfU
-          </span>
+          <Image
+            src="/img/brand/mark.svg"
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-full"
+          />
           <span className="font-display text-xl leading-none">{businessName}</span>
         </Link>
 

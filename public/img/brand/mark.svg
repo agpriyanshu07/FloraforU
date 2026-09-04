@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-labelledby="ffu-mark-title">
+  <title id="ffu-mark-title">FloralforU</title>
+
+  <!-- Solid rose disc, matching the site's rose-600 token. No decoration beyond
+       the monogram: the full logo's dotted arc disappears into noise below
+       about 64px, so this mark stays legible all the way down to a 16px favicon. -->
+  <circle cx="100" cy="100" r="100" fill="#9b2c5a"/>
+
+  <text x="99" y="128" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700"
+        fill="#ffffff" letter-spacing="-2">Ff<tspan font-style="italic">U</tspan></text>
+</svg>

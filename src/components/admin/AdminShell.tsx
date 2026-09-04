@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { logoutAction } from "@/app/admin/actions";
 import type { Session } from "@/lib/auth";
 
@@ -26,12 +27,13 @@ export default function AdminShell({
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center gap-3 px-4 py-3">
           <Link href="/admin" className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="grid h-9 w-9 place-items-center rounded-full bg-rose-600 font-display text-sm font-bold text-white"
-            >
-              FfU
-            </span>
+            <Image
+              src="/img/brand/mark.svg"
+              alt=""
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-full"
+            />
             <span className="font-display text-lg">Admin</span>
           </Link>
 
