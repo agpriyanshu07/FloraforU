@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/admin/ui";
 import ProductForm from "@/components/admin/ProductForm";
+import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function NewProductPage() {
         title="Add a product"
         description="It goes live on the site as soon as you save, unless you untick Published."
       />
-      <ProductForm categories={categories} />
+      <ProductForm categories={categories} uploadsEnabled={isCloudinaryConfigured()} />
     </>
   );
 }
