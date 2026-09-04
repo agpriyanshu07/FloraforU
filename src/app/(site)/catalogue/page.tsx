@@ -9,6 +9,8 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { queryCatalogue, type CatalogueParams } from "@/lib/catalogue";
 
+// Stays dynamic: the filter, sort and pagination searchParams make every
+// request a different page, so there is nothing stable to cache.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {

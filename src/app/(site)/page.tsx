@@ -17,7 +17,9 @@ import {
   getNewArrivals,
 } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
+// Cached, with admin edits pushing through immediately via revalidatePath.
+// The short window is a backstop for offers starting or ending on their own.
+export const revalidate = 300;
 
 export default async function HomePage() {
   const [settings, categories, arrivals, offers, offerIds, reviews, gallery] =

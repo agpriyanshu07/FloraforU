@@ -9,7 +9,9 @@ import { getSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 import { getActiveOffers, getPastOffers } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
+// Cached, with admin edits pushing through immediately via revalidatePath.
+// The short window is a backstop for offers starting or ending on their own.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Current offers",

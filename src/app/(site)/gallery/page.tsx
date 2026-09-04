@@ -4,7 +4,8 @@ import EmptyState from "@/components/EmptyState";
 import { BoxIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
+// Cached; admin writes revalidate this path explicitly, so the window is a backstop.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Our work & dispatch",
