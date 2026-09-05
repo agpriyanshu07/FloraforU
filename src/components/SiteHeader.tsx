@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CloseIcon, MenuIcon, WhatsappIcon } from "./icons";
 import WishlistLink from "./WishlistLink";
+import SearchBar from "./SearchBar";
 
 const NAV = [
   { href: "/catalogue", label: "Catalogue" },
@@ -69,6 +70,9 @@ export default function SiteHeader({
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Wide screens get the field itself; narrower ones reach it through
+              the menu below, where there is room for it. */}
+          <SearchBar className="hidden w-56 xl:block" />
           <WishlistLink />
           <a
             href={whatsappHref}
@@ -100,6 +104,9 @@ export default function SiteHeader({
         className="border-t border-line bg-cream lg:hidden"
       >
         <ul className="shell flex flex-col py-2">
+          <li className="px-3 pb-2 pt-1 xl:hidden">
+            <SearchBar />
+          </li>
           {NAV.map((item) => (
             <li key={item.href}>
               <Link
