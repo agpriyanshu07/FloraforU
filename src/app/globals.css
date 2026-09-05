@@ -168,3 +168,49 @@
   display: inline-block;
   animation: sparkle 1.4s var(--ease-out-soft) 1;
 }
+
+/* ==========================================================================
+   Scroll reveal
+   Both classes are added by Reveal.tsx after mount, so the server HTML has no
+   hidden state and the content still renders if the bundle never loads. The
+   component skips this entirely under prefers-reduced-motion; the media query
+   below is a second belt for anyone who toggles the setting mid-visit.
+   Opacity and transform only, so nothing here can trigger layout.
+   ========================================================================== */
+.ffu-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.55s var(--ease-out-soft),
+    transform 0.55s var(--ease-out-soft);
+}
+
+.ffu-reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ffu-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Slow drifting motes behind the offers section — decorative only, and never
+   rendered to assistive tech. Kept to transform/opacity and gated on
+   motion-safe at the call site so it stops dead under reduced motion. */
+@keyframes drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
+  50%  { transform: translate3d(0, -18px, 0) scale(1.25); opacity: 0.75; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
+}
+
+/* Gated here rather than with a motion-safe: variant, because that variant
+   only applies to Tailwind utilities — not to a hand-written class like this. */
+@media (prefers-reduced-motion: no-preference) {
+  .ffu-mote {
+    animation: drift 7s ease-in-out infinite;
+  }
+}

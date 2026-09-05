@@ -1,17 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import Countdown from "./Countdown";
-import { ArrowRightIcon, SparkIcon } from "./icons";
+import Reveal from "./Reveal";
+import { ArrowRightIcon } from "./icons";
 import { offerTheme } from "@/lib/offers";
-import { formatPrice } from "@/lib/format";
 
 export type StripProduct = {
   slug: string;
   name: string;
-  price: number | null;
-  priceOnEnquiry: boolean;
   imageUrl: string | null;
-  imageAlt: string;
 };
 
 export type StripOffer = {
@@ -19,6 +16,7 @@ export type StripOffer = {
   slug: string;
   title: string;
   description: string;
+  bannerUrl: string | null;
   discountLabel: string | null;
   endsAt: string;
   endsAtLabel: string;
@@ -28,24 +26,28 @@ export type StripOffer = {
   products: StripProduct[];
 };
 
+/** Decorative drifting motes. Fixed positions so the layout never shifts. */
+const MOTES = [
+  { left: "6%", top: "18%", size: 6, delay: "0s" },
+  { left: "18%", top: "72%", size: 4, delay: "1.4s" },
+  { left: "34%", top: "12%", size: 5, delay: "2.8s" },
+  { left: "62%", top: "80%", size: 5, delay: "0.7s" },
+  { left: "78%", top: "26%", size: 7, delay: "2.1s" },
+  { left: "92%", top: "62%", size: 4, delay: "3.5s" },
+];
+
 /**
- * The homepage sale module.
+ * The homepage offers section.
  *
- * This used to be a second full-bleed coloured bar, which put the campaign
- * name, the same countdown and the same "view offers" button on screen twice —
- * once in the site-wide ribbon above the header, then again below the hero.
- * Two identical bars read as a rendering bug rather than as a sale.
+ * This was previously a second full-bleed coloured bar, which repeated the
+ * ribbon above the header almost word for word — the same campaign name, the
+ * same countdown, the same button — so a live sale appeared twice and read as
+ * a rendering fault. The ribbon stays the thin persistent reminder; this is
+ * where the campaign is actually presented, banner and all.
  *
- * So the two surfaces now do different jobs. The ribbon is the thin persistent
- * reminder that a sale is on. This is the merchandising: what is actually
- * discounted, in pictures, with a way in. The campaign colour survives as a
- * single accent rule rather than a full-width wash, which is what stops it
- * reading as "the orange bar, again".
- *
- * Multiple live campaigns stack as cards. The previous version rotated them
- * through a carousel, which meant the second campaign was behind a timer and,
- * with reduced motion, behind nothing at all. Stacking shows every campaign to
- * everybody and needs no motion, no timer and no special case.
+ * Multiple live campaigns stack. The version before this rotated them through
+ * a carousel, which put the second campaign behind a timer and, under reduced
+ * motion, behind nothing at all.
  */
 export default function OfferStrip({ offers }: { offers: StripOffer[] }) {
   if (offers.length === 0) return null;
@@ -53,111 +55,112 @@ export default function OfferStrip({ offers }: { offers: StripOffer[] }) {
   return (
     <section
       aria-labelledby="offer-strip-heading"
-      className="border-y border-line bg-rose-50/60 py-14"
+      className="relative overflow-hidden border-y border-line bg-gradient-to-b from-cream via-marigold-50/40 to-cream py-16"
     >
-      <div className="shell">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="offer-strip-heading" className="font-display text-3xl">
-              {offers.length > 1 ? "Sales on right now" : "Sale on right now"}
-            </h2>
-            <p className="mt-1 text-ink-600">
-              Rates below are already discounted. Message us to confirm stock and
-              delivery for your date.
-            </p>
-          </div>
-          <Link href="/offers" className="btn-ghost btn-sm">
-            All offers
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        {MOTES.map((m, i) => (
+          <span
+            key={i}
+            className="ffu-mote absolute rounded-full bg-marigold-600/40"
+            style={{
+              left: m.left,
+              top: m.top,
+              width: m.size,
+              height: m.size,
+              animationDelay: m.delay,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="shell relative">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 id="offer-strip-heading" className="font-display text-[clamp(1.9rem,4vw,2.6rem)]">
+            {offers.length > 1 ? "Current offers" : "Current offer"}
+          </h2>
+          <p className="mt-2 text-ink-600">
+            Limited-time deals on our décor and floral collection.
+          </p>
         </div>
 
-        <ul className="grid gap-5">
-          {offers.map((offer) => {
+        <ul className="mx-auto mt-10 grid max-w-4xl gap-8">
+          {offers.map((offer, i) => {
             const theme = offerTheme(offer.theme);
+            // The campaign banner if the owner set one, otherwise the first
+            // product photo — better than an empty frame either way.
+            const art = offer.bannerUrl ?? offer.products[0]?.imageUrl ?? null;
+
             return (
-              <li key={offer.id} className="card overflow-hidden">
-                {/* The campaign colour, kept to a rule. A full-width themed
-                    block here is what made this look like a duplicate ribbon. */}
-                <div aria-hidden className={`h-1.5 ${theme.bg}`} />
+              <li key={offer.id}>
+                <Reveal delayMs={i * 90}>
+                  <Link
+                    href="/offers"
+                    className="group block overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-all duration-300 hover:shadow-xl motion-safe:hover:-translate-y-1"
+                  >
+                    <div className="relative aspect-[16/9] overflow-hidden bg-marigold-50 sm:aspect-[16/7]">
+                      {art && (
+                        <Image
+                          src={art}
+                          alt=""
+                          fill
+                          sizes="(max-width: 900px) 100vw, 880px"
+                          className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
+                        />
+                      )}
 
-                <div className="p-5 sm:p-6">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <SparkIcon className={`h-5 w-5 shrink-0 ${theme.onCream}`} />
-                    <h3 className="font-display text-2xl">{offer.title}</h3>
-
-                    {offer.discountLabel && (
-                      <span
-                        className={`rounded-md ${theme.bg} px-2.5 py-1 text-sm font-bold uppercase tracking-wide text-white`}
-                      >
-                        {offer.discountLabel}
+                      <span className="absolute right-4 top-4">
+                        <Countdown
+                          endsAt={offer.endsAt}
+                          fallback={`Ends ${offer.endsAtLabel}`}
+                          urgentWithinHours={offer.urgentWithinHours}
+                          chipClass="bg-ink-900/85 backdrop-blur-sm"
+                          escalate
+                        />
                       </span>
-                    )}
 
-                    <Countdown
-                      endsAt={offer.endsAt}
-                      fallback={`Ends ${offer.endsAtLabel}`}
-                      urgentWithinHours={offer.urgentWithinHours}
-                      escalate
-                    />
-                  </div>
+                      {offer.discountLabel && (
+                        <span
+                          className={`absolute left-4 top-4 rounded-md ${theme.bg} px-2.5 py-1 text-sm font-bold uppercase tracking-wide text-white`}
+                        >
+                          {offer.discountLabel}
+                        </span>
+                      )}
+                    </div>
 
-                  {offer.description && (
-                    <p className="mt-2 max-w-2xl text-ink-600">{offer.description}</p>
-                  )}
+                    <div className="p-5 sm:p-6">
+                      <h3
+                        className={`font-display text-xl uppercase tracking-wide transition-colors duration-200 ${theme.hoverText}`}
+                      >
+                        {offer.title}
+                      </h3>
+                      {offer.description && (
+                        <p className="mt-1.5 text-ink-600">{offer.description}</p>
+                      )}
 
-                  {/* Real figure from the Enquiry log. Hidden at 0 rather than
-                      printed as "0 people", which reads as a negative signal. */}
-                  {offer.enquiriesThisWeek > 0 && (
-                    <p className="mt-2 text-sm text-ink-600">
-                      {offer.enquiriesThisWeek}{" "}
-                      {offer.enquiriesThisWeek === 1 ? "person has" : "people have"}{" "}
-                      enquired about these items this week.
-                    </p>
-                  )}
-
-                  {offer.products.length > 0 && (
-                    <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                      {offer.products.map((p) => (
-                        <li key={p.slug}>
-                          <Link
-                            href={`/product/${p.slug}`}
-                            className="group block focus-visible:outline-none"
-                          >
-                            <span className="relative block aspect-square overflow-hidden rounded-xl border border-line bg-cream">
-                              {p.imageUrl && (
-                                <Image
-                                  src={p.imageUrl}
-                                  alt={p.imageAlt || p.name}
-                                  fill
-                                  sizes="(max-width: 640px) 45vw, 200px"
-                                  className="object-cover transition-transform duration-200 motion-safe:group-hover:scale-105"
-                                />
-                              )}
-                            </span>
-                            <span className="mt-1.5 block truncate text-sm font-medium group-hover:text-rose-700">
-                              {p.name}
-                            </span>
-                            <span className="block text-sm text-ink-600">
-                              {formatPrice(p.price, p.priceOnEnquiry)}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  <div className="mt-5">
-                    <Link href="/offers" className="btn-primary btn-sm">
-                      See the {offer.title}
-                      <ArrowRightIcon className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
+                      {/* Real figure from the Enquiry log. Hidden at 0 rather
+                          than printed as "0 people", which reads as a negative
+                          signal rather than a neutral one. */}
+                      {offer.enquiriesThisWeek > 0 && (
+                        <p className="mt-2 text-sm text-ink-600">
+                          {offer.enquiriesThisWeek}{" "}
+                          {offer.enquiriesThisWeek === 1 ? "person has" : "people have"}{" "}
+                          enquired about these items this week.
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                </Reveal>
               </li>
             );
           })}
         </ul>
+
+        <div className="mt-9 text-center">
+          <Link href="/offers" className="btn-primary group">
+            View all offers
+            <ArrowRightIcon className="h-4 w-4 transition-transform duration-200 motion-safe:group-hover:translate-x-1" />
+          </Link>
+        </div>
       </div>
     </section>
   );

@@ -25,6 +25,12 @@ export type OfferTheme = {
   onCream: string;
   /** Button background when placed on the themed ribbon (light on dark). */
   buttonText: string;
+  /**
+   * Title colour on card hover. Written out in full rather than composed from
+   * `onCream`, because Tailwind only ships classes it can see as literal text —
+   * a name built at runtime is silently never generated.
+   */
+  hoverText: string;
 };
 
 export const OFFER_THEMES: Record<OfferThemeName, OfferTheme> = {
@@ -37,6 +43,7 @@ export const OFFER_THEMES: Record<OfferThemeName, OfferTheme> = {
     chip: "bg-marigold-700",
     onCream: "text-marigold-700",
     buttonText: "text-marigold-700",
+    hoverText: "group-hover:text-marigold-700",
   },
   "festive-red": {
     name: "festive-red",
@@ -45,6 +52,7 @@ export const OFFER_THEMES: Record<OfferThemeName, OfferTheme> = {
     chip: "bg-festive-700",
     onCream: "text-festive-700",
     buttonText: "text-festive-700",
+    hoverText: "group-hover:text-festive-700",
   },
   "monsoon-blue": {
     name: "monsoon-blue",
@@ -53,6 +61,7 @@ export const OFFER_THEMES: Record<OfferThemeName, OfferTheme> = {
     chip: "bg-monsoon-700",
     onCream: "text-monsoon-700",
     buttonText: "text-monsoon-700",
+    hoverText: "group-hover:text-monsoon-700",
   },
   "midnight-gold": {
     name: "midnight-gold",
@@ -61,6 +70,7 @@ export const OFFER_THEMES: Record<OfferThemeName, OfferTheme> = {
     chip: "bg-midnight-700",
     onCream: "text-midnight-700",
     buttonText: "text-midnight-700",
+    hoverText: "group-hover:text-midnight-700",
   },
 };
 
