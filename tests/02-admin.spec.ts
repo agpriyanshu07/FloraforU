@@ -360,3 +360,53 @@ test("signing out locks the admin portal again", async ({ page }) => {
   await page.goto("/admin/products");
   expect(page.url()).toContain("/admin/login");
 });
+
+test("a product photo set by URL reaches the public product page", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/products/new");
+
+  const name = `QA Photo Pot ${Date.now()}`;
+  const primary = "/img/categories/pots-vases.svg";
+  const secondary = "/img/categories/lamps-diyas.svg";
+
+  await page.fill("#name", name);
+  await page.selectOption("#categoryId", { label: "Pots & Vases" });
+  await page.fill("#spec", "QA photo row");
+  await page.fill("#price", "999");
+
+  // The textarea lives inside a <details>. It is open already when uploads are
+  // switched off, which is how CI runs, but opening it is harmless either way
+  // and keeps this test honest if Cloudinary is ever configured for CI.
+  // getAttribute returns "" for a boolean attribute that is present, so compare
+  // against null rather than testing truthiness — otherwise this closes it.
+  const details = page.locator("details:has(#imageUrls)");
+  if ((await details.getAttribute("open")) === null) {
+    await details.locator("summary").click();
+  }
+  await page.fill("#imageUrls", `${primary}\n${secondary}`);
+
+  // Both photos should be listed back, with the first marked as the main one.
+  // Exact match: the hint text below also contains the words "main photo".
+  await expect(page.getByText("Main", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Remove photo/ })).toHaveCount(2);
+
+  await page.click('button:has-text("Create product")');
+  await page.waitForURL(/\/admin\/products(\?|$)/);
+
+  // The public page must render the primary photo, not the "coming soon" state.
+  // Scoped to <main>: the header carries its own logo image now, and without
+  // this scope ".first()" picks that up instead of the product's own photo.
+  await page.goto(`/catalogue?q=${encodeURIComponent(name)}`);
+  await page.click(`a:has-text("${name}")`);
+  const hero = page.locator("main img").first();
+  await expect(hero).toHaveAttribute("src", new RegExp(primary.replace(/\//g, "\\/")));
+
+  // Reopening the product must show both photos still attached, in order.
+  await page.goto("/admin/products");
+  await page.click(`a:has-text("${name}")`);
+  await expect(page.locator("#imageUrls")).toHaveValue(`${primary}\n${secondary}`);
+
+  page.once("dialog", (d) => d.accept());
+  await page.click('button:has-text("Delete product")');
+  await page.waitForURL(/\/admin\/products\?deleted=1/);
+});

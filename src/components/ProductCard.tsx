@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { imageProps } from "@/lib/image";
 import Link from "next/link";
 import EnquireButton from "./EnquireButton";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "./Badges";
@@ -36,7 +37,7 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
       >
         {image ? (
           <Image
-            src={image.url}
+            {...imageProps(image.url, 560)}
             alt=""
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"

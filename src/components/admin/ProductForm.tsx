@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveProductAction, type ActionState } from "@/lib/admin-actions";
+import ImageUploader from "./ImageUploader";
 
 type Category = { id: string; name: string };
 
@@ -35,9 +36,12 @@ function Save({ isEdit }: { isEdit: boolean }) {
 export default function ProductForm({
   categories,
   values = {},
+  uploadsEnabled = false,
 }: {
   categories: Category[];
   values?: ProductFormValues;
+  /** Whether Cloudinary is configured; decided on the server. */
+  uploadsEnabled?: boolean;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(
     saveProductAction,
@@ -138,20 +142,11 @@ export default function ProductForm({
           <span className="field-hint">Shown on the product page. Good for colours, variants and delivery notes.</span>
         </div>
 
-        <div>
-          <label htmlFor="imageUrls" className="field-label">Image URLs</label>
-          <textarea
-            id="imageUrls"
-            name="imageUrls"
-            rows={4}
-            defaultValue={sent ? (sent.imageUrls ?? "") : (values.imageUrls ?? []).join("\n")}
-            className="field font-mono text-[13px]"
-            placeholder={"/img/categories/pots-vases.svg\nhttps://res.cloudinary.com/…/pot-2.jpg"}
-          />
-          <span className="field-hint">
-            One URL per line, up to 6. The first is the primary photo. Alt text is generated automatically.
-          </span>
-        </div>
+        <ImageUploader
+          name="imageUrls"
+          defaultValue={sent ? (sent.imageUrls ?? "") : (values.imageUrls ?? []).join("\n")}
+          uploadsEnabled={uploadsEnabled}
+        />
       </div>
 
       <div className="space-y-6">

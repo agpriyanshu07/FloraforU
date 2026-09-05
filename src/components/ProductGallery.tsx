@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { imageProps } from "@/lib/image";
 import { useState } from "react";
 
 /** Simple accessible carousel — thumbnails act as tabs over one large image. */
@@ -25,7 +26,7 @@ export default function ProductGallery({
     <div>
       <div className="card relative aspect-square overflow-hidden bg-rose-50">
         <Image
-          src={images[active].url}
+          {...imageProps(images[active].url, 1040)}
           alt={images[active].alt || productName}
           fill
           priority
@@ -48,7 +49,7 @@ export default function ProductGallery({
                   i === active ? "border-rose-600" : "border-line hover:border-rose-300"
                 }`}
               >
-                <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
+                <Image {...imageProps(img.url, 128)} alt="" fill sizes="64px" className="object-cover" />
               </button>
             </li>
           ))}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/admin/ui";
 import ProductForm from "@/components/admin/ProductForm";
+import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { deleteProductAction } from "@/lib/admin-actions";
 import { db } from "@/lib/db";
@@ -46,6 +47,7 @@ export default async function EditProductPage({
       />
       <ProductForm
         categories={categories}
+        uploadsEnabled={isCloudinaryConfigured()}
         values={{
           id: product.id,
           name: product.name,
