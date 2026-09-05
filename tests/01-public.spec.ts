@@ -333,9 +333,9 @@ test("every simultaneously-active offer is reachable from the homepage", async (
     await expect(strip.getByRole("heading", { name: title, level: 3 })).toBeVisible();
   }
 
-  // The module earns its place by showing what is discounted, so a campaign
-  // with products must link to them rather than only announcing itself.
-  await expect(strip.locator('a[href^="/product/"]').first()).toBeVisible();
+  // Each campaign card is itself the way in, so the whole card links through
+  // to the offers page rather than only the button underneath it.
+  await expect(strip.locator('a[href="/offers"]').first()).toBeVisible();
 });
 
 test("the homepage sale module needs no motion, and does not repeat the ribbon", async ({
