@@ -1,159 +1,164 @@
-"use client";
-
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
 import Countdown from "./Countdown";
 import { ArrowRightIcon, SparkIcon } from "./icons";
 import { offerTheme } from "@/lib/offers";
+import { formatPrice } from "@/lib/format";
+
+export type StripProduct = {
+  slug: string;
+  name: string;
+  price: number | null;
+  priceOnEnquiry: boolean;
+  imageUrl: string | null;
+  imageAlt: string;
+};
 
 export type StripOffer = {
   id: string;
   slug: string;
   title: string;
+  description: string;
   discountLabel: string | null;
   endsAt: string;
   endsAtLabel: string;
   theme: string;
   urgentWithinHours: number;
-  /** Real count from the Enquiry table; 0 means "don't show a number". */
   enquiriesThisWeek: number;
+  products: StripProduct[];
 };
 
-const ROTATE_MS = 5000;
-
 /**
- * Homepage campaign strip.
+ * The homepage sale module.
  *
- * Previously the homepage rendered `offers[0]` only, so a second simultaneous
- * campaign was invisible unless a visitor happened to open /offers. This
- * renders every active campaign: one is static, several rotate.
+ * This used to be a second full-bleed coloured bar, which put the campaign
+ * name, the same countdown and the same "view offers" button on screen twice —
+ * once in the site-wide ribbon above the header, then again below the hero.
+ * Two identical bars read as a rendering bug rather than as a sale.
  *
- * Rotation pauses on hover and on keyboard focus, and does not start at all
- * under prefers-reduced-motion — in that case the offers are all rendered
- * stacked instead, so nothing becomes unreachable just because motion is off.
+ * So the two surfaces now do different jobs. The ribbon is the thin persistent
+ * reminder that a sale is on. This is the merchandising: what is actually
+ * discounted, in pictures, with a way in. The campaign colour survives as a
+ * single accent rule rather than a full-width wash, which is what stops it
+ * reading as "the orange bar, again".
+ *
+ * Multiple live campaigns stack as cards. The previous version rotated them
+ * through a carousel, which meant the second campaign was behind a timer and,
+ * with reduced motion, behind nothing at all. Stacking shows every campaign to
+ * everybody and needs no motion, no timer and no special case.
  */
 export default function OfferStrip({ offers }: { offers: StripOffer[] }) {
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const regionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const apply = () => setReducedMotion(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
-
-  const rotating = offers.length > 1 && !reducedMotion;
-
-  useEffect(() => {
-    if (!rotating || paused) return;
-    const id = setInterval(
-      () => setIndex((i) => (i + 1) % offers.length),
-      ROTATE_MS,
-    );
-    return () => clearInterval(id);
-  }, [rotating, paused, offers.length]);
-
   if (offers.length === 0) return null;
-
-  // Reduced motion, or a single offer: render everything, no rotation, no
-  // controls. Stacking is the honest fallback — hiding offers behind a paused
-  // carousel would make them unreachable for exactly the users who opted out.
-  const shown = rotating ? [offers[index]] : offers;
 
   return (
     <section
-      ref={regionRef}
       aria-labelledby="offer-strip-heading"
-      aria-roledescription={rotating ? "carousel" : undefined}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
+      className="border-y border-line bg-rose-50/60 py-14"
     >
-      {/* Named distinctly from the site-wide ribbon: two landmarks both called
-          "Current offer" is a real problem when you are moving by region. */}
-      <h2 id="offer-strip-heading" className="sr-only">
-        {offers.length > 1 ? `${offers.length} offers running now` : "Offer running now"}
-      </h2>
-
-      {shown.map((offer) => {
-        const theme = offerTheme(offer.theme);
-        return (
-          <div key={offer.id} className={`${theme.bg} text-white`}>
-            <div className="shell flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <SparkIcon className="h-5 w-5 shrink-0" />
-                <span className="font-display text-xl">{offer.title}</span>
-
-                {offer.discountLabel && (
-                  <span className="rounded-md bg-white/20 px-2 py-0.5 text-sm font-bold uppercase tracking-wide">
-                    {offer.discountLabel}
-                  </span>
-                )}
-
-                <Countdown
-                  endsAt={offer.endsAt}
-                  fallback={`Ends ${offer.endsAtLabel}`}
-                  urgentWithinHours={offer.urgentWithinHours}
-                  chipClass={theme.chip}
-                  escalate
-                />
-
-                {/* Real figure from the Enquiry log, not a manufactured one.
-                    Hidden entirely at 0 rather than printed as "0 people".
-                    Full white rather than white/85: at 13px the faded variant
-                    measures 4.08:1 on marigold-600 and fails AA. */}
-                {offer.enquiriesThisWeek > 0 && (
-                  <span className="text-[13px] text-white">
-                    {offer.enquiriesThisWeek}{" "}
-                    {offer.enquiriesThisWeek === 1 ? "enquiry" : "enquiries"} this week
-                  </span>
-                )}
-              </div>
-
-              <Link
-                href="/offers"
-                className={`btn btn-sm shrink-0 bg-white ${theme.buttonText} hover:bg-cream`}
-              >
-                View all offers
-                <ArrowRightIcon className="h-4 w-4" />
-              </Link>
-            </div>
+      <div className="shell">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="offer-strip-heading" className="font-display text-3xl">
+              {offers.length > 1 ? "Sales on right now" : "Sale on right now"}
+            </h2>
+            <p className="mt-1 text-ink-600">
+              Rates below are already discounted. Message us to confirm stock and
+              delivery for your date.
+            </p>
           </div>
-        );
-      })}
-
-      {rotating && (
-        <div className="bg-ink-900/90">
-          <div className="shell flex items-center justify-center gap-2 py-1.5">
-            {offers.map((offer, i) => (
-              <button
-                key={offer.id}
-                type="button"
-                onClick={() => setIndex(i)}
-                aria-current={i === index}
-                className={`grid h-11 w-8 place-items-center ${
-                  i === index ? "opacity-100" : "opacity-50 hover:opacity-80"
-                }`}
-              >
-                <span
-                  aria-hidden
-                  className={`block h-1.5 rounded-full bg-white transition-all duration-200 ${
-                    i === index ? "w-6" : "w-1.5"
-                  }`}
-                />
-                <span className="sr-only">
-                  Show offer {i + 1} of {offers.length}: {offer.title}
-                </span>
-              </button>
-            ))}
-          </div>
+          <Link href="/offers" className="btn-ghost btn-sm">
+            All offers
+            <ArrowRightIcon className="h-4 w-4" />
+          </Link>
         </div>
-      )}
+
+        <ul className="grid gap-5">
+          {offers.map((offer) => {
+            const theme = offerTheme(offer.theme);
+            return (
+              <li key={offer.id} className="card overflow-hidden">
+                {/* The campaign colour, kept to a rule. A full-width themed
+                    block here is what made this look like a duplicate ribbon. */}
+                <div aria-hidden className={`h-1.5 ${theme.bg}`} />
+
+                <div className="p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <SparkIcon className={`h-5 w-5 shrink-0 ${theme.onCream}`} />
+                    <h3 className="font-display text-2xl">{offer.title}</h3>
+
+                    {offer.discountLabel && (
+                      <span
+                        className={`rounded-md ${theme.bg} px-2.5 py-1 text-sm font-bold uppercase tracking-wide text-white`}
+                      >
+                        {offer.discountLabel}
+                      </span>
+                    )}
+
+                    <Countdown
+                      endsAt={offer.endsAt}
+                      fallback={`Ends ${offer.endsAtLabel}`}
+                      urgentWithinHours={offer.urgentWithinHours}
+                      escalate
+                    />
+                  </div>
+
+                  {offer.description && (
+                    <p className="mt-2 max-w-2xl text-ink-600">{offer.description}</p>
+                  )}
+
+                  {/* Real figure from the Enquiry log. Hidden at 0 rather than
+                      printed as "0 people", which reads as a negative signal. */}
+                  {offer.enquiriesThisWeek > 0 && (
+                    <p className="mt-2 text-sm text-ink-600">
+                      {offer.enquiriesThisWeek}{" "}
+                      {offer.enquiriesThisWeek === 1 ? "person has" : "people have"}{" "}
+                      enquired about these items this week.
+                    </p>
+                  )}
+
+                  {offer.products.length > 0 && (
+                    <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                      {offer.products.map((p) => (
+                        <li key={p.slug}>
+                          <Link
+                            href={`/product/${p.slug}`}
+                            className="group block focus-visible:outline-none"
+                          >
+                            <span className="relative block aspect-square overflow-hidden rounded-xl border border-line bg-cream">
+                              {p.imageUrl && (
+                                <Image
+                                  src={p.imageUrl}
+                                  alt={p.imageAlt || p.name}
+                                  fill
+                                  sizes="(max-width: 640px) 45vw, 200px"
+                                  className="object-cover transition-transform duration-200 motion-safe:group-hover:scale-105"
+                                />
+                              )}
+                            </span>
+                            <span className="mt-1.5 block truncate text-sm font-medium group-hover:text-rose-700">
+                              {p.name}
+                            </span>
+                            <span className="block text-sm text-ink-600">
+                              {formatPrice(p.price, p.priceOnEnquiry)}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-5">
+                    <Link href="/offers" className="btn-primary btn-sm">
+                      See the {offer.title}
+                      <ArrowRightIcon className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
