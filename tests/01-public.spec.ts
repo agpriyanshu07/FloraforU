@@ -8,8 +8,11 @@ test.beforeAll(() => reseed());
 const gridNames = (page: Page) =>
   page.$$eval("article h3 a", (as) => as.map((a) => a.textContent!.trim()));
 
+// Scoped to main: the header search has its own polite live region for its
+// suggestion count, and an unscoped selector picks up whichever comes first in
+// the DOM — which is the header's.
 const resultCount = (page: Page) =>
-  page.$eval('p[aria-live="polite"]', (el) => el.textContent!.trim());
+  page.$eval('main p[aria-live="polite"]', (el) => el.textContent!.trim());
 
 // ---------------------------------------------------------------- rendering --
 
@@ -464,4 +467,71 @@ test("the wishlist endpoint only returns published products, in saved order", as
     data: { slugs: Array.from({ length: 61 }, (_, i) => `p-${i}`) },
   });
   expect(bad.status(), "an oversized list is refused").toBe(400);
+});
+
+// -------------------------------------------------------------------- search --
+
+test("the header search suggests products and runs a real search on submit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const input = page.getByRole("combobox", { name: "Search the catalogue" });
+  await expect(input).toBeVisible();
+
+  await input.fill("lamp");
+  const options = page.getByRole("option");
+  await expect(options.first()).toBeVisible();
+  await expect(await options.count()).toBeGreaterThan(0);
+
+  // Suggestions are a shortcut to the item itself.
+  await input.press("ArrowDown");
+  await expect(input).toHaveAttribute("aria-activedescendant", /option-0$/);
+  await input.press("Enter");
+  await page.waitForURL("**/product/**");
+
+  // Escape closes the list without navigating anywhere.
+  await page.goto("/");
+  await input.fill("pot");
+  await expect(page.getByRole("option").first()).toBeVisible();
+  await input.press("Escape");
+  await expect(page.getByRole("option")).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe("/");
+
+  // Enter with nothing highlighted submits the form, which is the full search:
+  // /catalogue matches name, spec, code, description and category, not just the
+  // handful of names the suggestion endpoint returns.
+  await input.fill("marigold");
+  await input.press("Enter");
+  await page.waitForURL("**/catalogue?q=marigold");
+  await expect(page.locator("article").first()).toBeVisible();
+});
+
+test("search works with JavaScript disabled", async ({ browser }) => {
+  // The suggestions are an enhancement; the form underneath must still search.
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Search the catalogue" }).fill("marigold");
+  await page.keyboard.press("Enter");
+
+  await page.waitForURL("**/catalogue?q=marigold");
+  await expect(page.locator("article").first()).toBeVisible();
+  await context.close();
+});
+
+test("the suggestion endpoint ignores one-character queries", async ({ request }) => {
+  // A single letter matches most of the catalogue: no use as a suggestion, and
+  // not a query worth running on every keystroke.
+  const tooShort = await request.get("/api/search?q=l");
+  expect((await tooShort.json()).products).toEqual([]);
+
+  const real = await request.get("/api/search?q=lamp");
+  const body = await real.json();
+  expect(body.products.length).toBeGreaterThan(0);
+  expect(body.products.length).toBeLessThanOrEqual(6);
+
+  // Case-insensitive: PostgreSQL's `contains` is not, by default.
+  const upper = await request.get("/api/search?q=LAMP");
+  expect((await upper.json()).products.length).toBe(body.products.length);
 });
