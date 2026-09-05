@@ -38,27 +38,28 @@ model Category {
 }
 
 model Product {
-  id           String         @id @default(cuid())
-  slug         String         @unique
-  name         String
-  code         String?
-  spec         String         @default("") // free text: real spec lines are messy
-  description  String         @default("")
-  price        Float?         // null when priceOnEnquiry
-  priceOnEnquiry Boolean      @default(false)
-  availability String         @default("in_stock") // in_stock | limited | made_to_order
-  published    Boolean        @default(true)
-  isNew        Boolean        @default(false) // manual override; see newUntil
-  newUntil     DateTime?
-  featured     Boolean        @default(false) // homepage curation pin
-  featureOrder Int            @default(0)
-  categoryId   String
-  category     Category       @relation(fields: [categoryId], references: [id])
-  images       ProductImage[]
-  offers       OfferProduct[]
-  enquiries    Enquiry[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  name           String
+  code           String?
+  spec           String         @default("") // free text: real spec lines are messy
+  description    String         @default("")
+  price          Float? // null when priceOnEnquiry
+  priceOnEnquiry Boolean        @default(false)
+  availability   String         @default("in_stock") // in_stock | limited | made_to_order
+  published      Boolean        @default(true)
+  isNew          Boolean        @default(false) // manual override; see newUntil
+  newUntil       DateTime?
+  featured       Boolean        @default(false) // homepage curation pin
+  featureOrder   Int            @default(0)
+  categoryId     String
+  category       Category       @relation(fields: [categoryId], references: [id])
+  images         ProductImage[]
+  offers         OfferProduct[]
+  enquiries      Enquiry[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  reviews        Review[]
 
   @@index([categoryId])
   @@index([createdAt])
@@ -78,17 +79,28 @@ model ProductImage {
 }
 
 model Offer {
-  id          String         @id @default(cuid())
-  slug        String         @unique
-  title       String
-  description String         @default("")
-  bannerUrl   String?
-  startsAt    DateTime
-  endsAt      DateTime
-  published   Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  products    OfferProduct[]
+  id                String         @id @default(cuid())
+  slug              String         @unique
+  title             String
+  description       String         @default("")
+  bannerUrl         String?
+  startsAt          DateTime
+  endsAt            DateTime
+  published         Boolean        @default(true)
+  // Free text rather than a number: real campaigns are "Flat Rs 200 off",
+  // "Buy 2 get 1", "Up to 40% off" — a single percent column can't hold those.
+  discountLabel     String?
+  // Accent palette for this campaign, so a Diwali sale and a monsoon clearance
+  // don't read as the same banner recoloured. See OFFER_THEMES in lib/offers.ts.
+  theme             String         @default("marigold")
+  // Manual ordering when several campaigns run at once; ties fall back to
+  // soonest-ending, which is what the site did before this field existed.
+  priority          Int            @default(0)
+  // Hours before endsAt at which the countdown starts escalating.
+  urgentWithinHours Int            @default(48)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  products          OfferProduct[]
 
   @@index([startsAt, endsAt])
 }
@@ -103,18 +115,39 @@ model OfferProduct {
 }
 
 model Review {
-  id           String   @id @default(cuid())
-  customerName String
-  eventType    String   @default("")
-  quote        String
-  rating       Int      @default(5)
-  source       String   @default("Instagram DM")
-  photoUrl     String?
-  visible      Boolean  @default(true)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
+  id                  String   @id @default(cuid())
+  customerName        String
+  eventType           String   @default("")
+  quote               String
+  rating              Int      @default(5)
+  source              String   @default("Instagram DM")
+  photoUrl            String?
+  visible             Boolean  @default(true)
+  displayOrder        Int      @default(0)
+  createdAt           DateTime @default(now())
+  // pending | approved | rejected. Defaults to approved so the rows already in
+  // the database (all admin-entered, already vetted) keep showing after the
+  // migration; anything arriving from the public form is forced to pending.
+  status              String   @default("approved")
+  // Separates a self-submitted review from one an admin transcribed out of a
+  // WhatsApp thread, which matters when moderating.
+  submittedByCustomer Boolean  @default(false)
+  // Optional link to the product being reviewed, so product pages can show
+  // their own reviews.
+  productId           String?
+  product             Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // Admin-only. A phone/email the reviewer optionally leaves so a moderator can
+  // sanity-check it against past enquiries. Deliberately NOT a "verified buyer"
+  // signal — this site has no checkout, so there is no purchase to verify, and
+  // implying otherwise would be a claim the data can't support.
+  contactHint         String?
+  // Where an Instagram-sourced quote actually came from, so featured comments
+  // can link back to the real post instead of being unattributable.
+  sourceUrl           String?
 
   @@index([displayOrder])
+  @@index([status])
+  @@index([productId])
 }
 
 model GalleryItem {
@@ -136,7 +169,7 @@ model GalleryItem {
 // actual conversation happens off-site on WhatsApp/phone.
 model Enquiry {
   id        String   @id @default(cuid())
-  channel   String   // whatsapp | call | form | instagram
+  channel   String // whatsapp | call | form | instagram
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   name      String   @default("")

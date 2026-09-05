@@ -28,6 +28,13 @@ export type SiteSettings = {
   eventsCount: string;
   yearsCount: string;
   siteUrl: string;
+  /**
+   * Master switch for the Instagram-comment feature. Off by default and stored
+   * as a string like every other setting, because the settings table is a
+   * simple key/value store. Nothing about the feature renders while this is
+   * anything other than "true".
+   */
+  instagramCommentsEnabled: string;
 };
 
 // PLACEHOLDER values are prefixed so they are greppable and obvious in review.
@@ -56,6 +63,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   eventsCount: "400+",
   yearsCount: "6+",
   siteUrl: "http://localhost:3000",
+  instagramCommentsEnabled: "false",
 };
 
 export async function getSettings(): Promise<SiteSettings> {

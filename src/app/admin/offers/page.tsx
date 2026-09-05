@@ -123,6 +123,10 @@ export default async function AdminOffersPage({
                   endsAt: iso(editing.endsAt),
                   published: editing.published,
                   productIds: editing.products.map((p) => p.productId),
+                  discountLabel: editing.discountLabel ?? "",
+                  theme: editing.theme,
+                  priority: editing.priority,
+                  urgentWithinHours: editing.urgentWithinHours,
                 }
               : { startsAt: iso(new Date()), published: true }
           }

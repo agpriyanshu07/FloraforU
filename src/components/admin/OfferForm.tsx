@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveOfferAction, type ActionState } from "@/lib/admin-actions";
+import { OFFER_THEMES, OFFER_THEME_NAMES } from "@/lib/offers";
 
 type Product = { id: string; name: string; categoryName: string };
 
@@ -30,6 +31,10 @@ export default function OfferForm({
     endsAt?: string;
     published?: boolean;
     productIds?: string[];
+    discountLabel?: string;
+    theme?: string;
+    priority?: number;
+    urgentWithinHours?: number;
   };
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(saveOfferAction, {});
@@ -52,6 +57,9 @@ export default function OfferForm({
   );
   const [published, setPublished] = useState(
     sent ? sent.published === "on" : (values.published ?? true),
+  );
+  const [theme, setTheme] = useState(
+    sent ? (sent.theme ?? "marigold") : (values.theme ?? "marigold"),
   );
 
   const visible = filter
@@ -103,6 +111,84 @@ export default function OfferForm({
             <label htmlFor="endsAt" className="field-label">Ends</label>
             <input id="endsAt" name="endsAt" type="date" required defaultValue={str("endsAt", values.endsAt)} className="field" />
             {err("endsAt") && <span className="field-error">{err("endsAt")}</span>}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="discountLabel" className="field-label">
+            Discount badge <span className="font-normal text-ink-600">(optional)</span>
+          </label>
+          <input
+            id="discountLabel"
+            name="discountLabel"
+            defaultValue={str("discountLabel", values.discountLabel)}
+            className="field"
+            placeholder="e.g. 30% OFF, Flat ₹200 off, Buy 2 get 1"
+          />
+          <span className="field-hint">
+            Shown big and bold on the sale bar. Leave empty to show just the campaign name.
+          </span>
+          {err("discountLabel") && <span className="field-error">{err("discountLabel")}</span>}
+        </div>
+
+        <div>
+          <label htmlFor="theme" className="field-label">Campaign colour</label>
+          <select
+            id="theme"
+            name="theme"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            className="field"
+          >
+            {OFFER_THEME_NAMES.map((name) => (
+              <option key={name} value={name}>
+                {OFFER_THEMES[name].label}
+              </option>
+            ))}
+          </select>
+          <span className="field-hint">
+            Gives this campaign its own look, so two sales running together don&apos;t
+            read as the same banner twice.
+          </span>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="priority" className="field-label">Priority</label>
+            <input
+              id="priority"
+              name="priority"
+              type="number"
+              min={0}
+              max={100}
+              defaultValue={str("priority", String(values.priority ?? 0))}
+              className="field"
+            />
+            <span className="field-hint">
+              Higher shows first when several campaigns run at once.
+            </span>
+            {err("priority") && <span className="field-error">{err("priority")}</span>}
+          </div>
+          <div>
+            <label htmlFor="urgentWithinHours" className="field-label">
+              Urgent within (hours)
+            </label>
+            <input
+              id="urgentWithinHours"
+              name="urgentWithinHours"
+              type="number"
+              min={1}
+              max={720}
+              defaultValue={str("urgentWithinHours", String(values.urgentWithinHours ?? 48))}
+              className="field"
+            />
+            <span className="field-hint">
+              When the countdown starts looking urgent. It turns red in the last 6 hours
+              regardless.
+            </span>
+            {err("urgentWithinHours") && (
+              <span className="field-error">{err("urgentWithinHours")}</span>
+            )}
           </div>
         </div>
 

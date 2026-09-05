@@ -5,13 +5,15 @@ import ProductGallery from "@/components/ProductGallery";
 import ProductGrid from "@/components/ProductGrid";
 import EnquireButton from "@/components/EnquireButton";
 import ShareToStory from "@/components/ShareToStory";
+import ReviewCard from "@/components/ReviewCard";
+import ReviewForm from "@/components/ReviewForm";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "@/components/Badges";
 import { InstagramIcon, PhoneIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 import { formatPrice, isProductNew, AVAILABILITY_LABELS } from "@/lib/format";
-import { PRODUCT_CARD_SELECT, getActiveOfferProductIds } from "@/lib/queries";
+import { PRODUCT_CARD_SELECT, PUBLIC_REVIEW_WHERE, getActiveOfferProductIds } from "@/lib/queries";
 import { serialiseJsonLd } from "@/lib/json-ld";
 
 // Cached; admin writes revalidate this path explicitly, so the window is a backstop.
@@ -75,7 +77,7 @@ export default async function ProductPage({
   });
   if (!product || !product.published) notFound();
 
-  const [settings, offerIds, related] = await Promise.all([
+  const [settings, offerIds, related, reviews] = await Promise.all([
     getSettings(),
     getActiveOfferProductIds(),
     db.product.findMany({
@@ -87,6 +89,12 @@ export default async function ProductPage({
       orderBy: { createdAt: "desc" },
       take: 4,
       select: PRODUCT_CARD_SELECT,
+    }),
+    // Product pages showed no reviews at all before this — a review could not
+    // even be attached to a product.
+    db.review.findMany({
+      where: { ...PUBLIC_REVIEW_WHERE, productId: product.id },
+      orderBy: { displayOrder: "asc" },
     }),
   ]);
 
@@ -243,6 +251,28 @@ export default async function ProductPage({
           </p>
         </div>
       </div>
+
+      <section aria-labelledby="reviews-heading" className="mt-16">
+        <h2 id="reviews-heading" className="mb-5 font-display text-2xl">
+          {reviews.length > 0
+            ? `What customers say about ${product.name}`
+            : `Ordered ${product.name} before?`}
+        </h2>
+
+        {reviews.length > 0 && (
+          <ul className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {reviews.map((r) => (
+              <li key={r.id} className="flex">
+                <ReviewCard {...r} />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="max-w-2xl">
+          <ReviewForm productSlug={product.slug} productName={product.name} />
+        </div>
+      </section>
 
       {related.length > 0 && (
         <section aria-labelledby="related-heading" className="mt-16">

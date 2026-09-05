@@ -24,6 +24,22 @@ export async function signIn(page: Page) {
   await page.waitForURL("**/admin");
 }
 
+/**
+ * Gives this page its own bucket in the review rate limiter.
+ *
+ * The limiter keys on x-forwarded-for, and a browser submission sends none, so
+ * every form-driven review in the suite lands in the same "unknown" bucket —
+ * three per hour, shared. That is fine on a fresh server and quietly fatal on a
+ * reused one (reuseExistingServer is the local default), where the count
+ * carries over between runs and a later test starts seeing 429s.
+ */
+export async function isolateReviewLimiter(page: Page) {
+  const ip = `10.77.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+  await page.route("**/api/reviews", (route) =>
+    route.continue({ headers: { ...route.request().headers(), "x-forwarded-for": ip } }),
+  );
+}
+
 /** Scrolls the full page so lazily-loaded images actually load. */
 export async function loadLazyImages(page: Page) {
   await page.evaluate(async () => {

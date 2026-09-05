@@ -3,10 +3,10 @@ import Link from "next/link";
 import ProductGrid from "@/components/ProductGrid";
 import CategoryCard from "@/components/CategoryCard";
 import ReviewCard from "@/components/ReviewCard";
-import Countdown from "@/components/Countdown";
+import OfferStrip from "@/components/OfferStrip";
 import InstagramFeed from "@/components/InstagramFeed";
 import EmptyState from "@/components/EmptyState";
-import { ArrowRightIcon, BoxIcon, HeartIcon, SparkIcon, WhatsappIcon } from "@/components/icons";
+import { ArrowRightIcon, BoxIcon, HeartIcon, WhatsappIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
@@ -15,6 +15,8 @@ import {
   getActiveOffers,
   getCategoriesWithCounts,
   getNewArrivals,
+  getOfferEnquiryCount,
+  PUBLIC_REVIEW_WHERE,
 } from "@/lib/queries";
 
 // Cached, with admin edits pushing through immediately via revalidatePath.
@@ -30,7 +32,7 @@ export default async function HomePage() {
       getActiveOffers(),
       getActiveOfferProductIds(),
       db.review.findMany({
-        where: { visible: true },
+        where: PUBLIC_REVIEW_WHERE,
         orderBy: { displayOrder: "asc" },
         take: 3,
       }),
@@ -41,7 +43,27 @@ export default async function HomePage() {
       }),
     ]);
 
-  const activeOffer = offers[0];
+  const offerEnquiryCounts = await Promise.all(
+    offers.map((offer) => getOfferEnquiryCount(offer.id)),
+  );
+
+  // Previously `offers[0]` — a second simultaneous campaign was silently
+  // invisible here. Every active offer is passed through now, each with its
+  // own real enquiry count.
+  const stripOffers = offers.map((offer, i) => ({
+    id: offer.id,
+    slug: offer.slug,
+    title: offer.title,
+    discountLabel: offer.discountLabel,
+    endsAt: offer.endsAt.toISOString(),
+    endsAtLabel: offer.endsAt.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+    }),
+    theme: offer.theme,
+    urgentWithinHours: offer.urgentWithinHours,
+    enquiriesThisWeek: offerEnquiryCounts[i],
+  }));
   const heroWa = withUtm(
     buildWhatsappUrl({ number: settings.whatsapp, template: settings.whatsappTemplate }),
     "website",
@@ -107,32 +129,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------- Current offer */}
-      {activeOffer && (
-        <section aria-labelledby="offer-strip-heading" className="bg-marigold-600 text-white">
-          <div className="shell flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <SparkIcon className="h-5 w-5 shrink-0" />
-              <span id="offer-strip-heading" className="font-display text-xl">
-                {activeOffer.title}
-              </span>
-              <span className="rounded-full bg-marigold-700 px-3 py-0.5 text-[13px] font-semibold">
-                <Countdown
-                  endsAt={activeOffer.endsAt.toISOString()}
-                  fallback={`Ends ${activeOffer.endsAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-                />
-              </span>
-            </p>
-            <Link
-              href="/offers"
-              className="btn bg-white text-marigold-700 hover:bg-marigold-50 btn-sm shrink-0"
-            >
-              View all offers
-              <ArrowRightIcon className="h-4 w-4" />
-            </Link>
-          </div>
-        </section>
-      )}
+      {/* ------------------------------------------------------ Current offers */}
+      {/* Every active campaign, not just the soonest-ending one. */}
+      <OfferStrip offers={stripOffers} />
 
       {/* --------------------------------------------------- Shop by category */}
       <section aria-labelledby="categories-heading" className="shell py-14">
