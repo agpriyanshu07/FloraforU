@@ -16,8 +16,11 @@ const schema = z.object({
     .trim()
     .min(10, "Please add a little detail — what are you looking for?")
     .max(2000),
-  // Honeypot: a real person never fills this in.
-  website: z.string().max(0).optional(),
+  // Honeypot: a real person never fills this in. Accepted by the schema on
+  // purpose — rejecting it here would return a validation error and teach a bot
+  // exactly which field caught it. It is checked after parsing instead, and a
+  // filled one gets a normal-looking success response.
+  website: z.string().optional(),
 });
 
 export async function POST(request: Request) {
