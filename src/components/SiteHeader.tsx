@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CloseIcon, MenuIcon, WhatsappIcon } from "./icons";
+import WishlistLink from "./WishlistLink";
 
 const NAV = [
   { href: "/catalogue", label: "Catalogue" },
@@ -68,6 +69,7 @@ export default function SiteHeader({
         </nav>
 
         <div className="flex items-center gap-2">
+          <WishlistLink />
           <a
             href={whatsappHref}
             target="_blank"
