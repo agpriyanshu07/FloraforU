@@ -5,6 +5,7 @@ import ProductGallery from "@/components/ProductGallery";
 import ProductGrid from "@/components/ProductGrid";
 import EnquireButton from "@/components/EnquireButton";
 import ShareToStory from "@/components/ShareToStory";
+import WishlistButton from "@/components/WishlistButton";
 import ReviewCard from "@/components/ReviewCard";
 import ReviewForm from "@/components/ReviewForm";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "@/components/Badges";
@@ -230,6 +231,11 @@ export default async function ProductPage({
               <InstagramIcon className="h-4 w-4" />
               DM on Instagram
             </a>
+            <WishlistButton
+              slug={product.slug}
+              productName={product.name}
+              variant="button"
+            />
           </div>
 
           <div className="mt-4">

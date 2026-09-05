@@ -2,6 +2,7 @@ import Image from "next/image";
 import { imageProps } from "@/lib/image";
 import Link from "next/link";
 import EnquireButton from "./EnquireButton";
+import WishlistButton from "./WishlistButton";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "./Badges";
 import { formatPrice, isProductNew } from "@/lib/format";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
@@ -29,6 +30,10 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
 
   return (
     <article className="card group flex h-full w-full flex-col overflow-hidden transition-shadow duration-200 hover:shadow-[0_8px_28px_-12px_rgba(155,44,90,0.28)]">
+      {/* Wrapped so the heart can sit over the photo. It has to be a sibling
+          of this link rather than inside it — a button nested in a link is
+          invalid, and unpredictable to operate by keyboard. */}
+      <div className="relative">
       <Link
         href={`/product/${product.slug}`}
         className="relative block aspect-[4/3] overflow-hidden bg-rose-50"
@@ -59,6 +64,13 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
           <AvailabilityTag availability={product.availability} />
         </span>
       </Link>
+
+        <WishlistButton
+          slug={product.slug}
+          productName={product.name}
+          className="absolute bottom-2 right-2 z-10"
+        />
+      </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
         <CategoryTag>{product.category.name}</CategoryTag>

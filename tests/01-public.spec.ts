@@ -367,3 +367,101 @@ test("the homepage sale module needs no motion, and does not repeat the ribbon",
 
   await context.close();
 });
+
+// ------------------------------------------------------------------ wishlist --
+
+test("an item can be saved, survives navigation, and reaches the saved list", async ({
+  page,
+}) => {
+  await page.goto("/catalogue");
+
+  // Nothing saved yet, so the header offers no count.
+  await expect(page.getByRole("link", { name: "Saved items" })).toBeVisible();
+
+  const hearts = page.getByRole("button", { name: /^Save .+ for later$/ });
+  await hearts.first().click();
+  await hearts.nth(1).click();
+
+  // The heart is a real toggle, not a one-way action.
+  await expect(
+    page.getByRole("button", { name: /^Remove .+ from your saved items$/ }).first(),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Saved items — 2 items" })).toBeVisible();
+
+  // Survives a full navigation, because it lives in localStorage rather than
+  // in component state.
+  await page.goto("/wishlist");
+  const cards = page.locator("article");
+  await expect(cards).toHaveCount(2);
+  await expect(page.getByText("2 items saved in this browser.")).toBeVisible();
+
+  // The point of the list on a WhatsApp-only shop: one message with everything
+  // on it, naming the actual items rather than a generic opener.
+  const send = page.getByRole("link", { name: /Send this list on WhatsApp/ });
+  // wa.me encodes spaces as "+", which decodeURIComponent leaves alone.
+  const href = decodeURIComponent((await send.getAttribute("href")) ?? "").replace(
+    /\+/g,
+    " ",
+  );
+  expect(href).toContain("I've saved these items");
+  const firstName = (await cards.first().getByRole("heading").textContent())?.trim();
+  expect(href).toContain(firstName!);
+
+  // Un-saving from the list removes it from the list.
+  await page.getByRole("button", { name: /^Remove .+ from your saved items$/ }).first().click();
+  await expect(cards).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Clear list" }).click();
+  await expect(page.getByText("Nothing saved yet")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Saved items" })).toBeVisible();
+});
+
+test("the saved list survives a browser with no storage available", async ({
+  browser,
+}) => {
+  // Private mode and locked-down browsers throw on localStorage access. The
+  // hearts must degrade to "does not remember", never take the page down.
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      get() {
+        throw new Error("storage disabled");
+      },
+    });
+  });
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+
+  await page.goto("/wishlist");
+  await expect(page.getByText("Nothing saved yet")).toBeVisible();
+
+  await page.goto("/catalogue");
+  await page.getByRole("button", { name: /^Save .+ for later$/ }).first().click();
+  await expect(page.locator("article").first()).toBeVisible();
+
+  expect(errors, "storage being unavailable must not throw").toEqual([]);
+  await context.close();
+});
+
+test("the wishlist endpoint only returns published products, in saved order", async ({
+  request,
+}) => {
+  const res = await request.post("/api/wishlist", {
+    data: { slugs: ["dry-flower-bunch-assorted", "not-a-real-product", "lace-pot"] },
+  });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+
+  // The unknown slug is dropped rather than erroring, and the order the
+  // customer saved things in is preserved.
+  expect(body.products.map((p: { slug: string }) => p.slug)).toEqual([
+    "dry-flower-bunch-assorted",
+    "lace-pot",
+  ]);
+
+  const bad = await request.post("/api/wishlist", {
+    data: { slugs: Array.from({ length: 61 }, (_, i) => `p-${i}`) },
+  });
+  expect(bad.status(), "an oversized list is refused").toBe(400);
+});

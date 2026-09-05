@@ -60,4 +60,5 @@ export const PUBLIC_ROUTES = [
   "/reviews",
   "/about",
   "/contact",
+  "/wishlist",
 ] as const;

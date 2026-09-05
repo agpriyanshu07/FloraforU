@@ -41,7 +41,7 @@ export default async function ReviewsPage() {
   const wa = withUtm(
     buildWhatsappUrl({
       number: settings.whatsapp,
-      template: "Hi FloralforU! I'd like to leave a review about my recent order.",
+      message: "Hi FloralforU! I'd like to leave a review about my recent order.",
     }),
     "website",
     "reviews",

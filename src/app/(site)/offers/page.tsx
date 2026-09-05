@@ -62,7 +62,7 @@ export default async function OffersPage() {
             const wa = withUtm(
               buildWhatsappUrl({
                 number: settings.whatsapp,
-                template: `Hi FloralforU! I'd like to enquire about the "${offer.title}" offer.`,
+                message: `Hi FloralforU! I'd like to enquire about the "${offer.title}" offer.`,
               }),
               "website",
               `offer-${offer.slug}`,
