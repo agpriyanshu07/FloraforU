@@ -54,6 +54,7 @@ export default async function HomePage() {
     id: offer.id,
     slug: offer.slug,
     title: offer.title,
+    description: offer.description,
     discountLabel: offer.discountLabel,
     endsAt: offer.endsAt.toISOString(),
     endsAtLabel: offer.endsAt.toLocaleDateString("en-IN", {
@@ -63,6 +64,16 @@ export default async function HomePage() {
     theme: offer.theme,
     urgentWithinHours: offer.urgentWithinHours,
     enquiriesThisWeek: offerEnquiryCounts[i],
+    // The campaign's own items, so the homepage shows what is discounted
+    // rather than only announcing that something is.
+    products: offer.products.slice(0, 5).map(({ product }) => ({
+      slug: product.slug,
+      name: product.name,
+      price: product.price,
+      priceOnEnquiry: product.priceOnEnquiry,
+      imageUrl: product.images[0]?.url ?? null,
+      imageAlt: product.images[0]?.alt ?? "",
+    })),
   }));
   const heroWa = withUtm(
     buildWhatsappUrl({ number: settings.whatsapp, template: settings.whatsappTemplate }),

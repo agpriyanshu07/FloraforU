@@ -322,24 +322,23 @@ test("every simultaneously-active offer is reachable from the homepage", async (
   const strip = page.locator("section[aria-labelledby='offer-strip-heading']");
   await expect(strip).toBeVisible();
 
-  const dots = strip.getByRole("button", { name: /Show offer \d+ of \d+/ });
-  const count = await dots.count();
+  // The homepage used to render offers[0] and silently drop the rest. Every
+  // live campaign is now a card in this section, so each one has to be on the
+  // page outright — not behind a carousel, a timer or a click.
+  const titles = await strip.locator("h3").allTextContents();
+  expect(titles.length).toBeGreaterThan(0);
+  expect(titles).toContain("Ganesh Puja Sale");
 
-  if (count === 0) {
-    // One campaign live: it is rendered outright, with no carousel.
-    await expect(strip.getByText("Ganesh Puja Sale")).toBeVisible();
-    return;
+  for (const title of titles) {
+    await expect(strip.getByRole("heading", { name: title, level: 3 })).toBeVisible();
   }
 
-  // Several live: each must be reachable, which is the bug this covers —
-  // the homepage used to render offers[0] and silently drop the rest.
-  for (let i = 0; i < count; i++) {
-    await dots.nth(i).click();
-    await expect(strip.locator(".font-display").first()).toBeVisible();
-  }
+  // The module earns its place by showing what is discounted, so a campaign
+  // with products must link to them rather than only announcing itself.
+  await expect(strip.locator('a[href^="/product/"]').first()).toBeVisible();
 });
 
-test("with reduced motion the offer strip stacks instead of rotating", async ({
+test("the homepage sale module needs no motion, and does not repeat the ribbon", async ({
   browser,
 }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
@@ -347,17 +346,24 @@ test("with reduced motion the offer strip stacks instead of rotating", async ({
   await page.goto("/");
 
   const strip = page.locator("section[aria-labelledby='offer-strip-heading']");
-  // No carousel: every campaign is rendered at once so none is stranded
-  // behind a rotation that never runs.
+  // No carousel at all any more: campaigns stack, so nothing is stranded
+  // behind a rotation that never runs for someone who opted out of motion.
   await expect(strip.getByRole("button", { name: /Show offer/ })).toHaveCount(0);
   await expect(strip).not.toHaveAttribute("aria-roledescription", "carousel");
 
-  // And the countdown pulse is genuinely off, not merely slower.
+  // The countdown pulse is genuinely off, not merely slower.
   const animation = await strip
     .locator("span[aria-live='off']")
     .first()
     .evaluate((el) => getComputedStyle(el).animationName);
   expect(animation).toBe("none");
+
+  // The bug this guards: the ribbon and this module were both full-width
+  // themed bars carrying the same title, countdown and button, so the sale
+  // appeared twice and read as a rendering fault. The ribbon is a
+  // complementary landmark; the module must not be a second one.
+  await expect(page.getByRole("complementary", { name: "Current offer" })).toHaveCount(1);
+  await expect(strip.getByRole("link", { name: /^View offers$/ })).toHaveCount(0);
 
   await context.close();
 });
