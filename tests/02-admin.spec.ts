@@ -1,6 +1,6 @@
 import path from "node:path";
 import { test, expect } from "@playwright/test";
-import { ADMIN_EMAIL, reseed, signIn } from "./helpers";
+import { ADMIN_EMAIL, isolateReviewLimiter, reseed, signIn } from "./helpers";
 
 // These tests mutate shared database state and build on each other, so they run
 // in order rather than in parallel.
@@ -409,4 +409,121 @@ test("a product photo set by URL reaches the public product page", async ({ page
   page.once("dialog", (d) => d.accept());
   await page.click('button:has-text("Delete product")');
   await page.waitForURL(/\/admin\/products\?deleted=1/);
+});
+
+test("a submitted review stays invisible until an admin approves it", async ({ page }) => {
+  await isolateReviewLimiter(page);
+  const quote =
+    "QA moderation loop — the marigold lardi arrived a day early and matched the photos exactly.";
+
+  // 1. Submit as an ordinary visitor.
+  await page.goto("/reviews");
+  await page.fill("#customerName", "QA Moderation");
+  await page.fill("#eventType", "Wedding — QA");
+  await page.fill("#quote", quote);
+  await page.click('button:has-text("Submit review")');
+  await expect(page.getByText("Thanks — we've got your review")).toBeVisible();
+
+  // 2. It must NOT be public yet. This is the whole safety model for opening a
+  //    public write endpoint on the site's main trust signal.
+  await page.goto("/reviews");
+  await expect(page.getByText(quote)).toHaveCount(0);
+
+  // 3. Approve it in the admin queue.
+  await signIn(page);
+  await page.goto("/admin/reviews");
+  const row = page.locator("tr", { hasText: "QA Moderation" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Approve" }).click();
+  await page.waitForURL("**/admin/reviews?moderated=approved");
+
+  // 4. Only now is it public.
+  await page.goto("/reviews");
+  await expect(page.getByText(quote)).toBeVisible();
+});
+
+test("the review endpoint rejects bad input, drops honeypot spam and rate limits", async ({
+  request,
+}) => {
+  const ip = `10.55.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+  const headers = { "x-forwarded-for": ip };
+
+  // Invalid: too-short quote and an out-of-range rating.
+  const bad = await request.post("/api/reviews", {
+    headers,
+    data: { customerName: "A", quote: "short", rating: 9 },
+  });
+  expect(bad.status()).toBe(400);
+  const badBody = await bad.json();
+  expect(Object.keys(badBody.fieldErrors)).toEqual(
+    expect.arrayContaining(["customerName", "quote", "rating"]),
+  );
+
+  // Honeypot filled: accepted with a normal-looking success so a bot learns
+  // nothing, but nothing is stored.
+  const trap = await request.post("/api/reviews", {
+    headers: { "x-forwarded-for": `${ip}9` },
+    data: {
+      customerName: "Spam Bot",
+      quote: "A spam review long enough to clear the length check.",
+      rating: 5,
+      website: "http://spam.example",
+    },
+  });
+  expect(trap.status()).toBe(200);
+  expect((await trap.json()).ok).toBe(true);
+
+  // Rate limit: three per hour, so the fourth is refused.
+  const limitIp = { "x-forwarded-for": `${ip}1` };
+  for (let i = 1; i <= 3; i++) {
+    const ok = await request.post("/api/reviews", {
+      headers: limitIp,
+      data: {
+        customerName: `QA Limit ${i}`,
+        quote: `Rate limit probe ${i}, long enough to clear validation.`,
+        rating: 5,
+      },
+    });
+    expect(ok.status(), `submission ${i} should be accepted`).toBe(200);
+  }
+  const blocked = await request.post("/api/reviews", {
+    headers: limitIp,
+    data: {
+      customerName: "QA Limit 4",
+      quote: "This fourth one within the hour must be refused by the limiter.",
+      rating: 5,
+    },
+  });
+  expect(blocked.status()).toBe(429);
+});
+
+test("a review left on a product page shows on that product, and only that one", async ({
+  page,
+}) => {
+  await isolateReviewLimiter(page);
+
+  const quote = "QA product-scoped — lovely lace pot, packed well and exactly as pictured.";
+
+  await page.goto("/product/lace-pot");
+  await page.fill("#customerName", "QA Product");
+  await page.fill("#quote", quote);
+  await page.click('button:has-text("Submit review")');
+  await expect(page.getByText("Thanks — we've got your review")).toBeVisible();
+
+  await signIn(page);
+  await page.goto("/admin/reviews");
+  await page
+    .locator("tr", { hasText: "QA Product" })
+    .getByRole("button", { name: "Approve" })
+    .click();
+  await page.waitForURL("**/admin/reviews?moderated=approved");
+
+  await page.goto("/product/lace-pot");
+  await expect(page.getByText(quote)).toBeVisible();
+
+  // It belongs to that product, so it must not bleed onto another one. The
+  // slug has to be a real published product — a 404 would pass this vacuously.
+  await page.goto("/product/acrylic-gift-box-clear");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByText(quote)).toHaveCount(0);
 });

@@ -54,8 +54,30 @@ export async function getActiveOffers(): Promise<OfferWithProducts[]> {
   const now = new Date();
   return db.offer.findMany({
     where: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
-    orderBy: { endsAt: "asc" },
+    // Manual priority wins; ties fall back to soonest-ending, which is the
+    // order this returned before priority existed.
+    orderBy: [{ priority: "desc" }, { endsAt: "asc" }],
     include: OFFER_WITH_PRODUCTS,
+  });
+}
+
+/**
+ * How many real enquiries landed this week against the products in a given
+ * offer. Deliberately a live count off the Enquiry table rather than a
+ * decorative number — the site states real figures everywhere else, and an
+ * invented one here would undercut the rest.
+ *
+ * Returns 0 when the offer has no products or no enquiries; callers hide the
+ * line entirely rather than printing "0 people", which reads as a negative
+ * signal rather than a neutral one.
+ */
+export async function getOfferEnquiryCount(offerId: string): Promise<number> {
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  return db.enquiry.count({
+    where: {
+      createdAt: { gte: weekAgo },
+      product: { offers: { some: { offerId } } },
+    },
   });
 }
 
@@ -92,3 +114,13 @@ export async function getNewArrivals(limit = 8): Promise<ProductCardData[]> {
   });
   return [...pinned, ...rest];
 }
+
+/**
+ * The only condition under which a review is shown publicly. Both flags are
+ * required: `status` drives moderation, and `visible` remains the admin's
+ * manual hide switch for an already-approved review.
+ */
+export const PUBLIC_REVIEW_WHERE = {
+  visible: true,
+  status: "approved",
+} as const;

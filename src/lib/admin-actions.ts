@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { refreshPublicPages } from "@/lib/revalidate";
+import { OFFER_THEME_NAMES } from "@/lib/offers";
 import { db } from "./db";
 import { requireSession } from "./auth";
 import { slugify } from "./format";
@@ -345,6 +346,18 @@ const offerSchema = z.object({
   startsAt: z.string().min(1, "Pick a start date."),
   endsAt: z.string().min(1, "Pick an end date."),
   published: z.boolean(),
+  discountLabel: z
+    .string()
+    .trim()
+    .max(24, "Keep it short enough to read at a glance — 24 characters or less.")
+    .default(""),
+  theme: z.enum(OFFER_THEME_NAMES as [string, ...string[]]),
+  priority: z.number().int().min(0).max(100),
+  urgentWithinHours: z
+    .number()
+    .int()
+    .min(1, "Give the countdown at least an hour to escalate in.")
+    .max(720),
 });
 
 export async function saveOfferAction(
@@ -361,6 +374,10 @@ export async function saveOfferAction(
     startsAt: String(formData.get("startsAt") ?? ""),
     endsAt: String(formData.get("endsAt") ?? ""),
     published: formData.get("published") === "on",
+    discountLabel: String(formData.get("discountLabel") ?? ""),
+    theme: String(formData.get("theme") ?? "marigold"),
+    priority: Number(formData.get("priority") ?? 0),
+    urgentWithinHours: Number(formData.get("urgentWithinHours") ?? 48),
   });
 
   if (!parsed.success) {
@@ -396,6 +413,11 @@ export async function saveOfferAction(
     startsAt,
     endsAt,
     published: d.published,
+    // Empty stays null so the badge is omitted rather than rendered blank.
+    discountLabel: d.discountLabel || null,
+    theme: d.theme,
+    priority: d.priority,
+    urgentWithinHours: d.urgentWithinHours,
   };
 
   const offer = id
@@ -435,6 +457,11 @@ const reviewSchema = z.object({
   source: z.string().trim().max(60).default(""),
   visible: z.boolean(),
   displayOrder: z.number().int().min(0),
+  // Link back to the original Instagram post for a quote lifted from a
+  // comment, so the attribution is checkable rather than taken on trust.
+  sourceUrl: z
+    .union([z.string().trim().url("That doesn't look like a full link."), z.literal("")])
+    .default(""),
 });
 
 export async function saveReviewAction(
@@ -452,6 +479,7 @@ export async function saveReviewAction(
     source: String(formData.get("source") ?? ""),
     visible: formData.get("visible") === "on",
     displayOrder: Number(formData.get("displayOrder") ?? 0),
+    sourceUrl: String(formData.get("sourceUrl") ?? ""),
   });
 
   if (!parsed.success) {
@@ -463,10 +491,13 @@ export async function saveReviewAction(
     };
   }
 
+  // Empty stays null so the card renders plain text rather than an empty link.
+  const data = { ...parsed.data, sourceUrl: parsed.data.sourceUrl || null };
+
   if (id) {
-    await db.review.update({ where: { id }, data: parsed.data });
+    await db.review.update({ where: { id }, data });
   } else {
-    await db.review.create({ data: parsed.data });
+    await db.review.create({ data });
   }
 
   refreshPublicPages();
@@ -482,6 +513,32 @@ export async function deleteReviewAction(formData: FormData) {
   refreshPublicPages();
   revalidatePath("/admin/reviews");
   redirect("/admin/reviews?deleted=1");
+}
+
+/**
+ * Moderation for customer-submitted reviews. Approving sets both flags, since
+ * a submission arrives with visible:false as well as status:"pending" —
+ * approving has to clear both for the review to actually appear.
+ */
+export async function moderateReviewAction(formData: FormData) {
+  await guard();
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  if (!id || (decision !== "approved" && decision !== "rejected")) return;
+
+  await db.review.update({
+    where: { id },
+    data: {
+      status: decision,
+      // A rejected review stays in the table so it can be re-read or restored;
+      // it simply never renders.
+      visible: decision === "approved",
+    },
+  });
+
+  refreshPublicPages();
+  revalidatePath("/admin/reviews");
+  redirect(`/admin/reviews?moderated=${decision}`);
 }
 
 // =============================================================== GALLERY ===
@@ -645,6 +702,11 @@ export async function saveSettingsAction(
     const raw = formData.get(key);
     if (raw !== null) values[key] = String(raw);
   }
+
+  // Checkbox, so an unticked box sends nothing at all — it has to be read
+  // separately from the text keys above or it could never be switched off.
+  values.instagramCommentsEnabled =
+    formData.get("instagramCommentsEnabled") === "on" ? "true" : "false";
 
   const whatsappDigits = (values.whatsapp ?? "").replace(/\D/g, "");
   if (whatsappDigits.length < 10) {

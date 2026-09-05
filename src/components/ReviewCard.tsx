@@ -1,4 +1,4 @@
-import { StarIcon } from "./icons";
+import { InstagramIcon, StarIcon } from "./icons";
 
 export default function ReviewCard({
   customerName,
@@ -6,12 +6,15 @@ export default function ReviewCard({
   quote,
   rating,
   source,
+  sourceUrl,
 }: {
   customerName: string;
   eventType: string;
   quote: string;
   rating: number;
   source: string;
+  /** Link back to the original post, when the quote came from Instagram. */
+  sourceUrl?: string | null;
 }) {
   const initials = customerName
     .split(" ")
@@ -43,7 +46,21 @@ export default function ReviewCard({
           <span className="block text-ink-600">
             {eventType}
             {eventType && source ? " · " : ""}
-            {source}
+            {/* Where a quote came from Instagram, it links to the real post
+                rather than asking anyone to take the attribution on trust. */}
+            {sourceUrl ? (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700"
+              >
+                <InstagramIcon className="h-3.5 w-3.5" />
+                {source}
+              </a>
+            ) : (
+              source
+            )}
           </span>
         </span>
       </figcaption>

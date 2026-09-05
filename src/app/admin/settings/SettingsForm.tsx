@@ -111,6 +111,33 @@ export default function SettingsForm({ settings }: { settings: SiteSettings }) {
         </p>
       )}
 
+      <section className="card p-5">
+        <h2 className="font-display text-xl">Instagram comments</h2>
+        <p className="mt-1 text-[13px] text-ink-600">
+          Off by default. When on, reviews you&apos;ve saved with a link to an
+          Instagram post are shown in their own &ldquo;From Instagram&rdquo;
+          section, each linking back to the original comment.
+        </p>
+        <label className="mt-4 flex items-start gap-3">
+          <input
+            type="checkbox"
+            name="instagramCommentsEnabled"
+            defaultChecked={val("instagramCommentsEnabled") === "true"}
+            className="mt-1 h-5 w-5 accent-[#9b2c5a]"
+          />
+          <span>
+            <span className="block text-sm font-semibold">
+              Show the &ldquo;From Instagram&rdquo; section
+            </span>
+            <span className="block text-[13px] text-ink-600">
+              Only quote a comment with the commenter&apos;s knowledge, and keep the
+              wording exactly as they left it. Untick to hide the whole section
+              instantly, without deleting anything.
+            </span>
+          </span>
+        </label>
+      </section>
+
       {GROUPS.map((group) => (
         <section key={group.title} className="card p-5">
           <h2 className="font-display text-xl">{group.title}</h2>

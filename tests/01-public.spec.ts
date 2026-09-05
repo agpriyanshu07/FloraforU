@@ -208,7 +208,15 @@ test("an active offer is shown with a live countdown and an expired one is archi
   await expect(page.getByRole("heading", { name: "Ganesh Puja Sale" })).toBeVisible();
 
   // The countdown only renders after hydration; before that it shows a date.
-  await expect(page.getByText(/Ends in \d+d/)).toBeVisible();
+  // Scoped to the campaign's own card: the site-wide offer ribbon carries a
+  // second countdown, and several campaigns can run at once, so an unscoped
+  // match is ambiguous.
+  await expect(
+    page
+      .locator("section", { has: page.getByRole("heading", { name: "Ganesh Puja Sale" }) })
+      .getByText(/Ends in \d+d/)
+      .first(),
+  ).toBeVisible();
 
   const body = await page.evaluate(() => document.body.innerText);
   const [active, past] = body.split("Past campaigns");
@@ -265,4 +273,91 @@ test("the catalogue PDF is generated from live data", async ({ request }) => {
   const body = await response.body();
   expect(body.subarray(0, 5).toString()).toBe("%PDF-");
   expect(body.byteLength, "PDF should hold the whole catalogue").toBeGreaterThan(10_000);
+});
+
+// -------------------------------------------------------------- sale visibility --
+
+test("the offer ribbon follows the visitor across the site, not just the homepage", async ({
+  page,
+}) => {
+  // Before this the only sign of a live sale was the homepage strip and
+  // /offers, so anyone arriving on a product page from a shared link saw none.
+  for (const route of ["/", "/catalogue", "/product/lace-pot", "/about"]) {
+    await page.goto(route);
+    await expect(
+      page.getByRole("complementary", { name: "Current offer" }),
+      `${route} should carry the sale ribbon`,
+    ).toBeVisible();
+  }
+
+  // Redundant on /offers itself, where the campaigns are already the content.
+  await page.goto("/offers");
+  await expect(page.getByRole("complementary", { name: "Current offer" })).toHaveCount(0);
+});
+
+test("the offer ribbon can be dismissed for the session", async ({ page }) => {
+  await page.goto("/");
+  const ribbon = page.getByRole("complementary", { name: "Current offer" });
+  await expect(ribbon).toBeVisible();
+
+  await page.getByRole("button", { name: /Dismiss the offer bar/ }).click();
+  await expect(ribbon).toHaveCount(0);
+
+  // Still gone after a full navigation, since the choice is held in
+  // sessionStorage rather than in component state.
+  //
+  // This leaves and comes back to the same route on purpose. The dismissal is
+  // keyed by offer id, and two different routes are two independent ISR cache
+  // entries that can have been rendered against different seeds — so comparing
+  // across them would test the cache's freshness, not the ribbon.
+  await page.goto("/about");
+  await page.goto("/");
+  await expect(page.getByRole("complementary", { name: "Current offer" })).toHaveCount(0);
+});
+
+test("every simultaneously-active offer is reachable from the homepage", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const strip = page.locator("section[aria-labelledby='offer-strip-heading']");
+  await expect(strip).toBeVisible();
+
+  const dots = strip.getByRole("button", { name: /Show offer \d+ of \d+/ });
+  const count = await dots.count();
+
+  if (count === 0) {
+    // One campaign live: it is rendered outright, with no carousel.
+    await expect(strip.getByText("Ganesh Puja Sale")).toBeVisible();
+    return;
+  }
+
+  // Several live: each must be reachable, which is the bug this covers —
+  // the homepage used to render offers[0] and silently drop the rest.
+  for (let i = 0; i < count; i++) {
+    await dots.nth(i).click();
+    await expect(strip.locator(".font-display").first()).toBeVisible();
+  }
+});
+
+test("with reduced motion the offer strip stacks instead of rotating", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  const strip = page.locator("section[aria-labelledby='offer-strip-heading']");
+  // No carousel: every campaign is rendered at once so none is stranded
+  // behind a rotation that never runs.
+  await expect(strip.getByRole("button", { name: /Show offer/ })).toHaveCount(0);
+  await expect(strip).not.toHaveAttribute("aria-roledescription", "carousel");
+
+  // And the countdown pulse is genuinely off, not merely slower.
+  const animation = await strip
+    .locator("span[aria-live='off']")
+    .first()
+    .evaluate((el) => getComputedStyle(el).animationName);
+  expect(animation).toBe("none");
+
+  await context.close();
 });

@@ -25,6 +25,10 @@ export function refreshPublicPages() {
   ]) {
     revalidatePath(path);
   }
-  revalidatePath("/product/[slug]", "page");
-  revalidatePath("/categories/[slug]", "page");
+  // The route-group prefix is required: revalidatePath matches the route file
+  // structure, not the public URL, and both pages live in app/(site). Without
+  // "(site)" these two calls match nothing, and a product edit stayed invisible
+  // for the full hour — on the very pages WhatsApp links point customers at.
+  revalidatePath("/(site)/product/[slug]", "page");
+  revalidatePath("/(site)/categories/[slug]", "page");
 }
