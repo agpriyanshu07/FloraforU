@@ -595,33 +595,34 @@ test("a product card pages through its photos without navigating away", async ({
   const next = card.getByRole("button", { name: /^Next photo of Dry Flower Bunch/ });
   await expect(next).toHaveCount(1);
 
-  const before = await card.locator("img").first().getAttribute("src");
+  const photo = card.locator("img").first();
+  const before = await photo.getAttribute("src");
+
+  // No force and no click-until-it-takes here. The arrows are rendered by the
+  // gallery only once it has mounted on the client, so the count assertion
+  // above is the wait for hydration: by this line a click reaches React's
+  // handler, and a plain click also proves the button is genuinely reachable
+  // rather than sitting under something.
+  await next.click();
 
   // The photo changes and the card's link does not fire — the arrows sit inside
   // a linked card, so a stray navigation is the obvious failure here.
-  //
-  // Clicked until it takes, rather than once: the arrows are hydrated on the
-  // client, and on a loaded CI runner a click can land in the window before
-  // React attaches its handler — a single click has nothing to retry it, and
-  // the assertion then fails on a gallery that works. The click only fires
-  // while the photo is still the first one, so this can never page past the
-  // change it is waiting for.
-  await expect
-    .poll(
-      async () => {
-        const src = await card.locator("img").first().getAttribute("src");
-        if (src === before) await next.click({ force: true });
-        return src;
-      },
-      { timeout: 10_000 },
-    )
-    .not.toBe(before);
+  await expect(photo).not.toHaveAttribute("src", before!);
   expect(new URL(page.url()).pathname).toBe("/catalogue");
 
   // A product with a single photo gets no controls at all.
   await expect(
     page.getByRole("button", { name: /^Next photo of Velvet Backdrop/ }),
   ).toHaveCount(0);
+});
+
+test("the photo arrows are never served dead in the markup", async ({ page }) => {
+  // The arrows only work once React has attached to them. Shipping them in the
+  // server HTML puts a control on screen that ignores the first presses of
+  // anyone on a slow connection, so the markup must not carry them at all.
+  const html = await (await page.request.get("/catalogue")).text();
+  expect(html).toContain("Dry Flower Bunch");
+  expect(html).not.toContain("Next photo of");
 });
 
 test("the contact actions stay on one row at every width", async ({ page }) => {

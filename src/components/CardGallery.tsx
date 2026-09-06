@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { imageProps } from "@/lib/image";
 import { ArrowRightIcon } from "./icons";
 
@@ -19,6 +19,12 @@ type CardImage = { url: string; alt: string };
  * The arrows are real buttons rather than swipe-only, because the card sits
  * inside a link and a swipe there is ambiguous — it could equally mean "scroll
  * the page".
+ *
+ * They are also rendered only once this has mounted on the client. Server-side
+ * they would appear in the markup and sit there dead until React attaches its
+ * handlers — on a slow connection that is a visible control that does nothing
+ * when pressed, which is worse than no control at all. The photo itself, its
+ * link and the rest of the card are unaffected and still render on the server.
  */
 export default function CardGallery({
   images,
@@ -33,6 +39,10 @@ export default function CardGallery({
   priority?: boolean;
 }) {
   const [index, setIndex] = useState(0);
+  // False while rendering on the server and through hydration, true once this
+  // is running on the client — the store never changes, so nothing ever
+  // re-subscribes or re-renders after that first pass.
+  const interactive = useSyncExternalStore(subscribeToNothing, () => true, () => false);
 
   const shown = images[Math.min(index, images.length - 1)];
 
@@ -64,7 +74,7 @@ export default function CardGallery({
         )}
       </Link>
 
-      {images.length > 1 && (
+      {interactive && images.length > 1 && (
         <>
           <button
             type="button"
@@ -105,3 +115,5 @@ export default function CardGallery({
     </div>
   );
 }
+
+const subscribeToNothing = () => () => {};
