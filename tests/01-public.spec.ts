@@ -610,3 +610,35 @@ test("a product card pages through its photos without navigating away", async ({
     page.getByRole("button", { name: /^Next photo of Velvet Backdrop/ }),
   ).toHaveCount(0);
 });
+
+test("the three contact actions stay on one row at every width", async ({ page }) => {
+  // They used to wrap, dropping Instagram onto a line of its own. The row has to
+  // hold together on a 320px phone and a desktop card alike, and no label may be
+  // cut off to achieve it.
+  for (const width of [320, 360, 375, 414, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/contact");
+
+    // Found through the WhatsApp link's own parent rather than by class name, so
+    // this keeps testing the layout rather than the utilities that produce it.
+    const boxes = await page
+      .getByRole("link", { name: "Chat on WhatsApp" })
+      .evaluate((link) =>
+        [...link.parentElement!.children].map((child) => ({
+          top: Math.round(child.getBoundingClientRect().top),
+          height: Math.round(child.getBoundingClientRect().height),
+          // Overflowing content means a label is being cut off, not wrapped.
+          clipped: child.scrollWidth > child.clientWidth + 1,
+        })),
+      );
+
+    expect(boxes, `three actions at ${width}px`).toHaveLength(3);
+    expect(new Set(boxes.map((b) => b.top)).size, `one row at ${width}px`).toBe(1);
+    expect(
+      boxes.some((b) => b.clipped),
+      `no label cut off at ${width}px`,
+    ).toBe(false);
+    // The 44px touch target survives the squeeze.
+    expect(Math.min(...boxes.map((b) => b.height))).toBeGreaterThanOrEqual(44);
+  }
+});
