@@ -21,7 +21,9 @@ export const PRODUCT_CARD_SELECT = Prisma.validator<Prisma.ProductSelect>()({
   category: { select: { name: true, slug: true } },
   images: {
     orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-    take: 1,
+    // More than one so a card can page through a product's photos. Capped:
+    // a listing of 24 cards should not carry every photo of every product.
+    take: 5,
     select: { url: true, alt: true },
   },
 });

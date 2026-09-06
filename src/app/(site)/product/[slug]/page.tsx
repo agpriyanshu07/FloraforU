@@ -6,6 +6,7 @@ import ProductGrid from "@/components/ProductGrid";
 import EnquireButton from "@/components/EnquireButton";
 import ShareToStory from "@/components/ShareToStory";
 import WishlistButton from "@/components/WishlistButton";
+import StickyEnquireBar from "@/components/StickyEnquireBar";
 import ReviewCard from "@/components/ReviewCard";
 import ReviewForm from "@/components/ReviewForm";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "@/components/Badges";
@@ -132,6 +133,15 @@ export default async function ProductPage({
         dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
       />
 
+      <StickyEnquireBar
+        watchId="product-actions"
+        productId={product.id}
+        productName={product.name}
+        productSlug={product.slug}
+        priceLabel={priceLabel}
+        waHref={waHref}
+      />
+
       <nav aria-label="Breadcrumb" className="mb-5 text-sm text-ink-600">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>
@@ -207,7 +217,9 @@ export default async function ProductPage({
             </div>
           )}
 
-          <div className="mt-7 flex flex-wrap gap-3">
+          {/* id is watched by the sticky bar, which shows itself only once
+              this row has scrolled out of view. */}
+          <div id="product-actions" className="mt-7 flex flex-wrap gap-3">
             <EnquireButton
               href={waHref}
               productId={product.id}

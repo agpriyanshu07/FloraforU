@@ -145,11 +145,13 @@ export type SeedProduct = {
   availability?: string;
   description?: string;
   isNew?: boolean;
+  /** Seeds a second photo, so the card gallery's arrows have something to do. */
+  multiPhoto?: boolean;
 };
 
 export const PRODUCTS: SeedProduct[] = [
   // --- Artificial Flowers & Greenery (2001-2099) ---
-  { category: "artificial-flowers-greenery", code: "2001", name: "Dry Flower Bunch (Assorted)", spec: "Pack of 12 bunches, height approx 20 inch", price: 480, isNew: true, description: "Mixed dry bunch in natural and dyed shades. Popular for vase fillers and side arrangements." },
+  { category: "artificial-flowers-greenery", code: "2001", name: "Dry Flower Bunch (Assorted)", spec: "Pack of 12 bunches, height approx 20 inch", price: 480, isNew: true, multiPhoto: true, description: "Mixed dry bunch in natural and dyed shades. Popular for vase fillers and side arrangements." },
   { category: "artificial-flowers-greenery", code: "2002", name: "Sola Wood Rose Bunch", spec: "Pack of 10 stems | 5 colours available", price: 350 },
   { category: "artificial-flowers-greenery", code: "2003", name: "Foam Rose Garland (Lardi)", spec: "5 feet per lardi, pack of 6", price: 620 },
   { category: "artificial-flowers-greenery", code: "2004", name: "Marigold Lardi (Genda Phool)", spec: "8 feet, pack of 12 pcs, orange / yellow", price: 540, isNew: true },
@@ -189,7 +191,7 @@ export const PRODUCTS: SeedProduct[] = [
 
   // --- Pots & Vases (3100s) ---
   { category: "pots-vases", code: "3101", name: "Botal Pot (Bottle Vase)", spec: "Height 16 inch, per pc, matte finish", price: 420 },
-  { category: "pots-vases", code: "3102", name: "Lace Pot", spec: 'Size 10", 12", 14" — set of 3', price: 980, isNew: true },
+  { category: "pots-vases", code: "3102", name: "Lace Pot", spec: 'Size 10", 12", 14" — set of 3', price: 980, isNew: true, multiPhoto: true },
   { category: "pots-vases", code: "3103", name: "Moti Pot (Pearl Finish)", spec: "Per pc, height 12 inch, ivory", price: 380 },
   { category: "pots-vases", code: "3104", name: "Marble Finish Planter", spec: "Set of 2, 14 inch + 10 inch", price: 1250 },
   { category: "pots-vases", code: "3105", name: "Metal Urli Bowl", spec: "18 inch diameter, antique gold", price: 1650 },

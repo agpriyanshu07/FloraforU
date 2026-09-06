@@ -1,5 +1,6 @@
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import BackToTop from "@/components/BackToTop";
 import OfferRibbon from "@/components/OfferRibbon";
 import { getSettings } from "@/lib/settings";
 import { getActiveOffers } from "@/lib/queries";
@@ -45,10 +46,12 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
         />
       )}
       <SiteHeader businessName={settings.businessName} whatsappHref={whatsappHref} />
-      <main id="main" className="flex-1">
+      {/* tabIndex -1 so the skip link and Back to top can move focus here. */}
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
         {children}
       </main>
       <SiteFooter settings={settings} />
+      <BackToTop />
     </div>
   );
 }
