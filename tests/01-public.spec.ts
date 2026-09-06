@@ -611,10 +611,10 @@ test("a product card pages through its photos without navigating away", async ({
   ).toHaveCount(0);
 });
 
-test("the three contact actions stay on one row at every width", async ({ page }) => {
-  // They used to wrap, dropping Instagram onto a line of its own. The row has to
-  // hold together on a 320px phone and a desktop card alike, and no label may be
-  // cut off to achieve it.
+test("the contact actions stay on one row at every width", async ({ page }) => {
+  // They used to wrap, dropping the last button onto a line of its own. The row
+  // has to hold together on a 320px phone and a desktop card alike, and no label
+  // may be cut off to achieve it.
   for (const width of [320, 360, 375, 414, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/contact");
@@ -632,7 +632,7 @@ test("the three contact actions stay on one row at every width", async ({ page }
         })),
       );
 
-    expect(boxes, `three actions at ${width}px`).toHaveLength(3);
+    expect(boxes, `actions at ${width}px`).toHaveLength(2);
     expect(new Set(boxes.map((b) => b.top)).size, `one row at ${width}px`).toBe(1);
     expect(
       boxes.some((b) => b.clipped),
@@ -641,4 +641,10 @@ test("the three contact actions stay on one row at every width", async ({ page }
     // The 44px touch target survives the squeeze.
     expect(Math.min(...boxes.map((b) => b.height))).toBeGreaterThanOrEqual(44);
   }
+
+  // Calling is still one tap away, through the phone number itself.
+  // Scoped to main: the footer carries the same number.
+  await expect(
+    page.locator("main").getByRole("link", { name: /^\+91/ }),
+  ).toHaveAttribute("href", /^tel:/);
 });

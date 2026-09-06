@@ -20,10 +20,9 @@ export const metadata: Metadata = {
     "Visit FloralforU at Bank More, Dhanbad, or message us on WhatsApp. Shop address, phone, hours and directions.",
 };
 
-/** Shared by the three action buttons so the row divides evenly. min-w-0 lets a
+/** Shared by both action buttons so the row divides evenly. min-w-0 lets a
  *  column shrink below its label's width, which is what makes the grid hold. */
-const contactBtn =
-  "min-w-0 !px-2 text-center text-[12px] leading-tight break-words sm:!px-4 sm:text-sm";
+const contactBtn = "min-w-0 !px-3 text-center leading-tight break-words sm:!px-5";
 
 export default async function ContactPage() {
   const settings = await getSettings();
@@ -93,25 +92,16 @@ export default async function ContactPage() {
               </li>
             </ul>
 
-            {/* One row on every width. Three equal columns rather than a wrap:
-                the buttons share whatever the card gives them and a long label
-                wraps inside its own pill instead of Instagram dropping to a
-                line of its own. Below 390px the columns are around 85px and an
-                icon costs a quarter of that — enough to cut "WhatsApp" off — so
-                the icons sit out the narrowest phones and the labels carry it.
-                Verified from 320px to 1440px; nothing clips and the 44px touch
-                target holds throughout. */}
-            <div className="mt-6 grid grid-cols-3 gap-2 [&_svg]:hidden min-[390px]:[&_svg]:block sm:gap-3">
+            {/* One row on every width, two equal columns sharing whatever the
+                card gives them. The phone number above is itself a tel: link,
+                so calling is still one tap from here without a button of its
+                own. Verified from 320px to 1440px; nothing clips and the 44px
+                touch target holds throughout. */}
+            <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-3">
               <EnquireButton
                 href={wa}
                 label="Chat on WhatsApp"
                 className={`${contactBtn} btn-whatsapp`}
-              />
-              <EnquireButton
-                href={`tel:${settings.phone.replace(/\s/g, "")}`}
-                channel="call"
-                label="Call the shop"
-                className={`${contactBtn} btn-ghost`}
               />
               <a
                 href={withUtm(settings.instagram, "website", "contact-page")}
