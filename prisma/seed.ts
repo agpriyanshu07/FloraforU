@@ -149,7 +149,18 @@ async function main() {
       startsAt: new Date(now - 3 * day),
       endsAt: new Date(now + 15 * day),
       published: true,
-      products: { create: activeProducts.map((p) => ({ productId: p.id })) },
+      // 20% off everything in the campaign, so cards show the old rate struck
+      // through beside the new one.
+      discountPercent: 20,
+      discountLabel: "20% off",
+      products: {
+        create: activeProducts.map((p, i) => ({
+          productId: p.id,
+          // One item cut harder than the rest, which is how these sales
+          // actually run — and it exercises the per-product override.
+          offerPrice: i === 0 && p.price ? Math.round(p.price * 0.7) : null,
+        })),
+      },
     },
   });
 

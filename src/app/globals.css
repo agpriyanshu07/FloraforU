@@ -104,6 +104,7 @@
   .btn-primary,
   .btn-accent,
   .btn-whatsapp,
+  .btn-instagram,
   .btn-ghost,
   .btn-danger {
     @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2
@@ -114,6 +115,30 @@
   .btn-accent  { @apply bg-marigold-600 text-white hover:bg-marigold-700; }
   .btn-whatsapp{ @apply bg-whatsapp text-white hover:bg-whatsapp-dark; }
   .btn-ghost   { @apply border border-line bg-surface text-ink-900 hover:bg-rose-50; }
+  /* Instagram's gradient, the way btn-whatsapp carries WhatsApp's green, so a
+     link to the shop's profile looks like what it is.
+
+     Weighted to the pink-purple-blue half of their palette rather than running
+     the full yellow-to-blue sweep. The warm end is the problem: white label
+     text measured 2.3-2.8:1 against it, well under AA, and no anchoring of the
+     circle fixed that on a wide pill without pushing the yellow off the button
+     entirely. These are Instagram's own brand colours with the pink taken
+     3% deeper — at #e1306c exactly it is 4.34:1, and while the gradient is
+     anchored so that stop never lands on the button, a later re-anchoring
+     would silently drop below AA. Every stop clears 4.5:1 on its own now, so
+     any blend between them does too; measured 4.9:1 behind the widest label
+     and 5.2:1 behind the header icon. */
+  .btn-instagram {
+    @apply text-white;
+    background: radial-gradient(
+      circle at -20% 145%,
+      #da2f69 0%,
+      #c13584 38%,
+      #833ab4 70%,
+      #2a51d8 100%
+    );
+  }
+  .btn-instagram:hover { filter: brightness(1.08); }
   .btn-danger  { @apply bg-red-700 text-white hover:bg-red-800; }
   .btn-sm      { @apply min-h-10 px-3.5 text-[13px]; }
 

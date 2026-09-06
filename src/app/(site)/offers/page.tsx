@@ -69,7 +69,15 @@ export default async function OffersPage() {
             );
 
             return (
-              <section key={offer.id} aria-labelledby={`offer-${offer.id}`}>
+              <section
+                key={offer.id}
+                // The slug is the anchor the homepage card and every discounted
+                // product page link to, so landing here goes to that campaign
+                // rather than the top of a page listing several.
+                id={offer.slug}
+                aria-labelledby={`offer-${offer.id}`}
+                className="scroll-mt-24"
+              >
                 <div className="card overflow-hidden">
                   {offer.bannerUrl && (
                     <div className="relative aspect-[16/6] bg-marigold-50">
@@ -129,7 +137,7 @@ export default async function OffersPage() {
                         spec={offer.description}
                         price={offer.discountLabel ?? ""}
                         handle={settings.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@").replace(/\/$/, "")}
-                        label="Share this sale"
+                        label="Download sale poster"
                         offer={{
                           title: offer.title,
                           discountLabel: offer.discountLabel,
@@ -147,7 +155,14 @@ export default async function OffersPage() {
                 <ProductGrid
                   products={offer.products.map((op) => op.product)}
                   settings={settings}
-                  offerIds={new Set(offer.products.map((op) => op.productId))}
+                  offerTerms={
+                    new Map(
+                      offer.products.map((op) => [
+                        op.productId,
+                        { offerPrice: op.offerPrice, discountPercent: offer.discountPercent },
+                      ]),
+                    )
+                  }
                 />
               </section>
             );

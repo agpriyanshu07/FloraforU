@@ -5,6 +5,8 @@ import BulkBar from "@/components/admin/BulkBar";
 import SelectAll from "@/components/admin/SelectAll";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
+import { offerPriceOf } from "@/lib/pricing";
+import { getActiveOfferTerms } from "@/lib/queries";
 import type { Prisma } from "@/generated/prisma";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,11 @@ export default async function AdminProductsPage({
     }),
     db.product.count({ where }),
   ]);
+
+  // Which of these are in a live campaign, and at what price. Without this the
+  // table shows the everyday rate while the site shows a discounted one, and
+  // the shop edits prices without knowing a sale is running against them.
+  const offerTerms = await getActiveOfferTerms();
 
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
   const qs = (p: number) => {
@@ -170,7 +177,24 @@ export default async function AdminProductsPage({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-ink-600">{p.category.name}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{formatPrice(p.price, p.priceOnEnquiry)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {(() => {
+                    const offer = offerTerms.get(p.id);
+                    const sale = offerPriceOf(p.price, p.priceOnEnquiry, offer);
+                    if (sale === null) return formatPrice(p.price, p.priceOnEnquiry);
+                    return (
+                      <>
+                        <span className="font-medium">{formatPrice(sale, false)}</span>{" "}
+                        <span className="text-ink-600 line-through">
+                          {formatPrice(p.price, p.priceOnEnquiry)}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-marigold-700">
+                          {offer?.title}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </td>
                 <td className="px-4 py-3">
                   <span className="flex flex-wrap gap-1 text-[11px] font-bold uppercase tracking-wider">
                     {(p.newUntil ? p.newUntil > new Date() : p.isNew) && (

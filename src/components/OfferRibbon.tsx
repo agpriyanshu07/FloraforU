@@ -112,7 +112,15 @@ export default function OfferRibbon({ offer }: { offer: RibbonOffer }) {
         <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <span className="truncate font-semibold">{offer.title}</span>
           {offer.discountLabel && (
-            <span className="rounded bg-white/20 px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide">
+            // A solid white chip carrying the campaign's own colour, rather
+            // than white-on-white/20: that translucent version resolved to
+            // white on #c3753a — 3.54:1, under AA. It only rendered once a
+            // campaign actually carried a discount badge, which is why nothing
+            // caught it until one did. buttonText is the theme's own token for
+            // exactly this case, so it stays legible on all four ribbons.
+            <span
+              className={`rounded bg-white px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide ${theme.buttonText}`}
+            >
               {offer.discountLabel}
             </span>
           )}

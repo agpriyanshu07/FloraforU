@@ -9,6 +9,7 @@ import { clear, useWishlist } from "@/lib/wishlist";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 import { formatPrice } from "@/lib/format";
 import type { ProductCardData } from "@/lib/queries";
+import type { OfferTerms } from "@/lib/pricing";
 import type { SiteSettings } from "@/lib/settings";
 
 /**
@@ -35,11 +36,15 @@ function revive(rows: unknown[]): ProductCardData[] {
 
 export default function WishlistBoard({
   settings,
-  offerSlugs,
+  offerTermsBySlug,
 }: {
   settings: SiteSettings;
-  /** Slugs currently in a live campaign, so cards can show the offer badge. */
-  offerSlugs: string[];
+  /**
+   * Campaign terms for every product in a live sale, keyed by slug, so a saved
+   * item that has since gone on sale shows its new price here too — which is
+   * most of the point of having saved it.
+   */
+  offerTermsBySlug: Record<string, OfferTerms>;
 }) {
   const slugs = useWishlist();
   const key = slugs.join(",");
@@ -143,7 +148,7 @@ export default function WishlistBoard({
     "wishlist",
   );
 
-  const offers = new Set(offerSlugs);
+
 
   return (
     <>
@@ -181,7 +186,7 @@ export default function WishlistBoard({
       <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {products.map((p) => (
           <li key={p.id} className="flex">
-            <ProductCard product={p} settings={settings} onOffer={offers.has(p.slug)} />
+            <ProductCard product={p} settings={settings} offer={offerTermsBySlug[p.slug]} />
           </li>
         ))}
       </ul>

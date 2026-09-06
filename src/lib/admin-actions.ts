@@ -352,6 +352,10 @@ const offerSchema = z.object({
     .max(24, "Keep it short enough to read at a glance — 24 characters or less.")
     .default(""),
   theme: z.enum(OFFER_THEME_NAMES as [string, ...string[]]),
+  // Empty means "no arithmetic discount", which is different from 0.
+  discountPercent: z
+    .union([z.literal(""), z.coerce.number().int().min(1).max(99)])
+    .transform((v) => (v === "" ? null : v)),
   priority: z.number().int().min(0).max(100),
   urgentWithinHours: z
     .number()
@@ -359,6 +363,29 @@ const offerSchema = z.object({
     .min(1, "Give the countdown at least an hour to escalate in.")
     .max(720),
 });
+
+/**
+ * The per-product price overrides, as {productId: rupees}. Non-numeric and
+ * non-positive entries are dropped here so the caller only ever sees usable
+ * figures.
+ */
+function parseOfferPrices(raw: FormDataEntryValue | null): Record<string, number> {
+  if (typeof raw !== "string" || !raw.trim()) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+
+  const out: Record<string, number> = {};
+  for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) out[id] = Math.round(n);
+  }
+  return out;
+}
 
 export async function saveOfferAction(
   _prev: ActionState,
@@ -375,6 +402,7 @@ export async function saveOfferAction(
     endsAt: String(formData.get("endsAt") ?? ""),
     published: formData.get("published") === "on",
     discountLabel: String(formData.get("discountLabel") ?? ""),
+    discountPercent: String(formData.get("discountPercent") ?? "").trim(),
     theme: String(formData.get("theme") ?? "marigold"),
     priority: Number(formData.get("priority") ?? 0),
     urgentWithinHours: Number(formData.get("urgentWithinHours") ?? 48),
@@ -415,6 +443,7 @@ export async function saveOfferAction(
     published: d.published,
     // Empty stays null so the badge is omitted rather than rendered blank.
     discountLabel: d.discountLabel || null,
+    discountPercent: d.discountPercent,
     theme: d.theme,
     priority: d.priority,
     urgentWithinHours: d.urgentWithinHours,
@@ -424,10 +453,36 @@ export async function saveOfferAction(
     ? await db.offer.update({ where: { id }, data })
     : await db.offer.create({ data });
 
+  // Per-product overrides arrive as one JSON object. Anything unparseable is
+  // treated as "no overrides" rather than failing the save: the campaign itself
+  // is the thing being edited, and losing it over a malformed extra would be
+  // the worse outcome.
+  const overrides = parseOfferPrices(formData.get("offerPrices"));
+
+  // Read back the real prices so an override that is not actually a discount is
+  // dropped here rather than reaching the site. The form says so as it is typed;
+  // this is the check that holds when someone posts the form directly.
+  const priced = await db.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, price: true, priceOnEnquiry: true },
+  });
+  const priceOf = new Map(priced.map((p) => [p.id, p]));
+
   await db.offerProduct.deleteMany({ where: { offerId: offer.id } });
   if (productIds.length > 0) {
     await db.offerProduct.createMany({
-      data: productIds.map((productId) => ({ offerId: offer.id, productId })),
+      data: productIds.map((productId) => {
+        const product = priceOf.get(productId);
+        const override = overrides[productId];
+        const usable =
+          override !== undefined &&
+          product !== undefined &&
+          !product.priceOnEnquiry &&
+          product.price !== null &&
+          override > 0 &&
+          override < product.price;
+        return { offerId: offer.id, productId, offerPrice: usable ? override : null };
+      }),
     });
   }
 

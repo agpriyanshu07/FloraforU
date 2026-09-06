@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DownloadIcon } from "./icons";
 
 /** Campaign accents, mirroring OFFER_THEMES for the canvas (which needs raw
  *  hex, not Tailwind classes). */
@@ -19,9 +20,14 @@ export type StoryOffer = {
 };
 
 /**
- * "Share to Instagram Story" — renders a 1080x1920 story card on a canvas and
- * downloads it as a PNG, ready to post. Runs entirely in the browser; no server
- * round-trip and no image-generation service.
+ * Renders a 1080x1920 story-sized card on a canvas and downloads it as a PNG,
+ * ready for the customer to post themselves. Runs entirely in the browser; no
+ * server round-trip and no image-generation service.
+ *
+ * The button used to read "Save as Instagram Story", which promised something
+ * this cannot do: the site has no connection to anyone's Instagram account and
+ * posts nothing. All it does is put an image in your downloads. The label says
+ * that now, and the caption underneath says what to do with it.
  *
  * Two shapes: a product card (the original), or a campaign card when `offer` is
  * passed — same generator so both stay visually consistent as the brand evolves.
@@ -141,9 +147,23 @@ export default function ShareToStory({
   }
 
   return (
-    <button type="button" onClick={makeStory} className="btn-ghost btn-sm" disabled={busy}>
-      {busy ? "Preparing…" : (label ?? "Save as Instagram Story")}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={makeStory}
+        className="btn-ghost btn-sm"
+        disabled={busy}
+      >
+        <DownloadIcon className="h-4 w-4 shrink-0" />
+        {busy ? "Making the image…" : (label ?? "Download story image")}
+      </button>
+      {!label && (
+        <p className="mt-1.5 text-[13px] text-ink-600">
+          Saves a picture to your device, sized for Instagram or WhatsApp Status.
+          You post it yourself — nothing is shared from here.
+        </p>
+      )}
+    </div>
   );
 }
 

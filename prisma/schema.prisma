@@ -89,7 +89,13 @@ model Offer {
   published         Boolean        @default(true)
   // Free text rather than a number: real campaigns are "Flat Rs 200 off",
   // "Buy 2 get 1", "Up to 40% off" — a single percent column can't hold those.
+  // This is the headline wording only; it does not change any price.
   discountLabel     String?
+  // The percentage actually taken off every product in the campaign, which is
+  // what lets a card show the old price struck through beside the new one.
+  // Separate from discountLabel because that one is a slogan and this one is
+  // arithmetic: a "Buy 2 get 1" campaign has a label and no percentage.
+  discountPercent   Int?
   // Accent palette for this campaign, so a Diwali sale and a monsoon clearance
   // don't read as the same banner recoloured. See OFFER_THEMES in lib/offers.ts.
   theme             String         @default("marigold")
@@ -106,10 +112,15 @@ model Offer {
 }
 
 model OfferProduct {
-  offerId   String
-  productId String
-  offer     Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  offerId    String
+  productId  String
+  // Overrides the campaign percentage for this one product, for the item that
+  // is discounted harder (or barely) than the rest of the sale. Null means the
+  // campaign percentage applies; if that is null too, the product is simply
+  // part of the campaign at its usual price.
+  offerPrice Float?
+  offer      Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@id([offerId, productId])
 }

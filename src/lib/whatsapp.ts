@@ -23,6 +23,7 @@ export function buildWhatsappUrl({
   productName,
   productCode,
   productUrl,
+  note,
 }: {
   number: string;
   template?: string;
@@ -34,6 +35,13 @@ export function buildWhatsappUrl({
   message?: string;
   productName?: string;
   productCode?: string | null;
+  /**
+   * Appended after the template. Used to carry the sale price the customer was
+   * actually looking at: without it the shop reads "enquiring about Dry Flower
+   * Bunch", quotes the everyday rate, and the customer has to argue the
+   * discount they saw a second earlier.
+   */
+  note?: string;
   productUrl?: string;
 }): string {
   const text = (
@@ -49,7 +57,9 @@ export function buildWhatsappUrl({
           "Hi FloralforU! I'd like to enquire about your event décor items."
   ).trim();
 
-  return `https://wa.me/${normaliseWhatsappNumber(number)}?text=${encodeURIComponent(text)}`;
+  const body = note ? `${text}\n\n${note}` : text;
+
+  return `https://wa.me/${normaliseWhatsappNumber(number)}?text=${encodeURIComponent(body)}`;
 }
 
 /** Adds UTM tags so WhatsApp traffic from the site is attributable. */
@@ -58,4 +68,27 @@ export function withUtm(url: string, source: string, medium = "website"): string
   u.searchParams.set("utm_source", source);
   u.searchParams.set("utm_medium", medium);
   return u.toString();
+}
+
+/**
+ * A link that opens a message thread with the shop, rather than its profile.
+ *
+ * "DM on Instagram" used to point at the profile page, so it promised a
+ * conversation and delivered a grid of photos — the customer then had to find
+ * Message themselves. ig.me/m/<handle> is Instagram's own direct-message link
+ * and opens the thread in the app.
+ *
+ * Falls back to the profile URL when the handle can't be read out of the
+ * stored address, because a link to the right shop beats a broken one.
+ */
+export function instagramDmUrl(profileUrl: string): string {
+  const handle = profileUrl
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .replace(/[/?#].*$/, "")
+    .replace(/^@/, "");
+
+  return /^[A-Za-z0-9._]{1,30}$/.test(handle)
+    ? `https://ig.me/m/${handle}`
+    : profileUrl;
 }

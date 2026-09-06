@@ -64,7 +64,7 @@ export default async function CataloguePage({
           <ProductGrid
             products={result.products}
             settings={settings}
-            offerIds={result.offerIds}
+            offerTerms={result.offerTerms}
             priorityCount={4}
             heading="All products"
           />

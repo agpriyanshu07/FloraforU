@@ -93,7 +93,7 @@ export default function SiteHeader({
             href={instagramHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-ghost hidden w-11 !px-0 sm:inline-flex"
+            className="btn-instagram hidden w-11 !px-0 sm:inline-flex"
           >
             <InstagramIcon className="h-[18px] w-[18px] shrink-0" />
             <span className="sr-only">{businessName} on Instagram</span>
@@ -149,7 +149,7 @@ export default function SiteHeader({
               href={instagramHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-ghost min-w-0 !px-3"
+              className="btn-instagram min-w-0 !px-3"
             >
               <InstagramIcon className="h-4 w-4 shrink-0" />
               Instagram

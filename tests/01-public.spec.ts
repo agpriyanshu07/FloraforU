@@ -723,3 +723,184 @@ test("the homepage content is visible with JavaScript disabled", async ({ browse
   await expect(page.getByRole("heading", { name: "New arrivals" })).toBeVisible();
   await context.close();
 });
+
+test("every Instagram link carries the brand gradient, readable in white", async ({
+  page,
+}) => {
+  // Instagram's own gradient runs from pale yellow to blue, and white label text
+  // on the warm end measures ~2.4:1 — well under AA. The palette here is
+  // weighted to the pink-purple-blue half to clear it, which is easy to undo by
+  // "restoring" the real thing, so the stops are checked rather than trusted.
+  const contrastVsWhite = (r: number, g: number, b: number) => {
+    const channel = (c: number) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance =
+      0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+    return 1.05 / (luminance + 0.05);
+  };
+
+  for (const route of ["/", "/contact", "/reviews", "/product/lace-pot"]) {
+    await page.goto(route);
+
+    // The action buttons, not every link that happens to point at Instagram —
+    // the feed's photo tiles link there too and are meant to look like photos.
+    const links = page.locator("a.btn-instagram");
+    const count = await links.count();
+    expect(count, `Instagram buttons on ${route}`).toBeGreaterThan(0);
+
+    // And none of them has been quietly returned to the old plain treatment.
+    await expect(
+      page.locator('a[href*="instagram.com"].btn-ghost'),
+      `${route} still has a plain Instagram button`,
+    ).toHaveCount(0);
+
+    for (let i = 0; i < count; i++) {
+      const background = await links
+        .nth(i)
+        .evaluate((el) => getComputedStyle(el).backgroundImage);
+
+      expect(background, `${route} link ${i} has the gradient`).toContain("gradient");
+
+      // Every stop must clear AA on its own; a blend of two passing colours
+      // stays between them, so the whole sweep clears it too.
+      const stops = [...background.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)];
+      expect(stops.length, `${route} link ${i} colour stops`).toBeGreaterThan(1);
+
+      for (const [, r, g, b] of stops) {
+        const ratio = contrastVsWhite(Number(r), Number(g), Number(b));
+        expect(
+          ratio,
+          `${route} link ${i}: white on rgb(${r},${g},${b}) is ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  }
+});
+
+test("an offer shows the old price struck through beside the new one", async ({ page }) => {
+  await page.goto("/offers");
+
+  const card = page.locator("article").first();
+  await expect(card).toBeVisible();
+
+  // Three things have to agree, or the discount is not believable: the price
+  // paid, the price it replaces, and the percentage between them.
+  const struck = card.locator(".line-through").first();
+  await expect(struck).toBeVisible();
+
+  const rupees = (text: string) => Number(text.replace(/[^0-9]/g, ""));
+  const was = rupees((await struck.innerText()).trim());
+  const chip = await card.getByText(/\d+% off/).first().innerText();
+  const percent = Number(chip.replace(/[^0-9]/g, ""));
+
+  // The current price is the first rupee figure in the block, before the struck one.
+  const block = await struck.locator("xpath=..").innerText();
+  const now = rupees(block.split("₹")[1] ?? "");
+
+  expect(now, "the sale price is lower than the original").toBeLessThan(was);
+  expect(
+    Math.round(((was - now) / was) * 100),
+    `the badge says ${percent}% and the prices say otherwise`,
+  ).toBe(percent);
+
+  // The struck price must be announced as a former price, not read out as if
+  // it were what you pay.
+  await expect(struck).toHaveAttribute("aria-label", /^Was ₹/);
+});
+
+test("a discounted product quotes the sale price everywhere on its page", async ({
+  page,
+}) => {
+  await page.goto("/offers");
+  const href = await page
+    .locator("article a[href^='/product/']")
+    .first()
+    .getAttribute("href");
+  await page.goto(href!);
+
+  const struck = page.locator("main .line-through").first();
+  await expect(struck).toBeVisible();
+
+  // The campaign is named and dated, so the discount can be checked rather than
+  // taken on trust.
+  await expect(page.getByRole("link", { name: /Sale|Offer|Clearance/ }).first()).toBeVisible();
+
+  // The enquiry itself has to carry the price the customer is looking at.
+  // Without it the shop opens a chat about a product with no figure attached,
+  // quotes the everyday rate, and the customer argues the discount they just saw.
+  const enquire = page.locator('main a[href^="https://wa.me/"]').first();
+  // searchParams, not decodeURIComponent: the message is form-encoded, so the
+  // latter leaves every space as a "+" and no assertion about wording matches.
+  const wa =
+    new URL((await enquire.getAttribute("href")) ?? "").searchParams.get("text") ?? "";
+  const wasPrice = (await struck.innerText()).trim();
+
+  expect(wa, "the enquiry does not mention the sale price").toContain("Seen on the website at");
+  expect(wa, "the old price is not marked as the old one").toContain(`was ${wasPrice}`);
+
+  // And the sticky bar a phone shows quotes the same figure, not the old one.
+  const nowPrice = (await page.locator("main .line-through").first().locator("xpath=..").innerText())
+    .split("₹")[1]
+    ?.split(/\s/)[0];
+  expect(wa, "the enquiry quotes a different price from the page").toContain(`₹${nowPrice}`);
+});
+
+test("action buttons wear the icon of the thing they open", async ({ page }) => {
+  await page.goto("/product/lace-pot");
+
+  // "Call the shop" carried a WhatsApp mark, promising the wrong app. Each
+  // button's icon is checked against its href rather than its label.
+  // Matched on accessible name, which for the WhatsApp button is its aria-label
+  // ("Enquire about <product> on WhatsApp") rather than its visible text.
+  const rows: [RegExp, RegExp][] = [
+    [/^Enquire about .* on WhatsApp$/, /^https:\/\/wa\.me\//],
+    [/^Call the shop$/, /^tel:/],
+    [/^DM on Instagram$/, /^https:\/\/ig\.me\/m\//],
+  ];
+
+  for (const [name, href] of rows) {
+    const link = page.getByRole("link", { name }).first();
+    await expect(link, `${name} exists`).toBeVisible();
+    expect(await link.getAttribute("href"), `${name} points at the right app`).toMatch(href);
+  }
+
+  // A tel: link has no browsing context to open, so it must not target a new tab.
+  const call = page.getByRole("link", { name: "Call the shop" }).first();
+  expect(await call.getAttribute("target"), "tel: opened a blank tab").toBeNull();
+});
+
+test("the story button says it downloads a file, not that it posts for you", async ({
+  page,
+}) => {
+  await page.goto("/product/lace-pot");
+
+  // The old label, "Save as Instagram Story", read as though the site would put
+  // the product on the customer's own story. It cannot: it makes a PNG.
+  await expect(page.getByRole("button", { name: /Instagram Story/i })).toHaveCount(0);
+
+  const button = page.getByRole("button", { name: /Download story image/i });
+  await expect(button).toBeVisible();
+  await expect(page.getByText(/You post it yourself/i)).toBeVisible();
+});
+
+test("the homepage offer card announces itself as one campaign, not its whole text", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  // The whole banner is a single link. Without an explicit name it announced as
+  // its entire contents run together — "Ends in 14d 9h 47m20% offGanesh Puja
+  // SaleFestive lamps, torans…" — which no screen-reader user can act on.
+  const card = page.locator('a[href^="/offers#"]').first();
+  const name = (await card.getAttribute("aria-label")) ?? "";
+  expect(name, "the card link has no name of its own").toMatch(/see this offer$/);
+  expect(name.length, "the name is the whole card again").toBeLessThan(80);
+
+  // And it lands on that campaign rather than the top of a page listing several.
+  const href = (await card.getAttribute("href"))!;
+  await page.goto(href);
+  const anchor = href.split("#")[1];
+  await expect(page.locator(`#${anchor}`)).toBeVisible();
+});

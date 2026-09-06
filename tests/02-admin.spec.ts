@@ -527,3 +527,66 @@ test("a review left on a product page shows on that product, and only that one",
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText(quote)).toHaveCount(0);
 });
+
+test("a campaign discount round-trips and reaches the public price", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/offers");
+
+  await page
+    .locator("tr", { hasText: "Ganesh Puja Sale" })
+    .first()
+    .getByRole("link", { name: "Edit" })
+    .click();
+  await page.waitForURL(/edit=/);
+
+  const percent = page.locator("#discountPercent");
+  await expect(percent).toHaveValue("20");
+
+  // Selected products float to the top and carry a price box each — editing a
+  // ten-item sale used to mean hunting through ninety-seven alphabetical rows.
+  const overrides = page.locator('input[id^="price-"]');
+  await expect(overrides.first()).toBeVisible();
+  const count = await overrides.count();
+  expect(count, "one price box per product in the campaign").toBeGreaterThan(1);
+
+  // The form states the rupee outcome before it is saved.
+  await percent.fill("50");
+  await expect(page.getByText(/Shows as ₹.*campaign percentage/).first()).toBeVisible();
+
+  // An override that isn't a discount is called out rather than accepted.
+  await overrides.nth(1).fill("99999999");
+  await expect(page.getByText(/Not a discount/).first()).toBeVisible();
+  await overrides.nth(1).fill("");
+
+  await page.getByRole("button", { name: /Save campaign/ }).click();
+  await page.waitForURL(/saved=/);
+
+  // 50% off has to be what the shop actually sees on the site.
+  await page.goto("/offers");
+  await expect(page.getByText("50% off").first()).toBeVisible();
+
+  // Put it back, so the suite leaves the campaign as it found it.
+  await page.goto("/admin/offers");
+  await page
+    .locator("tr", { hasText: "Ganesh Puja Sale" })
+    .first()
+    .getByRole("link", { name: "Edit" })
+    .click();
+  await page.waitForURL(/edit=/);
+  await page.locator("#discountPercent").fill("20");
+  await page.getByRole("button", { name: /Save campaign/ }).click();
+  await page.waitForURL(/saved=/);
+});
+
+test("the admin product list shows the price a sale is currently charging", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/admin/products?q=Marigold");
+
+  // Without this the table shows the everyday rate while the site charges less,
+  // and prices get edited without anyone knowing a campaign is running.
+  const row = page.locator("tr", { hasText: "Marigold Lardi" }).first();
+  await expect(row.locator(".line-through")).toBeVisible();
+  await expect(row.getByText("Ganesh Puja Sale")).toBeVisible();
+});

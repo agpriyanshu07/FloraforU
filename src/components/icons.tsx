@@ -65,6 +65,31 @@ export const InstagramIcon = ({ className }: IconProps) => (
   </svg>
 );
 
+/**
+ * The same mark painted in Instagram's gradient, for the places where it sits on
+ * the page rather than on a button — where btn-instagram's gradient background
+ * does the colouring instead and this glyph would be gradient on gradient.
+ *
+ * The gradient id is fixed rather than generated: repeated ids resolve to the
+ * first definition in the document, which is exactly the same gradient, and a
+ * generated one would differ between the server and client renders.
+ */
+export const InstagramColorIcon = ({ className }: IconProps) => (
+  <svg {...base(className)} stroke="url(#ffu-ig)">
+    <defs>
+      <linearGradient id="ffu-ig" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0%" stopColor="#da2f69" />
+        <stop offset="38%" stopColor="#c13584" />
+        <stop offset="70%" stopColor="#833ab4" />
+        <stop offset="100%" stopColor="#2a51d8" />
+      </linearGradient>
+    </defs>
+    <rect x="2" y="2" width="20" height="20" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.5" cy="6.5" r="1" fill="url(#ffu-ig)" stroke="none" />
+  </svg>
+);
+
 export const SearchIcon = ({ className }: IconProps) => (
   <svg {...base(className)}>
     <circle cx="11" cy="11" r="7" />
