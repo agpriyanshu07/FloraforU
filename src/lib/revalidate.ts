@@ -17,6 +17,10 @@ export function refreshPublicPages() {
     "/catalogue",
     "/categories",
     "/offers",
+    // The saved list renders offer prices too, so a campaign starting has to
+    // reach it as well — otherwise a customer's saved item shows the old rate
+    // for up to an hour after the sale goes live.
+    "/wishlist",
     "/reviews",
     "/gallery",
     "/about",
