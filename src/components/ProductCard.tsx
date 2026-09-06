@@ -1,8 +1,7 @@
-import Image from "next/image";
-import { imageProps } from "@/lib/image";
 import Link from "next/link";
 import EnquireButton from "./EnquireButton";
 import WishlistButton from "./WishlistButton";
+import CardGallery from "./CardGallery";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "./Badges";
 import { formatPrice, isProductNew } from "@/lib/format";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
@@ -18,7 +17,6 @@ type Props = {
 
 export default function ProductCard({ product, settings, onOffer, priority }: Props) {
   const isNew = isProductNew(product);
-  const image = product.images[0];
   const productUrl = `${settings.siteUrl}/product/${product.slug}`;
   const waHref = buildWhatsappUrl({
     number: settings.whatsapp,
@@ -30,40 +28,26 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
 
   return (
     <article className="card group flex h-full w-full flex-col overflow-hidden transition-shadow duration-200 hover:shadow-[0_8px_28px_-12px_rgba(155,44,90,0.28)]">
-      {/* Wrapped so the heart can sit over the photo. It has to be a sibling
-          of this link rather than inside it — a button nested in a link is
-          invalid, and unpredictable to operate by keyboard. */}
+      {/* Wrapped so the heart and badges can sit over the photo. They are
+          siblings of the gallery's own link rather than inside it — a button
+          nested in an anchor is invalid markup. */}
       <div className="relative">
-      <Link
-        href={`/product/${product.slug}`}
-        className="relative block aspect-[4/3] overflow-hidden bg-rose-50"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        {image ? (
-          <Image
-            {...imageProps(image.url, 560)}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            priority={priority}
-          />
-        ) : (
-          <span className="flex h-full items-center justify-center text-sm text-ink-600">
-            Photo coming soon
-          </span>
-        )}
+        <CardGallery
+          images={product.images}
+          productName={product.name}
+          href={`/product/${product.slug}`}
+          priority={priority}
+        />
+
         {(isNew || onOffer) && (
-          <span className="absolute left-2 top-2 flex flex-wrap gap-1.5">
+          <span className="absolute left-2 top-2 z-10 flex flex-wrap gap-1.5">
             {isNew && <NewBadge />}
             {onOffer && <OfferBadge />}
           </span>
         )}
-        <span className="absolute right-2 top-2">
+        <span className="absolute right-2 top-2 z-10">
           <AvailabilityTag availability={product.availability} />
         </span>
-      </Link>
 
         <WishlistButton
           slug={product.slug}

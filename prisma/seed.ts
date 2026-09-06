@@ -108,6 +108,20 @@ async function main() {
               position: 0,
               isPrimary: true,
             },
+            // A handful of products carry a second photo. Real listings will
+            // have several, and without at least one multi-photo product here
+            // the card gallery's arrows are never exercised — by a test or by
+            // anyone looking at the seeded site.
+            ...(p.multiPhoto
+              ? [
+                  {
+                    url: "/img/categories/lights-lighting-decor.svg",
+                    alt: `${p.name} — second view (placeholder image, awaiting real product photo)`,
+                    position: 1,
+                    isPrimary: false,
+                  },
+                ]
+              : []),
           ],
         },
       },

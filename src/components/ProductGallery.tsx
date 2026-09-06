@@ -35,25 +35,29 @@ export default function ProductGallery({
         />
       </div>
 
+      {/* A div, not a ul: role="tablist" requires its tabs to be direct
+          children, and the <li> wrappers this used to have broke that
+          relationship — axe flagged aria-required-children,
+          aria-required-parent and listitem all at once. It went unnoticed
+          because no product had a second photo until now. */}
       {images.length > 1 && (
-        <ul className="mt-3 flex gap-2" role="tablist" aria-label={`${productName} photos`}>
+        <div className="mt-3 flex gap-2" role="tablist" aria-label={`${productName} photos`}>
           {images.map((img, i) => (
-            <li key={img.url + i}>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={i === active}
-                aria-label={`Show photo ${i + 1} of ${images.length}`}
-                onClick={() => setActive(i)}
-                className={`relative h-16 w-16 overflow-hidden rounded-lg border-2 transition-colors duration-200 ${
-                  i === active ? "border-rose-600" : "border-line hover:border-rose-300"
-                }`}
-              >
-                <Image {...imageProps(img.url, 128)} alt="" fill sizes="64px" className="object-cover" />
-              </button>
-            </li>
+            <button
+              key={img.url + i}
+              type="button"
+              role="tab"
+              aria-selected={i === active}
+              aria-label={`Show photo ${i + 1} of ${images.length}`}
+              onClick={() => setActive(i)}
+              className={`relative h-16 w-16 overflow-hidden rounded-lg border-2 transition-colors duration-200 ${
+                i === active ? "border-rose-600" : "border-line hover:border-rose-300"
+              }`}
+            >
+              <Image {...imageProps(img.url, 128)} alt="" fill sizes="64px" className="object-cover" />
+            </button>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

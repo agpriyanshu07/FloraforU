@@ -535,3 +535,78 @@ test("the suggestion endpoint ignores one-character queries", async ({ request }
   const upper = await request.get("/api/search?q=LAMP");
   expect((await upper.json()).products.length).toBe(body.products.length);
 });
+
+// --------------------------------------------------------- detail and polish --
+
+test("the sticky enquire bar appears once the real button is scrolled past", async ({
+  browser,
+}) => {
+  // The whole site funnels to one action, and on a phone that action scrolls
+  // away behind the description, reviews and related items.
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto("/product/lace-pot");
+
+  const bar = page.locator("div.fixed.bottom-0").first();
+  const hidden = async () =>
+    ((await bar.getAttribute("class")) ?? "").includes("translate-y-full");
+
+  expect(await hidden(), "hidden while the real button is still in view").toBe(true);
+
+  // A jump, not a gradual scroll: an IntersectionObserver never fires for this
+  // (intersection never changes), which is how two earlier attempts silently
+  // did nothing.
+  await page.evaluate(() => window.scrollTo(0, 3000));
+  await expect.poll(hidden, { timeout: 4000 }).toBe(false);
+  await expect(bar.getByRole("link", { name: /Enquire about Lace Pot/ })).toBeVisible();
+
+  // Back up to the button and the duplicate gets out of the way again.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(hidden, { timeout: 4000 }).toBe(true);
+
+  await context.close();
+});
+
+test("back to top appears on a long page and returns to the top", async ({ page }) => {
+  await page.goto("/catalogue");
+  const button = page.getByRole("button", { name: "Back to top" });
+
+  // Checked by state, not geometry: the button is always positioned in the
+  // viewport and is hidden by opacity, so toBeInViewport() reports it visible
+  // even when it is not.
+  const hidden = async () =>
+    ((await button.getAttribute("class")) ?? "").includes("opacity-0");
+
+  expect(await hidden(), "hidden near the top of the page").toBe(true);
+
+  await page.evaluate(() => window.scrollTo(0, 2500));
+  await expect.poll(hidden, { timeout: 4000 }).toBe(false);
+
+  await button.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
+});
+
+test("a product card pages through its photos without navigating away", async ({
+  page,
+}) => {
+  await page.goto("/catalogue");
+
+  const card = page.locator("article").filter({ hasText: "Dry Flower Bunch" }).first();
+  const next = card.getByRole("button", { name: /^Next photo of Dry Flower Bunch/ });
+  await expect(next).toHaveCount(1);
+
+  const before = await card.locator("img").first().getAttribute("src");
+  await next.click({ force: true });
+
+  // The photo changes and the card's link does not fire — the arrows sit inside
+  // a linked card, so a stray navigation is the obvious failure here.
+  await expect
+    .poll(() => card.locator("img").first().getAttribute("src"), { timeout: 4000 })
+    .not.toBe(before);
+  expect(new URL(page.url()).pathname).toBe("/catalogue");
+
+  // A product with a single photo gets no controls at all.
+  await expect(
+    page.getByRole("button", { name: /^Next photo of Velvet Backdrop/ }),
+  ).toHaveCount(0);
+});
