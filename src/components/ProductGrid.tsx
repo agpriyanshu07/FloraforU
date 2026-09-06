@@ -1,17 +1,19 @@
 import ProductCard from "./ProductCard";
 import type { ProductCardData } from "@/lib/queries";
+import type { OfferTerms } from "@/lib/pricing";
 import type { SiteSettings } from "@/lib/settings";
 
 export default function ProductGrid({
   products,
   settings,
-  offerIds,
+  offerTerms,
   priorityCount = 0,
   heading,
 }: {
   products: ProductCardData[];
   settings: SiteSettings;
-  offerIds?: Set<string>;
+  /** Live campaign terms by product id — see getActiveOfferTerms. */
+  offerTerms?: Map<string, OfferTerms>;
   priorityCount?: number;
   heading?: string;
 }) {
@@ -27,7 +29,7 @@ export default function ProductGrid({
             <ProductCard
               product={product}
               settings={settings}
-              onOffer={offerIds?.has(product.id)}
+              offer={offerTerms?.get(product.id)}
               priority={i < priorityCount}
             />
           </li>

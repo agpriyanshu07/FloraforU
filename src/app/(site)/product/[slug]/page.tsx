@@ -9,13 +9,16 @@ import WishlistButton from "@/components/WishlistButton";
 import StickyEnquireBar from "@/components/StickyEnquireBar";
 import ReviewCard from "@/components/ReviewCard";
 import ReviewForm from "@/components/ReviewForm";
+import Price from "@/components/Price";
+import Countdown from "@/components/Countdown";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "@/components/Badges";
-import { InstagramIcon, PhoneIcon } from "@/components/icons";
+import { InstagramIcon, PhoneIcon, StarIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
+import { buildWhatsappUrl, instagramDmUrl, withUtm } from "@/lib/whatsapp";
 import { formatPrice, isProductNew, AVAILABILITY_LABELS } from "@/lib/format";
-import { PRODUCT_CARD_SELECT, PUBLIC_REVIEW_WHERE, getActiveOfferProductIds } from "@/lib/queries";
+import { enquiryPriceNote, offerPriceOf, pricingFor } from "@/lib/pricing";
+import { PRODUCT_CARD_SELECT, PUBLIC_REVIEW_WHERE, getActiveOfferTerms } from "@/lib/queries";
 import { serialiseJsonLd } from "@/lib/json-ld";
 
 // Cached; admin writes revalidate this path explicitly, so the window is a backstop.
@@ -79,9 +82,9 @@ export default async function ProductPage({
   });
   if (!product || !product.published) notFound();
 
-  const [settings, offerIds, related, reviews] = await Promise.all([
+  const [settings, offerTerms, related, reviews] = await Promise.all([
     getSettings(),
-    getActiveOfferProductIds(),
+    getActiveOfferTerms(),
     db.product.findMany({
       where: {
         published: true,
@@ -100,8 +103,19 @@ export default async function ProductPage({
     }),
   ]);
 
-  const onOffer = offerIds.has(product.id);
-  const priceLabel = formatPrice(product.price, product.priceOnEnquiry);
+  const offer = offerTerms.get(product.id);
+  const onOffer = Boolean(offer);
+  const pricing = pricingFor(product.price, product.priceOnEnquiry, offer);
+  // What the customer actually pays today. The sticky bar, the share image and
+  // the WhatsApp message all quote this, so none of them can advertise the
+  // pre-sale price after the card has already shown the discount.
+  const priceLabel = pricing.currentLabel;
+
+  const ratingCount = reviews.length;
+  const averageRating =
+    ratingCount > 0
+      ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / ratingCount) * 10) / 10
+      : null;
   const productUrl = `${settings.siteUrl}/product/${product.slug}`;
   const waHref = withUtm(
     buildWhatsappUrl({
@@ -110,6 +124,7 @@ export default async function ProductPage({
       productName: product.name,
       productCode: product.code,
       productUrl,
+      note: enquiryPriceNote(pricing) ?? undefined,
     }),
     "website",
     "product-page",
@@ -124,6 +139,35 @@ export default async function ProductPage({
     category: product.category.name,
     image: product.images.map((i) => `${settings.siteUrl}${i.url}`),
     brand: { "@type": "Brand", name: settings.businessName },
+    // Priced products carry an offer so search results can show the rate the
+    // page shows — including the sale price while a campaign is running. Items
+    // on enquiry are left without one rather than published at a made-up price.
+    ...(product.priceOnEnquiry || product.price === null
+      ? {}
+      : {
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "INR",
+            price: offerPriceOf(product.price, product.priceOnEnquiry, offer) ?? product.price,
+            availability:
+              product.availability === "in_stock"
+                ? "https://schema.org/InStock"
+                : product.availability === "limited"
+                  ? "https://schema.org/LimitedAvailability"
+                  : "https://schema.org/PreOrder",
+            url: productUrl,
+            seller: { "@type": "Organization", name: settings.businessName },
+          },
+        }),
+    ...(averageRating !== null
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: averageRating,
+            reviewCount: ratingCount,
+          },
+        }
+      : {}),
   };
 
   return (
@@ -175,14 +219,59 @@ export default async function ProductPage({
             {product.name}
           </h1>
 
-          {product.code && (
-            <p className="mt-1 text-sm text-ink-600">Product code: {product.code}</p>
+          {/* Real ratings from this product's own approved reviews, linked to
+              them. No stars at all when nobody has reviewed it — an empty
+              five-star rail reads as a rating of zero. */}
+          {averageRating !== null && (
+            <a
+              href="#reviews-heading"
+              className="mt-2 inline-flex items-center gap-2 text-sm text-ink-600 hover:text-rose-700"
+            >
+              <span aria-hidden className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <StarIcon key={n} filled={n <= Math.round(averageRating)} />
+                ))}
+              </span>
+              <span>
+                {averageRating.toFixed(1)} from {ratingCount}{" "}
+                {ratingCount === 1 ? "review" : "reviews"}
+              </span>
+            </a>
           )}
 
-          <p className="mt-5 font-display text-3xl text-rose-600">{priceLabel}</p>
-          {!product.priceOnEnquiry && (
-            <p className="mt-1 text-[13px] text-ink-600">
-              Indicative rate. Bulk and event pricing confirmed on WhatsApp.
+          <div className="mt-5">
+            <Price
+              price={product.price}
+              priceOnEnquiry={product.priceOnEnquiry}
+              terms={offer}
+              size="page"
+            />
+            {!product.priceOnEnquiry && (
+              <p className="mt-1 text-[13px] text-ink-600">
+                Indicative rate. Bulk and event pricing confirmed on WhatsApp.
+              </p>
+            )}
+          </div>
+
+          {/* Which sale this price comes from, and how long it lasts. A struck
+              price with no campaign behind it is the pattern shoppers have
+              learnt to distrust. */}
+          {offer && pricing.percentOff !== null && (
+            <p className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-marigold-100 bg-marigold-50 px-3 py-2 text-sm">
+              <Link
+                href={`/offers#${offer.slug}`}
+                className="font-semibold text-marigold-700 hover:underline"
+              >
+                {offer.title}
+              </Link>
+              <Countdown
+                endsAt={offer.endsAt.toISOString()}
+                fallback={`Ends ${offer.endsAt.toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                })}`}
+                chipClass="bg-marigold-100 text-marigold-700"
+              />
             </p>
           )}
 
@@ -191,6 +280,14 @@ export default async function ProductPage({
               <dt className="w-32 shrink-0 font-semibold">Pack / size</dt>
               <dd className="text-ink-600">{product.spec || "Ask us"}</dd>
             </div>
+            {product.code && (
+              // Moved out from under the heading: it is a spec, and this is
+              // the number customers read out on WhatsApp to order.
+              <div className="flex gap-4 py-3">
+                <dt className="w-32 shrink-0 font-semibold">Product code</dt>
+                <dd className="font-mono text-ink-600">{product.code}</dd>
+              </div>
+            )}
             <div className="flex gap-4 py-3">
               <dt className="w-32 shrink-0 font-semibold">Availability</dt>
               <dd className="text-ink-600">
@@ -206,6 +303,13 @@ export default async function ProductPage({
                 >
                   {product.category.name}
                 </Link>
+              </dd>
+            </div>
+            <div className="flex gap-4 py-3">
+              <dt className="w-32 shrink-0 font-semibold">Delivery</dt>
+              <dd className="text-ink-600">
+                Collect from the shop in {settings.city}, or ask us about delivery to
+                your venue when you enquire.
               </dd>
             </div>
           </dl>
@@ -235,7 +339,7 @@ export default async function ProductPage({
               className="btn-ghost"
             />
             <a
-              href={withUtm(settings.instagram, "website", "product-dm")}
+              href={withUtm(instagramDmUrl(settings.instagram), "website", "product-dm")}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-instagram"
@@ -297,7 +401,7 @@ export default async function ProductPage({
           <h2 id="related-heading" className="mb-5 font-display text-2xl">
             More from {product.category.name}
           </h2>
-          <ProductGrid products={related} settings={settings} offerIds={offerIds} />
+          <ProductGrid products={related} settings={settings} offerTerms={offerTerms} />
         </section>
       )}
     </div>

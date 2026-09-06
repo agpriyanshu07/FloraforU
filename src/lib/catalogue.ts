@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "./db";
-import { PRODUCT_CARD_SELECT, getActiveOfferProductIds } from "./queries";
+import { PRODUCT_CARD_SELECT, getActiveOfferTerms } from "./queries";
 import type { Prisma } from "@/generated/prisma";
 
 export const PAGE_SIZE = 24;
@@ -27,7 +27,7 @@ export async function queryCatalogue(
   params: CatalogueParams,
   forcedCategorySlug?: string,
 ) {
-  const offerIds = await getActiveOfferProductIds();
+  const offerTerms = await getActiveOfferTerms();
   const q = params.q?.trim();
   const categorySlug = forcedCategorySlug ?? params.category;
   const sort = params.sort && sort_valid(params.sort) ? params.sort : "newest";
@@ -61,7 +61,7 @@ export async function queryCatalogue(
   }
 
   if (params.offer === "1") {
-    where.id = { in: [...offerIds] };
+    where.id = { in: [...offerTerms.keys()] };
   }
 
   // Price sorts must not scatter "Price on Enquiry" items through the middle of
@@ -87,7 +87,7 @@ export async function queryCatalogue(
     take: PAGE_SIZE,
   });
 
-  return { products, total, page, pageCount, offerIds, sort };
+  return { products, total, page, pageCount, offerTerms, sort };
 }
 
 function sort_valid(s: string) {

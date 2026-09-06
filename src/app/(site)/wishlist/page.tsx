@@ -25,7 +25,11 @@ export default async function WishlistPage() {
       where: {
         offer: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
       },
-      select: { product: { select: { slug: true } } },
+      select: {
+        offerPrice: true,
+        product: { select: { slug: true } },
+        offer: { select: { discountPercent: true } },
+      },
     }),
   ]);
 
@@ -42,7 +46,14 @@ export default async function WishlistPage() {
 
       <WishlistBoard
         settings={settings}
-        offerSlugs={offerRows.map((r) => r.product.slug)}
+        // A plain object rather than a Map: this crosses into a client
+        // component, and only JSON survives that boundary.
+        offerTermsBySlug={Object.fromEntries(
+          offerRows.map((r) => [
+            r.product.slug,
+            { offerPrice: r.offerPrice, discountPercent: r.offer.discountPercent },
+          ]),
+        )}
       />
     </div>
   );

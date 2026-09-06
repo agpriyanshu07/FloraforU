@@ -6,7 +6,7 @@ import { HeartIcon, InstagramIcon, WhatsappIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { PUBLIC_REVIEW_WHERE } from "@/lib/queries";
-import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
+import { buildWhatsappUrl, instagramDmUrl, withUtm } from "@/lib/whatsapp";
 
 // Cached; admin writes revalidate this path explicitly, so the window is a backstop.
 export const revalidate = 3600;
@@ -121,7 +121,7 @@ export default async function ReviewsPage() {
               Send a review on WhatsApp
             </a>
             <a
-              href={withUtm(settings.instagram, "website", "reviews")}
+              href={withUtm(instagramDmUrl(settings.instagram), "website", "reviews")}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-instagram"

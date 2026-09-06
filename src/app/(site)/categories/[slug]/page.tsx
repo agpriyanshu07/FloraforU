@@ -97,7 +97,7 @@ export default async function CategoryPage({
           <ProductGrid
             products={result.products}
             settings={settings}
-            offerIds={result.offerIds}
+            offerTerms={result.offerTerms}
             priorityCount={4}
             heading="Products in this category"
           />

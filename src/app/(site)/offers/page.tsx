@@ -129,7 +129,7 @@ export default async function OffersPage() {
                         spec={offer.description}
                         price={offer.discountLabel ?? ""}
                         handle={settings.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@").replace(/\/$/, "")}
-                        label="Share this sale"
+                        label="Download sale poster"
                         offer={{
                           title: offer.title,
                           discountLabel: offer.discountLabel,
@@ -147,7 +147,14 @@ export default async function OffersPage() {
                 <ProductGrid
                   products={offer.products.map((op) => op.product)}
                   settings={settings}
-                  offerIds={new Set(offer.products.map((op) => op.productId))}
+                  offerTerms={
+                    new Map(
+                      offer.products.map((op) => [
+                        op.productId,
+                        { offerPrice: op.offerPrice, discountPercent: offer.discountPercent },
+                      ]),
+                    )
+                  }
                 />
               </section>
             );

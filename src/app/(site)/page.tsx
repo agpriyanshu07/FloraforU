@@ -11,7 +11,7 @@ import { ArrowRightIcon, BoxIcon, HeartIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import {
-  getActiveOfferProductIds,
+  getActiveOfferTerms,
   getActiveOffers,
   getCategoriesWithCounts,
   getNewArrivals,
@@ -24,13 +24,13 @@ import {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [settings, categories, arrivals, offers, offerIds, reviews, gallery] =
+  const [settings, categories, arrivals, offers, offerTerms, reviews, gallery] =
     await Promise.all([
       getSettings(),
       getCategoriesWithCounts(),
       getNewArrivals(8),
       getActiveOffers(),
-      getActiveOfferProductIds(),
+      getActiveOfferTerms(),
       db.review.findMany({
         where: PUBLIC_REVIEW_WHERE,
         orderBy: { displayOrder: "asc" },
@@ -190,7 +190,7 @@ export default async function HomePage() {
           // shared with the catalogue, where 20 separately animating cards
           // would be noise rather than polish.
           <Reveal>
-            <ProductGrid products={arrivals} settings={settings} offerIds={offerIds} />
+            <ProductGrid products={arrivals} settings={settings} offerTerms={offerTerms} />
           </Reveal>
         ) : (
           <EmptyState

@@ -2,8 +2,10 @@ import Link from "next/link";
 import EnquireButton from "./EnquireButton";
 import WishlistButton from "./WishlistButton";
 import CardGallery from "./CardGallery";
+import Price from "./Price";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "./Badges";
-import { formatPrice, isProductNew } from "@/lib/format";
+import { isProductNew } from "@/lib/format";
+import { enquiryPriceNote, pricingFor, type OfferTerms } from "@/lib/pricing";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import type { ProductCardData } from "@/lib/queries";
 import type { SiteSettings } from "@/lib/settings";
@@ -11,11 +13,14 @@ import type { SiteSettings } from "@/lib/settings";
 type Props = {
   product: ProductCardData;
   settings: SiteSettings;
-  onOffer?: boolean;
+  /** Present when a live campaign covers this product. */
+  offer?: OfferTerms | null;
   priority?: boolean;
 };
 
-export default function ProductCard({ product, settings, onOffer, priority }: Props) {
+export default function ProductCard({ product, settings, offer, priority }: Props) {
+  const onOffer = Boolean(offer);
+  const pricing = pricingFor(product.price, product.priceOnEnquiry, offer);
   const isNew = isProductNew(product);
   const productUrl = `${settings.siteUrl}/product/${product.slug}`;
   const waHref = buildWhatsappUrl({
@@ -24,6 +29,7 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
     productName: product.name,
     productCode: product.code,
     productUrl,
+    note: enquiryPriceNote(pricing) ?? undefined,
   });
 
   return (
@@ -74,9 +80,20 @@ export default function ProductCard({ product, settings, onOffer, priority }: Pr
           </p>
         )}
 
-        <p className="mt-auto pt-2 text-lg font-semibold text-ink-900">
-          {formatPrice(product.price, product.priceOnEnquiry)}
-        </p>
+        {/* Quoted on WhatsApp more often than the name is, so it belongs on the
+            card rather than one click away. */}
+        {product.code && (
+          <p className="text-[11px] uppercase tracking-wide text-ink-600">
+            Code {product.code}
+          </p>
+        )}
+
+        <Price
+          price={product.price}
+          priceOnEnquiry={product.priceOnEnquiry}
+          terms={offer}
+          className="mt-auto pt-2"
+        />
 
         <EnquireButton
           href={waHref}

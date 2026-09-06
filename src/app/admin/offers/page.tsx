@@ -27,11 +27,17 @@ export default async function AdminOffersPage({
   const [offers, products] = await Promise.all([
     db.offer.findMany({
       orderBy: { endsAt: "desc" },
-      include: { products: { select: { productId: true } } },
+      include: { products: { select: { productId: true, offerPrice: true } } },
     }),
     db.product.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, category: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        priceOnEnquiry: true,
+        category: { select: { name: true } },
+      },
     }),
   ]);
 
@@ -40,6 +46,8 @@ export default async function AdminOffersPage({
     id: p.id,
     name: p.name,
     categoryName: p.category.name,
+    price: p.price,
+    priceOnEnquiry: p.priceOnEnquiry,
   }));
 
   return (
@@ -123,6 +131,10 @@ export default async function AdminOffersPage({
                   endsAt: iso(editing.endsAt),
                   published: editing.published,
                   productIds: editing.products.map((p) => p.productId),
+                  offerPrices: Object.fromEntries(
+                    editing.products.map((p) => [p.productId, p.offerPrice]),
+                  ),
+                  discountPercent: editing.discountPercent,
                   discountLabel: editing.discountLabel ?? "",
                   theme: editing.theme,
                   priority: editing.priority,

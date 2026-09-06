@@ -1,6 +1,12 @@
 "use client";
 
-import { WhatsappIcon } from "./icons";
+import { InstagramIcon, PhoneIcon, WhatsappIcon } from "./icons";
+
+const CHANNEL_ICONS = {
+  whatsapp: WhatsappIcon,
+  call: PhoneIcon,
+  instagram: InstagramIcon,
+} as const;
 
 type Props = {
   href: string;
@@ -27,6 +33,12 @@ export default function EnquireButton({
   channel = "whatsapp",
   ariaLabel,
 }: Props) {
+  const Icon = CHANNEL_ICONS[channel];
+  // tel: is handed to the dialler, not to a browsing context. Opening it in a
+  // new tab left an empty window behind on desktop, and _blank on a non-http
+  // scheme buys nothing anyway.
+  const external = /^https?:/i.test(href);
+
   function logEnquiry() {
     try {
       fetch("/api/enquiries", {
@@ -39,7 +51,7 @@ export default function EnquireButton({
           pagePath: window.location.pathname,
         }),
       }).catch(() => {
-        /* logging must never block the customer reaching WhatsApp */
+        /* logging must never block the customer reaching us */
       });
     } catch {
       /* ignore */
@@ -49,15 +61,19 @@ export default function EnquireButton({
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
       onClick={logEnquiry}
       className={className}
       aria-label={ariaLabel ?? label}
     >
-      {/* shrink-0: in a narrow flex button the icon was being squeezed to zero
+      {/* The icon follows the channel. It used to be the WhatsApp mark
+          unconditionally, so "Call the shop" — a tel: link — wore a WhatsApp
+          logo and promised the wrong app.
+
+          shrink-0: in a narrow flex button the icon was being squeezed to zero
           width instead of keeping its size, so it vanished silently. */}
-      <WhatsappIcon className="h-4 w-4 shrink-0" />
+      <Icon className="h-4 w-4 shrink-0" />
       {label}
     </a>
   );

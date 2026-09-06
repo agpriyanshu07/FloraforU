@@ -778,3 +778,109 @@ test("every Instagram link carries the brand gradient, readable in white", async
     }
   }
 });
+
+test("an offer shows the old price struck through beside the new one", async ({ page }) => {
+  await page.goto("/offers");
+
+  const card = page.locator("article").first();
+  await expect(card).toBeVisible();
+
+  // Three things have to agree, or the discount is not believable: the price
+  // paid, the price it replaces, and the percentage between them.
+  const struck = card.locator(".line-through").first();
+  await expect(struck).toBeVisible();
+
+  const rupees = (text: string) => Number(text.replace(/[^0-9]/g, ""));
+  const was = rupees((await struck.innerText()).trim());
+  const chip = await card.getByText(/\d+% off/).first().innerText();
+  const percent = Number(chip.replace(/[^0-9]/g, ""));
+
+  // The current price is the first rupee figure in the block, before the struck one.
+  const block = await struck.locator("xpath=..").innerText();
+  const now = rupees(block.split("₹")[1] ?? "");
+
+  expect(now, "the sale price is lower than the original").toBeLessThan(was);
+  expect(
+    Math.round(((was - now) / was) * 100),
+    `the badge says ${percent}% and the prices say otherwise`,
+  ).toBe(percent);
+
+  // The struck price must be announced as a former price, not read out as if
+  // it were what you pay.
+  await expect(struck).toHaveAttribute("aria-label", /^Was ₹/);
+});
+
+test("a discounted product quotes the sale price everywhere on its page", async ({
+  page,
+}) => {
+  await page.goto("/offers");
+  const href = await page
+    .locator("article a[href^='/product/']")
+    .first()
+    .getAttribute("href");
+  await page.goto(href!);
+
+  const struck = page.locator("main .line-through").first();
+  await expect(struck).toBeVisible();
+
+  // The campaign is named and dated, so the discount can be checked rather than
+  // taken on trust.
+  await expect(page.getByRole("link", { name: /Sale|Offer|Clearance/ }).first()).toBeVisible();
+
+  // The enquiry itself has to carry the price the customer is looking at.
+  // Without it the shop opens a chat about a product with no figure attached,
+  // quotes the everyday rate, and the customer argues the discount they just saw.
+  const enquire = page.locator('main a[href^="https://wa.me/"]').first();
+  // searchParams, not decodeURIComponent: the message is form-encoded, so the
+  // latter leaves every space as a "+" and no assertion about wording matches.
+  const wa =
+    new URL((await enquire.getAttribute("href")) ?? "").searchParams.get("text") ?? "";
+  const wasPrice = (await struck.innerText()).trim();
+
+  expect(wa, "the enquiry does not mention the sale price").toContain("Seen on the website at");
+  expect(wa, "the old price is not marked as the old one").toContain(`was ${wasPrice}`);
+
+  // And the sticky bar a phone shows quotes the same figure, not the old one.
+  const nowPrice = (await page.locator("main .line-through").first().locator("xpath=..").innerText())
+    .split("₹")[1]
+    ?.split(/\s/)[0];
+  expect(wa, "the enquiry quotes a different price from the page").toContain(`₹${nowPrice}`);
+});
+
+test("action buttons wear the icon of the thing they open", async ({ page }) => {
+  await page.goto("/product/lace-pot");
+
+  // "Call the shop" carried a WhatsApp mark, promising the wrong app. Each
+  // button's icon is checked against its href rather than its label.
+  // Matched on accessible name, which for the WhatsApp button is its aria-label
+  // ("Enquire about <product> on WhatsApp") rather than its visible text.
+  const rows: [RegExp, RegExp][] = [
+    [/^Enquire about .* on WhatsApp$/, /^https:\/\/wa\.me\//],
+    [/^Call the shop$/, /^tel:/],
+    [/^DM on Instagram$/, /^https:\/\/ig\.me\/m\//],
+  ];
+
+  for (const [name, href] of rows) {
+    const link = page.getByRole("link", { name }).first();
+    await expect(link, `${name} exists`).toBeVisible();
+    expect(await link.getAttribute("href"), `${name} points at the right app`).toMatch(href);
+  }
+
+  // A tel: link has no browsing context to open, so it must not target a new tab.
+  const call = page.getByRole("link", { name: "Call the shop" }).first();
+  expect(await call.getAttribute("target"), "tel: opened a blank tab").toBeNull();
+});
+
+test("the story button says it downloads a file, not that it posts for you", async ({
+  page,
+}) => {
+  await page.goto("/product/lace-pot");
+
+  // The old label, "Save as Instagram Story", read as though the site would put
+  // the product on the customer's own story. It cannot: it makes a PNG.
+  await expect(page.getByRole("button", { name: /Instagram Story/i })).toHaveCount(0);
+
+  const button = page.getByRole("button", { name: /Download story image/i });
+  await expect(button).toBeVisible();
+  await expect(page.getByText(/You post it yourself/i)).toBeVisible();
+});

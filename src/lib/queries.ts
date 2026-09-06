@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { offerPriceOf, type OfferTerms } from "./pricing";
 import { Prisma } from "@/generated/prisma";
 
 /**
@@ -40,16 +41,60 @@ export type OfferWithProducts = Prisma.OfferGetPayload<{
   include: typeof OFFER_WITH_PRODUCTS;
 }>;
 
-/** IDs of every product attached to an offer that is live right now. */
-export async function getActiveOfferProductIds(): Promise<Set<string>> {
+/**
+ * Every product in a campaign that is live right now, with the terms it is on
+ * sale under. A Map rather than a Set because a card has to show the discount,
+ * not just the fact that one exists — and `has()` still answers the old
+ * question for callers that only need the badge.
+ *
+ * A product in two overlapping campaigns keeps the cheaper one: the shop has
+ * advertised both prices, and quoting the higher of the two is the version a
+ * customer would rightly argue with.
+ */
+export type ActiveOfferTerms = OfferTerms & {
+  /** The campaign this price comes from, so a product page can name it. */
+  title: string;
+  slug: string;
+  endsAt: Date;
+};
+
+export async function getActiveOfferTerms(): Promise<Map<string, ActiveOfferTerms>> {
   const now = new Date();
   const rows = await db.offerProduct.findMany({
     where: {
       offer: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
     },
-    select: { productId: true },
+    select: {
+      productId: true,
+      offerPrice: true,
+      product: { select: { price: true, priceOnEnquiry: true } },
+      offer: {
+        select: { title: true, slug: true, endsAt: true, discountPercent: true },
+      },
+    },
   });
-  return new Set(rows.map((r) => r.productId));
+
+  const best = new Map<string, ActiveOfferTerms>();
+  for (const row of rows) {
+    const terms: ActiveOfferTerms = {
+      offerPrice: row.offerPrice,
+      discountPercent: row.offer.discountPercent,
+      title: row.offer.title,
+      slug: row.offer.slug,
+      endsAt: row.offer.endsAt,
+    };
+    const existing = best.get(row.productId);
+    if (!existing) {
+      best.set(row.productId, terms);
+      continue;
+    }
+    const contender = offerPriceOf(row.product.price, row.product.priceOnEnquiry, terms);
+    const incumbent = offerPriceOf(row.product.price, row.product.priceOnEnquiry, existing);
+    if (contender !== null && (incumbent === null || contender < incumbent)) {
+      best.set(row.productId, terms);
+    }
+  }
+  return best;
 }
 
 export async function getActiveOffers(): Promise<OfferWithProducts[]> {
