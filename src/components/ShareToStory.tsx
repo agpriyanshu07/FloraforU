@@ -27,7 +27,8 @@ export type StoryOffer = {
  * The button used to read "Save as Instagram Story", which promised something
  * this cannot do: the site has no connection to anyone's Instagram account and
  * posts nothing. All it does is put an image in your downloads. The label says
- * that now, and the caption underneath says what to do with it.
+ * that now — "Download product details" (the card carries the name, spec and
+ * price) — and the caption underneath says what to do with it.
  *
  * Two shapes: a product card (the original), or a campaign card when `offer` is
  * passed — same generator so both stay visually consistent as the brand evolves.
@@ -155,7 +156,7 @@ export default function ShareToStory({
         disabled={busy}
       >
         <DownloadIcon className="h-4 w-4 shrink-0" />
-        {busy ? "Making the image…" : (label ?? "Download story image")}
+        {busy ? "Making the image…" : (label ?? "Download product details")}
       </button>
       {!label && (
         <p className="mt-1.5 text-[13px] text-ink-600">

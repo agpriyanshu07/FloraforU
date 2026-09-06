@@ -880,7 +880,7 @@ test("the story button says it downloads a file, not that it posts for you", asy
   // the product on the customer's own story. It cannot: it makes a PNG.
   await expect(page.getByRole("button", { name: /Instagram Story/i })).toHaveCount(0);
 
-  const button = page.getByRole("button", { name: /Download story image/i });
+  const button = page.getByRole("button", { name: /Download product details/i });
   await expect(button).toBeVisible();
   await expect(page.getByText(/You post it yourself/i)).toBeVisible();
 });
