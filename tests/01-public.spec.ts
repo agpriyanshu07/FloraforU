@@ -596,12 +596,25 @@ test("a product card pages through its photos without navigating away", async ({
   await expect(next).toHaveCount(1);
 
   const before = await card.locator("img").first().getAttribute("src");
-  await next.click({ force: true });
 
   // The photo changes and the card's link does not fire — the arrows sit inside
   // a linked card, so a stray navigation is the obvious failure here.
+  //
+  // Clicked until it takes, rather than once: the arrows are hydrated on the
+  // client, and on a loaded CI runner a click can land in the window before
+  // React attaches its handler — a single click has nothing to retry it, and
+  // the assertion then fails on a gallery that works. The click only fires
+  // while the photo is still the first one, so this can never page past the
+  // change it is waiting for.
   await expect
-    .poll(() => card.locator("img").first().getAttribute("src"), { timeout: 4000 })
+    .poll(
+      async () => {
+        const src = await card.locator("img").first().getAttribute("src");
+        if (src === before) await next.click({ force: true });
+        return src;
+      },
+      { timeout: 10_000 },
+    )
     .not.toBe(before);
   expect(new URL(page.url()).pathname).toBe("/catalogue");
 
