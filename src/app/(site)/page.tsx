@@ -6,10 +6,9 @@ import ReviewCard from "@/components/ReviewCard";
 import OfferStrip from "@/components/OfferStrip";
 import InstagramFeed from "@/components/InstagramFeed";
 import EmptyState from "@/components/EmptyState";
-import { ArrowRightIcon, BoxIcon, HeartIcon, WhatsappIcon } from "@/components/icons";
+import { ArrowRightIcon, BoxIcon, HeartIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 import {
   getActiveOfferProductIds,
   getActiveOffers,
@@ -72,11 +71,6 @@ export default async function HomePage() {
       imageUrl: product.images[0]?.url ?? null,
     })),
   }));
-  const heroWa = withUtm(
-    buildWhatsappUrl({ number: settings.whatsapp, template: settings.whatsappTemplate }),
-    "website",
-    "hero",
-  );
 
   return (
     <>
@@ -95,20 +89,14 @@ export default async function HomePage() {
               browse the full catalogue, then message us on WhatsApp to confirm
               stock, rates and delivery. No online payment, just a quick chat.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
+            {/* One call to action, not two. WhatsApp is already in the header
+                on every page, so a second green button here only competed with
+                the catalogue link for the same first click. */}
+            <div className="mt-7">
               <Link href="/catalogue" className="btn-primary">
                 Explore catalogue
                 <ArrowRightIcon className="h-4 w-4" />
               </Link>
-              <a
-                href={heroWa}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-whatsapp"
-              >
-                <WhatsappIcon className="h-4 w-4" />
-                Chat on WhatsApp
-              </a>
             </div>
             <dl className="mt-9 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">
               {[

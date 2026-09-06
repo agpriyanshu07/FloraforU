@@ -45,7 +45,11 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
           }}
         />
       )}
-      <SiteHeader businessName={settings.businessName} whatsappHref={whatsappHref} />
+      <SiteHeader
+        businessName={settings.businessName}
+        whatsappHref={whatsappHref}
+        instagramHref={withUtm(settings.instagram, "website", "header")}
+      />
       {/* tabIndex -1 so the skip link and Back to top can move focus here. */}
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
         {children}

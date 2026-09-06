@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CloseIcon, MenuIcon, WhatsappIcon } from "./icons";
+import { CloseIcon, InstagramIcon, MenuIcon, WhatsappIcon } from "./icons";
 import WishlistLink from "./WishlistLink";
 import SearchBar from "./SearchBar";
 
@@ -21,9 +21,11 @@ const NAV = [
 export default function SiteHeader({
   businessName,
   whatsappHref,
+  instagramHref,
 }: {
   businessName: string;
   whatsappHref: string;
+  instagramHref: string;
 }) {
   const pathname = usePathname();
 
@@ -74,14 +76,27 @@ export default function SiteHeader({
               the menu below, where there is room for it. */}
           <SearchBar className="hidden w-56 xl:block" />
           <WishlistLink />
+          {/* Icons alone up here. The word "WhatsApp" bought nothing the mark
+              doesn't already say, and dropping it leaves room for Instagram
+              beside it. Both keep an accessible name through the sr-only text,
+              so a screen reader still hears where each one goes. */}
           <a
             href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-whatsapp btn-sm hidden sm:inline-flex"
+            className="btn-whatsapp hidden w-11 !px-0 sm:inline-flex"
           >
-            <WhatsappIcon className="h-4 w-4" />
-            WhatsApp
+            <WhatsappIcon className="h-[18px] w-[18px] shrink-0" />
+            <span className="sr-only">Chat with {businessName} on WhatsApp</span>
+          </a>
+          <a
+            href={instagramHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost hidden w-11 !px-0 sm:inline-flex"
+          >
+            <InstagramIcon className="h-[18px] w-[18px] shrink-0" />
+            <span className="sr-only">{businessName} on Instagram</span>
           </a>
 
           <button
@@ -120,15 +135,24 @@ export default function SiteHeader({
               </Link>
             </li>
           ))}
-          <li className="px-3 py-2 sm:hidden">
+          <li className="grid grid-cols-2 gap-2 px-3 py-2 sm:hidden">
             <a
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-whatsapp w-full"
+              className="btn-whatsapp min-w-0 !px-3"
             >
-              <WhatsappIcon className="h-4 w-4" />
-              Chat on WhatsApp
+              <WhatsappIcon className="h-4 w-4 shrink-0" />
+              WhatsApp
+            </a>
+            <a
+              href={instagramHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost min-w-0 !px-3"
+            >
+              <InstagramIcon className="h-4 w-4 shrink-0" />
+              Instagram
             </a>
           </li>
         </ul>
