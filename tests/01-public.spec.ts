@@ -661,3 +661,65 @@ test("the contact actions stay on one row at every width", async ({ page }) => {
     page.locator("main").getByRole("link", { name: /^\+91/ }),
   ).toHaveAttribute("href", /^tel:/);
 });
+
+test("the homepage reveals its sections on scroll, and never traps content", async ({
+  browser,
+}) => {
+  // Motion has to be asked for: headless Chromium reports
+  // prefers-reduced-motion: reduce by default, and the reveals correctly turn
+  // themselves off under it — so the default context sees no effect at all.
+  const context = await browser.newContext({ reducedMotion: "no-preference" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  const hidden = () =>
+    page.evaluate(
+      () =>
+        [...document.querySelectorAll(".ffu-reveal")].filter(
+          (el) => getComputedStyle(el).opacity === "0",
+        ).length,
+    );
+
+  // Polled, not read once: the hidden state is applied on mount, so it does not
+  // exist in the HTML the navigation resolves with. Something below the fold
+  // must start hidden, or there is no effect here at all.
+  await expect.poll(hidden, { timeout: 5000 }).toBeGreaterThan(5);
+
+  // Read the page the way a visitor does, then let the last transition finish.
+  const height = await page.evaluate(() => document.body.scrollHeight);
+  for (let y = 0; y < height; y += 500) {
+    await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), y);
+    await page.waitForTimeout(120);
+  }
+
+  // The failure this guards against is content that never arrives: a section
+  // stuck at opacity 0 is invisible but still in the layout, so nothing else
+  // looks wrong.
+  await expect.poll(hidden, { timeout: 5000 }).toBe(0);
+  await context.close();
+});
+
+test("reduced motion turns the reveals off rather than speeding them up", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  // Nothing is armed at all: no element is ever hidden waiting for a scroll.
+  await expect(page.locator(".ffu-reveal")).toHaveCount(0);
+  await context.close();
+});
+
+test("the homepage content is visible with JavaScript disabled", async ({ browser }) => {
+  // The reveal state is applied on mount, never in the server HTML. If that
+  // ever inverts, a failed bundle takes the whole page's content with it.
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  await expect(page.locator(".ffu-reveal")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Shop by category" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New arrivals" })).toBeVisible();
+  await context.close();
+});

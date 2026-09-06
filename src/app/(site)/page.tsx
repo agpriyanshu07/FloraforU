@@ -6,6 +6,7 @@ import ReviewCard from "@/components/ReviewCard";
 import OfferStrip from "@/components/OfferStrip";
 import InstagramFeed from "@/components/InstagramFeed";
 import EmptyState from "@/components/EmptyState";
+import Reveal from "@/components/Reveal";
 import { ArrowRightIcon, BoxIcon, HeartIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
@@ -131,31 +132,38 @@ export default async function HomePage() {
 
       {/* --------------------------------------------------- Shop by category */}
       <section aria-labelledby="categories-heading" className="shell py-14">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="categories-heading" className="font-display text-3xl">
-              Shop by category
-            </h2>
-            <p className="mt-1 text-ink-600">
-              Everything we stock, sorted the way our customers actually ask for it.
-            </p>
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="categories-heading" className="font-display text-3xl">
+                Shop by category
+              </h2>
+              <p className="mt-1 text-ink-600">
+                Everything we stock, sorted the way our customers actually ask for it.
+              </p>
+            </div>
+            <Link href="/categories" className="btn-ghost btn-sm">
+              View all {categories.length} categories
+            </Link>
           </div>
-          <Link href="/categories" className="btn-ghost btn-sm">
-            View all {categories.length} categories
-          </Link>
-        </div>
+        </Reveal>
 
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {categories.slice(0, 8).map((c, i) => (
             <li key={c.id} className="flex">
-              <CategoryCard
-                slug={c.slug}
-                name={c.name}
-                description={c.description}
-                imageUrl={c.imageUrl}
-                count={c._count.products}
-                priority={i < 4}
-              />
+              {/* Staggered by column, not by index: the delay restarts on each
+                  row, so a row arrives as a row instead of the last card in a
+                  long grid waiting most of a second for its turn. */}
+              <Reveal className="flex w-full" delayMs={(i % 4) * 70}>
+                <CategoryCard
+                  slug={c.slug}
+                  name={c.name}
+                  description={c.description}
+                  imageUrl={c.imageUrl}
+                  count={c._count.products}
+                  priority={i < 4}
+                />
+              </Reveal>
             </li>
           ))}
         </ul>
@@ -163,20 +171,27 @@ export default async function HomePage() {
 
       {/* -------------------------------------------------------- New arrivals */}
       <section aria-labelledby="arrivals-heading" className="shell pb-14">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="arrivals-heading" className="font-display text-3xl">
-              New arrivals
-            </h2>
-            <p className="mt-1 text-ink-600">The latest additions to our shelves.</p>
+        <Reveal>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="arrivals-heading" className="font-display text-3xl">
+                New arrivals
+              </h2>
+              <p className="mt-1 text-ink-600">The latest additions to our shelves.</p>
+            </div>
+            <Link href="/catalogue?sort=newest" className="btn-ghost btn-sm">
+              See the full catalogue
+            </Link>
           </div>
-          <Link href="/catalogue?sort=newest" className="btn-ghost btn-sm">
-            See the full catalogue
-          </Link>
-        </div>
+        </Reveal>
 
         {arrivals.length > 0 ? (
-          <ProductGrid products={arrivals} settings={settings} offerIds={offerIds} />
+          // One reveal for the whole grid rather than per card: ProductGrid is
+          // shared with the catalogue, where 20 separately animating cards
+          // would be noise rather than polish.
+          <Reveal>
+            <ProductGrid products={arrivals} settings={settings} offerIds={offerIds} />
+          </Reveal>
         ) : (
           <EmptyState
             title="No products yet"
@@ -191,20 +206,24 @@ export default async function HomePage() {
       {/* ------------------------------------------------------------- Reviews */}
       <section aria-labelledby="reviews-heading" className="border-y border-line bg-rose-50 py-14">
         <div className="shell">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-            <h2 id="reviews-heading" className="font-display text-3xl">
-              What our customers say
-            </h2>
-            <Link href="/reviews" className="btn-ghost btn-sm">
-              Read all reviews
-            </Link>
-          </div>
+          <Reveal>
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+              <h2 id="reviews-heading" className="font-display text-3xl">
+                What our customers say
+              </h2>
+              <Link href="/reviews" className="btn-ghost btn-sm">
+                Read all reviews
+              </Link>
+            </div>
+          </Reveal>
 
           {reviews.length > 0 ? (
             <ul className="grid gap-4 md:grid-cols-3">
-              {reviews.map((r) => (
+              {reviews.map((r, i) => (
                 <li key={r.id} className="flex">
-                  <ReviewCard {...r} />
+                  <Reveal className="flex w-full" delayMs={i * 90}>
+                    <ReviewCard {...r} />
+                  </Reveal>
                 </li>
               ))}
             </ul>
@@ -223,30 +242,40 @@ export default async function HomePage() {
           over an empty grid reads as a broken section, not an empty one. */}
       {gallery.length > 0 && (
         <section aria-labelledby="gallery-heading" className="shell py-14">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 id="gallery-heading" className="font-display text-3xl">
-                See us in action
-              </h2>
-              <p className="mt-1 text-ink-600">
-                Real setups and real dispatch — so you know exactly what turns up.
-              </p>
+          <Reveal>
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="gallery-heading" className="font-display text-3xl">
+                  See us in action
+                </h2>
+                <p className="mt-1 text-ink-600">
+                  Real setups and real dispatch — so you know exactly what turns up.
+                </p>
+              </div>
+              <Link href="/gallery" className="btn-ghost btn-sm">
+                Open the gallery
+              </Link>
             </div>
-            <Link href="/gallery" className="btn-ghost btn-sm">
-              Open the gallery
-            </Link>
-          </div>
+          </Reveal>
 
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {gallery.map((g) => (
-              <li key={g.id} className="card relative aspect-square overflow-hidden">
-                <Image
-                  src={g.imageUrl ?? "/img/hero.svg"}
-                  alt={g.alt || g.title}
-                  fill
-                  sizes="(max-width: 640px) 50vw, 280px"
-                  className="object-cover"
-                />
+            {gallery.map((g, i) => (
+              <li key={g.id}>
+                {/* The Reveal itself carries the card, so it is the positioned
+                    ancestor the fill image needs — a wrapper inside the tile
+                    would animate an empty box while the photo stayed put. */}
+                <Reveal
+                  className="card relative block aspect-square overflow-hidden"
+                  delayMs={(i % 4) * 70}
+                >
+                  <Image
+                    src={g.imageUrl ?? "/img/hero.svg"}
+                    alt={g.alt || g.title}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 280px"
+                    className="object-cover"
+                  />
+                </Reveal>
               </li>
             ))}
           </ul>
@@ -255,7 +284,9 @@ export default async function HomePage() {
 
       {/* ----------------------------------------------------------- Instagram */}
       <div className="border-t border-line">
-        <InstagramFeed instagramUrl={settings.instagram} handle="@floralforu_" />
+        <Reveal>
+          <InstagramFeed instagramUrl={settings.instagram} handle="@floralforu_" />
+        </Reveal>
       </div>
     </>
   );
