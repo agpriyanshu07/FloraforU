@@ -723,3 +723,58 @@ test("the homepage content is visible with JavaScript disabled", async ({ browse
   await expect(page.getByRole("heading", { name: "New arrivals" })).toBeVisible();
   await context.close();
 });
+
+test("every Instagram link carries the brand gradient, readable in white", async ({
+  page,
+}) => {
+  // Instagram's own gradient runs from pale yellow to blue, and white label text
+  // on the warm end measures ~2.4:1 — well under AA. The palette here is
+  // weighted to the pink-purple-blue half to clear it, which is easy to undo by
+  // "restoring" the real thing, so the stops are checked rather than trusted.
+  const contrastVsWhite = (r: number, g: number, b: number) => {
+    const channel = (c: number) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance =
+      0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+    return 1.05 / (luminance + 0.05);
+  };
+
+  for (const route of ["/", "/contact", "/reviews", "/product/lace-pot"]) {
+    await page.goto(route);
+
+    // The action buttons, not every link that happens to point at Instagram —
+    // the feed's photo tiles link there too and are meant to look like photos.
+    const links = page.locator("a.btn-instagram");
+    const count = await links.count();
+    expect(count, `Instagram buttons on ${route}`).toBeGreaterThan(0);
+
+    // And none of them has been quietly returned to the old plain treatment.
+    await expect(
+      page.locator('a[href*="instagram.com"].btn-ghost'),
+      `${route} still has a plain Instagram button`,
+    ).toHaveCount(0);
+
+    for (let i = 0; i < count; i++) {
+      const background = await links
+        .nth(i)
+        .evaluate((el) => getComputedStyle(el).backgroundImage);
+
+      expect(background, `${route} link ${i} has the gradient`).toContain("gradient");
+
+      // Every stop must clear AA on its own; a blend of two passing colours
+      // stays between them, so the whole sweep clears it too.
+      const stops = [...background.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)];
+      expect(stops.length, `${route} link ${i} colour stops`).toBeGreaterThan(1);
+
+      for (const [, r, g, b] of stops) {
+        const ratio = contrastVsWhite(Number(r), Number(g), Number(b));
+        expect(
+          ratio,
+          `${route} link ${i}: white on rgb(${r},${g},${b}) is ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  }
+});

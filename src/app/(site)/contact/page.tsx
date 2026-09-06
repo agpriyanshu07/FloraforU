@@ -107,7 +107,7 @@ export default async function ContactPage() {
                 href={withUtm(settings.instagram, "website", "contact-page")}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${contactBtn} btn-ghost`}
+                className={`${contactBtn} btn-instagram`}
               >
                 <InstagramIcon className="h-4 w-4 shrink-0" />
                 Instagram

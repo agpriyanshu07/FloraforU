@@ -114,7 +114,7 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
               href={withUtm(settings.instagram, "website", "footer")}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-ghost btn-sm"
+              className="btn-instagram btn-sm"
             >
               <InstagramIcon className="h-4 w-4" />
               Instagram

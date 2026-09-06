@@ -49,7 +49,7 @@ export default async function InstagramFeed({
             New arrivals, event setups and dispatch updates go up on Instagram first.
           </p>
         </div>
-        <a href={profileHref} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+        <a href={profileHref} target="_blank" rel="noopener noreferrer" className="btn-instagram">
           <InstagramIcon className="h-4 w-4" />
           Open Instagram
         </a>

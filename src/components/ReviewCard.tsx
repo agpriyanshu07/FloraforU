@@ -1,4 +1,4 @@
-import { InstagramIcon, StarIcon } from "./icons";
+import { InstagramColorIcon, StarIcon } from "./icons";
 
 export default function ReviewCard({
   customerName,
@@ -55,7 +55,7 @@ export default function ReviewCard({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700"
               >
-                <InstagramIcon className="h-3.5 w-3.5" />
+                <InstagramColorIcon className="h-3.5 w-3.5" />
                 {source}
               </a>
             ) : (

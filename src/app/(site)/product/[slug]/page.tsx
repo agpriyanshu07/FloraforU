@@ -238,7 +238,7 @@ export default async function ProductPage({
               href={withUtm(settings.instagram, "website", "product-dm")}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-ghost"
+              className="btn-instagram"
             >
               <InstagramIcon className="h-4 w-4" />
               DM on Instagram
