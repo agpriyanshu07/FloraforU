@@ -69,7 +69,15 @@ export default async function OffersPage() {
             );
 
             return (
-              <section key={offer.id} aria-labelledby={`offer-${offer.id}`}>
+              <section
+                key={offer.id}
+                // The slug is the anchor the homepage card and every discounted
+                // product page link to, so landing here goes to that campaign
+                // rather than the top of a page listing several.
+                id={offer.slug}
+                aria-labelledby={`offer-${offer.id}`}
+                className="scroll-mt-24"
+              >
                 <div className="card overflow-hidden">
                   {offer.bannerUrl && (
                     <div className="relative aspect-[16/6] bg-marigold-50">

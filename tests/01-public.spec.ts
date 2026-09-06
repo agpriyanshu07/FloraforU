@@ -884,3 +884,23 @@ test("the story button says it downloads a file, not that it posts for you", asy
   await expect(button).toBeVisible();
   await expect(page.getByText(/You post it yourself/i)).toBeVisible();
 });
+
+test("the homepage offer card announces itself as one campaign, not its whole text", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  // The whole banner is a single link. Without an explicit name it announced as
+  // its entire contents run together — "Ends in 14d 9h 47m20% offGanesh Puja
+  // SaleFestive lamps, torans…" — which no screen-reader user can act on.
+  const card = page.locator('a[href^="/offers#"]').first();
+  const name = (await card.getAttribute("aria-label")) ?? "";
+  expect(name, "the card link has no name of its own").toMatch(/see this offer$/);
+  expect(name.length, "the name is the whole card again").toBeLessThan(80);
+
+  // And it lands on that campaign rather than the top of a page listing several.
+  const href = (await card.getAttribute("href"))!;
+  await page.goto(href);
+  const anchor = href.split("#")[1];
+  await expect(page.locator(`#${anchor}`)).toBeVisible();
+});

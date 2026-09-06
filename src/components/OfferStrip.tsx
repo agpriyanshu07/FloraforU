@@ -94,7 +94,13 @@ export default function OfferStrip({ offers }: { offers: StripOffer[] }) {
               <li key={offer.id}>
                 <Reveal delayMs={i * 90}>
                   <Link
-                    href="/offers"
+                    href={`/offers#${offer.slug}`}
+                    // Named explicitly: the whole card is one link, so without
+                    // this a screen reader announces its entire contents run
+                    // together — "Ends in 14d 9h 47m20% offGanesh Puja
+                    // SaleFestive lamps, torans…" — which is unusable as a
+                    // link name even though it is technically not empty.
+                    aria-label={`${offer.title} — see this offer`}
                     className="group block overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-all duration-300 hover:shadow-xl motion-safe:hover:-translate-y-1"
                   >
                     <div className="relative aspect-[16/9] overflow-hidden bg-marigold-50 sm:aspect-[16/7]">
