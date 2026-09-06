@@ -596,12 +596,25 @@ test("a product card pages through its photos without navigating away", async ({
   await expect(next).toHaveCount(1);
 
   const before = await card.locator("img").first().getAttribute("src");
-  await next.click({ force: true });
 
   // The photo changes and the card's link does not fire — the arrows sit inside
   // a linked card, so a stray navigation is the obvious failure here.
+  //
+  // Clicked until it takes, rather than once: the arrows are hydrated on the
+  // client, and on a loaded CI runner a click can land in the window before
+  // React attaches its handler — a single click has nothing to retry it, and
+  // the assertion then fails on a gallery that works. The click only fires
+  // while the photo is still the first one, so this can never page past the
+  // change it is waiting for.
   await expect
-    .poll(() => card.locator("img").first().getAttribute("src"), { timeout: 4000 })
+    .poll(
+      async () => {
+        const src = await card.locator("img").first().getAttribute("src");
+        if (src === before) await next.click({ force: true });
+        return src;
+      },
+      { timeout: 10_000 },
+    )
     .not.toBe(before);
   expect(new URL(page.url()).pathname).toBe("/catalogue");
 
@@ -609,4 +622,104 @@ test("a product card pages through its photos without navigating away", async ({
   await expect(
     page.getByRole("button", { name: /^Next photo of Velvet Backdrop/ }),
   ).toHaveCount(0);
+});
+
+test("the contact actions stay on one row at every width", async ({ page }) => {
+  // They used to wrap, dropping the last button onto a line of its own. The row
+  // has to hold together on a 320px phone and a desktop card alike, and no label
+  // may be cut off to achieve it.
+  for (const width of [320, 360, 375, 414, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/contact");
+
+    // Found through the WhatsApp link's own parent rather than by class name, so
+    // this keeps testing the layout rather than the utilities that produce it.
+    const boxes = await page
+      .getByRole("link", { name: "Chat on WhatsApp" })
+      .evaluate((link) =>
+        [...link.parentElement!.children].map((child) => ({
+          top: Math.round(child.getBoundingClientRect().top),
+          height: Math.round(child.getBoundingClientRect().height),
+          // Overflowing content means a label is being cut off, not wrapped.
+          clipped: child.scrollWidth > child.clientWidth + 1,
+        })),
+      );
+
+    expect(boxes, `actions at ${width}px`).toHaveLength(2);
+    expect(new Set(boxes.map((b) => b.top)).size, `one row at ${width}px`).toBe(1);
+    expect(
+      boxes.some((b) => b.clipped),
+      `no label cut off at ${width}px`,
+    ).toBe(false);
+    // The 44px touch target survives the squeeze.
+    expect(Math.min(...boxes.map((b) => b.height))).toBeGreaterThanOrEqual(44);
+  }
+
+  // Calling is still one tap away, through the phone number itself.
+  // Scoped to main: the footer carries the same number.
+  await expect(
+    page.locator("main").getByRole("link", { name: /^\+91/ }),
+  ).toHaveAttribute("href", /^tel:/);
+});
+
+test("the homepage reveals its sections on scroll, and never traps content", async ({
+  browser,
+}) => {
+  // Motion has to be asked for: headless Chromium reports
+  // prefers-reduced-motion: reduce by default, and the reveals correctly turn
+  // themselves off under it — so the default context sees no effect at all.
+  const context = await browser.newContext({ reducedMotion: "no-preference" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  const hidden = () =>
+    page.evaluate(
+      () =>
+        [...document.querySelectorAll(".ffu-reveal")].filter(
+          (el) => getComputedStyle(el).opacity === "0",
+        ).length,
+    );
+
+  // Polled, not read once: the hidden state is applied on mount, so it does not
+  // exist in the HTML the navigation resolves with. Something below the fold
+  // must start hidden, or there is no effect here at all.
+  await expect.poll(hidden, { timeout: 5000 }).toBeGreaterThan(5);
+
+  // Read the page the way a visitor does, then let the last transition finish.
+  const height = await page.evaluate(() => document.body.scrollHeight);
+  for (let y = 0; y < height; y += 500) {
+    await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), y);
+    await page.waitForTimeout(120);
+  }
+
+  // The failure this guards against is content that never arrives: a section
+  // stuck at opacity 0 is invisible but still in the layout, so nothing else
+  // looks wrong.
+  await expect.poll(hidden, { timeout: 5000 }).toBe(0);
+  await context.close();
+});
+
+test("reduced motion turns the reveals off rather than speeding them up", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  // Nothing is armed at all: no element is ever hidden waiting for a scroll.
+  await expect(page.locator(".ffu-reveal")).toHaveCount(0);
+  await context.close();
+});
+
+test("the homepage content is visible with JavaScript disabled", async ({ browser }) => {
+  // The reveal state is applied on mount, never in the server HTML. If that
+  // ever inverts, a failed bundle takes the whole page's content with it.
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  await expect(page.locator(".ffu-reveal")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Shop by category" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New arrivals" })).toBeVisible();
+  await context.close();
 });

@@ -55,7 +55,9 @@ export default function EnquireButton({
       className={className}
       aria-label={ariaLabel ?? label}
     >
-      <WhatsappIcon className="h-4 w-4" />
+      {/* shrink-0: in a narrow flex button the icon was being squeezed to zero
+          width instead of keeping its size, so it vanished silently. */}
+      <WhatsappIcon className="h-4 w-4 shrink-0" />
       {label}
     </a>
   );

@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     "Visit FloralforU at Bank More, Dhanbad, or message us on WhatsApp. Shop address, phone, hours and directions.",
 };
 
+/** Shared by both action buttons so the row divides evenly. min-w-0 lets a
+ *  column shrink below its label's width, which is what makes the grid hold. */
+const contactBtn = "min-w-0 !px-3 text-center leading-tight break-words sm:!px-5";
+
 export default async function ContactPage() {
   const settings = await getSettings();
   const wa = withUtm(
@@ -88,21 +92,24 @@ export default async function ContactPage() {
               </li>
             </ul>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <EnquireButton href={wa} label="Chat on WhatsApp" className="btn-whatsapp" />
+            {/* One row on every width, two equal columns sharing whatever the
+                card gives them. The phone number above is itself a tel: link,
+                so calling is still one tap from here without a button of its
+                own. Verified from 320px to 1440px; nothing clips and the 44px
+                touch target holds throughout. */}
+            <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-3">
               <EnquireButton
-                href={`tel:${settings.phone.replace(/\s/g, "")}`}
-                channel="call"
-                label="Call the shop"
-                className="btn-ghost"
+                href={wa}
+                label="Chat on WhatsApp"
+                className={`${contactBtn} btn-whatsapp`}
               />
               <a
                 href={withUtm(settings.instagram, "website", "contact-page")}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-ghost"
+                className={`${contactBtn} btn-ghost`}
               >
-                <InstagramIcon className="h-4 w-4" />
+                <InstagramIcon className="h-4 w-4 shrink-0" />
                 Instagram
               </a>
             </div>
