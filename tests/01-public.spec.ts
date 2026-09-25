@@ -1,5 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { PUBLIC_ROUTES, loadLazyImages, reseed } from "./helpers";
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 test.describe.configure({ mode: "serial" });
 
@@ -623,6 +626,47 @@ test("the photo arrows are never served dead in the markup", async ({ page }) =>
   const html = await (await page.request.get("/catalogue")).text();
   expect(html).toContain("Dry Flower Bunch");
   expect(html).not.toContain("Next photo of");
+});
+
+test("the campaign banners carry no words of their own", async ({ page }) => {
+  // The banner sits directly under the campaign's real title, discount badge
+  // and countdown. Artwork that spells out a headline of its own either says
+  // the same thing twice or, worse, contradicts it once a campaign is renamed
+  // — which is exactly how the old placeholders ended up reading "Seasonal
+  // Offer" under a heading that said something else.
+  const dir = path.join(process.cwd(), "public", "img", "offers");
+  const banners = fs.readdirSync(dir).filter((f) => f.endsWith(".svg"));
+  expect(banners.length).toBeGreaterThan(0);
+  for (const file of banners) {
+    const svg = fs.readFileSync(path.join(dir, file), "utf8");
+    expect(svg, `${file} draws text`).not.toMatch(/<text[\s>]/);
+  }
+
+  // And on the page itself it is announced as decoration, not described.
+  await page.goto("/offers");
+  const banner = page.locator('img[src*="/img/offers/"]').first();
+  await expect(banner).toHaveCount(1);
+  await expect(banner).toHaveAttribute("alt", "");
+});
+
+test("a reseed never overwrites real artwork", async () => {
+  // The seed regenerates the placeholder art on every run, local and CI. Once
+  // the owner drops a real photo or a drawn banner at one of those paths, that
+  // regeneration must leave it alone — otherwise the file appears to revert by
+  // itself, which is exactly what happened to the campaign banners.
+  const file = path.join(process.cwd(), "public", "img", "categories", "lamps-diyas.svg");
+  const original = fs.readFileSync(file);
+  const real = '<svg xmlns="http://www.w3.org/2000/svg"><!-- a real photo would go here --></svg>';
+  try {
+    fs.writeFileSync(file, real);
+    execFileSync(process.execPath, [
+      "scripts/generate-placeholder-art.mjs",
+      JSON.stringify([{ slug: "lamps-diyas", short: "Lamps" }]),
+    ]);
+    expect(fs.readFileSync(file, "utf8")).toBe(real);
+  } finally {
+    fs.writeFileSync(file, original);
+  }
 });
 
 test("the contact actions stay on one row at every width", async ({ page }) => {

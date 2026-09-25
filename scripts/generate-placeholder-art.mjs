@@ -5,7 +5,7 @@
  *
  *   node scripts/generate-placeholder-art.mjs
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const OUT = join(process.cwd(), "public", "img");
@@ -67,9 +67,24 @@ function tile({ label, sub, w = 800, h = 600, scheme, seed = 0 }) {
 </svg>`;
 }
 
+const kept = [];
+
+/**
+ * Writes a placeholder, but never over real artwork.
+ *
+ * Every file this script authors carries the `placeholder artwork` marker in
+ * its aria-label. Anything at one of these paths *without* that marker was put
+ * there by a person — a real product photo, a drawn campaign banner — and a
+ * reseed silently undoing that is a trap: the seed runs this on every local
+ * reset and in CI, so the loss looks like the file "reverting by itself".
+ */
 function write(rel, content) {
   const file = join(OUT, rel);
   mkdirSync(dirname(file), { recursive: true });
+  if (existsSync(file) && !readFileSync(file, "utf8").includes("placeholder artwork")) {
+    kept.push(rel);
+    return;
+  }
   writeFileSync(file, content);
 }
 
@@ -78,11 +93,10 @@ categories.forEach((c, i) => {
   write(`categories/${c.slug}.svg`, tile({ label: c.short, sub: "placeholder photo", scheme: i, seed: i + 1 }));
 });
 
-// Hero, offers, gallery, review avatars
+// Hero and gallery. The campaign banners under public/img/offers/ are NOT
+// generated here any more: they are drawn artwork, committed to the repo, and
+// this script has no business rewriting them.
 write("hero.svg", tile({ label: "FloralforU", sub: "event décor · dhanbad", w: 1200, h: 800, scheme: 0, seed: 77 }));
-["ganesh-puja-sale", "monsoon-clearance"].forEach((slug, i) =>
-  write(`offers/${slug}.svg`, tile({ label: "Seasonal Offer", sub: slug.replace(/-/g, " "), w: 1200, h: 420, scheme: i + 2, seed: 100 + i })),
-);
 // Labels must match the tags the seed assigns: g1-g5 event, g6-g8 dispatch,
 // g9 the shop counter. A tile captioned "Our shop counter" that reads
 // "Dispatch" looks like a mistake, because it is one.
@@ -91,4 +105,5 @@ for (let i = 1; i <= 9; i++) {
   const label = GALLERY_LABELS[i <= 5 ? 0 : i <= 8 ? 1 : 2];
   write(`gallery/g${i}.svg`, tile({ label, sub: "placeholder photo", w: 700, h: 700, scheme: i, seed: 200 + i }));
 }
-console.log(`Wrote placeholder artwork for ${categories.length} categories + hero/offers/gallery.`);
+console.log(`Wrote placeholder artwork for ${categories.length} categories + hero/gallery.`);
+if (kept.length) console.log(`Left ${kept.length} real asset(s) untouched: ${kept.join(", ")}`);
