@@ -694,6 +694,58 @@ test("every page shares with a preview image messengers can actually render", as
   }
 });
 
+test("the shop describes itself to search engines, on every page", async ({ page }) => {
+  // A local shop's whole search story is "there is a business in Dhanbad, at
+  // this address, on this phone number". The product pages described their
+  // products; nothing described the shop.
+  for (const route of ["/", "/catalogue", "/contact", "/product/dry-flower-bunch-assorted"]) {
+    await page.goto(route);
+    const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+    const shop = blocks.map((b) => JSON.parse(b)).find((b) => b["@type"] === "Store");
+    expect(shop, `${route} carries no Store block`).toBeTruthy();
+    expect(shop.address.addressLocality).toBeTruthy();
+    expect(shop.address.addressCountry).toBe("IN");
+    expect(shop.telephone).toBeTruthy();
+
+    // Free-text opening hours must never be published as if they were the
+    // machine format: a wrong answer in a field search engines act on is worse
+    // than no answer.
+    expect(shop.openingHours).toBeUndefined();
+  }
+
+  // And the trail above a product, which is what a result shows instead of a
+  // bare URL.
+  await page.goto("/product/dry-flower-bunch-assorted");
+  const crumbs = (
+    await page.locator('script[type="application/ld+json"]').allTextContents()
+  )
+    .map((b) => JSON.parse(b))
+    .find((b) => b["@type"] === "BreadcrumbList");
+  expect(crumbs).toBeTruthy();
+  expect(crumbs.itemListElement).toHaveLength(3);
+  expect(crumbs.itemListElement[0].name).toBe("Home");
+  expect(crumbs.itemListElement[2].name).toContain("Dry Flower Bunch");
+});
+
+test("every indexable page names its canonical URL", async ({ page }) => {
+  // The catalogue links to a lot of its own filter, sort and page combinations.
+  // Without this they compete with each other as separate near-identical
+  // results for the same inventory.
+  for (const route of ["/", "/catalogue", "/categories", "/offers", "/contact", "/about"]) {
+    await page.goto(route);
+    const href = await page
+      .locator('link[rel="canonical"]')
+      .first()
+      .getAttribute("href");
+    expect(href, `${route} has no canonical`).toBeTruthy();
+  }
+
+  await page.goto("/catalogue?category=lamps-diyas&sort=price-asc&page=2");
+  const canonical = await page.locator('link[rel="canonical"]').first().getAttribute("href");
+  expect(new URL(canonical!).pathname).toBe("/catalogue");
+  expect(new URL(canonical!).search).toBe("");
+});
+
 test("the contact actions stay on one row at every width", async ({ page }) => {
   // They used to wrap, dropping the last button onto a line of its own. The row
   // has to hold together on a 320px phone and a desktop card alike, and no label

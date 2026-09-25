@@ -19,7 +19,7 @@ import { buildWhatsappUrl, instagramDmUrl, withUtm } from "@/lib/whatsapp";
 import { formatPrice, isProductNew, AVAILABILITY_LABELS } from "@/lib/format";
 import { enquiryPriceNote, offerPriceOf, pricingFor } from "@/lib/pricing";
 import { PRODUCT_CARD_SELECT, PUBLIC_REVIEW_WHERE, getActiveOfferTerms } from "@/lib/queries";
-import { serialiseJsonLd } from "@/lib/json-ld";
+import { BreadcrumbJsonLd, JsonLd } from "@/components/JsonLd";
 
 // Cached; admin writes revalidate this path explicitly, so the window is a backstop.
 export const revalidate = 3600;
@@ -184,9 +184,17 @@ export default async function ProductPage({
 
   return (
     <div className="shell py-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
+      <JsonLd data={jsonLd} />
+      {/* The same trail the page shows visually, in the form a crawler reads —
+          it is what turns a bare URL under a search result into
+          "floralforu.com › Lamps & Diyas › Brass Diya". */}
+      <BreadcrumbJsonLd
+        siteUrl={settings.siteUrl}
+        trail={[
+          { name: "Home", path: "/" },
+          { name: product.category.name, path: `/categories/${product.category.slug}` },
+          { name: product.name, path: `/product/${product.slug}` },
+        ]}
       />
 
       <StickyEnquireBar

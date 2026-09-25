@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "Contact & directions",
   description:
     "Visit FloralforU at Bank More, Dhanbad, or message us on WhatsApp. Shop address, phone, hours and directions.",
+  alternates: { canonical: "/contact" },
 };
 
 /** Shared by both action buttons so the row divides evenly. min-w-0 lets a

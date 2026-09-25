@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Current offers",
   description:
     "Named, time-bound seasonal sales from FloralforU — festive décor, lamps, flowers and event equipment at our best rates. Enquire on WhatsApp before the offer ends.",
+  alternates: { canonical: "/offers" },
 };
 
 const dateFmt = (d: Date) =>

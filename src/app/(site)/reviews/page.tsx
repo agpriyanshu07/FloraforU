@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   title: "Customer reviews",
   description:
     "What brides, event planners and shopkeepers in Dhanbad say about ordering décor, flowers and SFX items from FloralforU.",
+  alternates: { canonical: "/reviews" },
 };
 
 export default async function ReviewsPage() {

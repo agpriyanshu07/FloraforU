@@ -1,4 +1,5 @@
 import SiteHeader from "@/components/SiteHeader";
+import { LocalBusinessJsonLd } from "@/components/JsonLd";
 import SiteFooter from "@/components/SiteFooter";
 import BackToTop from "@/components/BackToTop";
 import OfferRibbon from "@/components/OfferRibbon";
@@ -26,6 +27,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-full flex-col">
+      <LocalBusinessJsonLd settings={settings} />
       <a href="#main" className="skip-link">
         Skip to main content
       </a>

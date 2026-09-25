@@ -166,10 +166,19 @@ test("a product name cannot inject script into the public page", async ({ page }
   const blocks = await page.$$eval('script[type="application/ld+json"]', (els) =>
     els.map((e) => e.textContent ?? ""),
   );
-  expect(blocks, "exactly one JSON-LD block, not a split one").toHaveLength(1);
-  expect(() => JSON.parse(blocks[0])).not.toThrow();
-  expect(blocks[0], "no raw < may survive into the document").not.toContain("<");
-  expect(JSON.parse(blocks[0]).name, "the name is still carried, just escaped").toBe(payload);
+  // A page carries several of these now — the shop, the breadcrumb trail, the
+  // product. So the check is not "how many" but the property that actually
+  // matters: a block closed early by an injected </script> leaves a fragment
+  // that is not valid JSON, and a raw < is what makes that possible at all.
+  expect(blocks.length, "the product page carries its JSON-LD").toBeGreaterThan(0);
+  for (const block of blocks) {
+    expect(() => JSON.parse(block), "every block is whole, not split").not.toThrow();
+    expect(block, "no raw < may survive into the document").not.toContain("<");
+  }
+
+  const products = blocks.map((b) => JSON.parse(b)).filter((b) => b["@type"] === "Product");
+  expect(products, "one Product block").toHaveLength(1);
+  expect(products[0].name, "the name is still carried, just escaped").toBe(payload);
 
   // Clean up so the catalogue is left as the seed made it.
   await page.goto(slug);
