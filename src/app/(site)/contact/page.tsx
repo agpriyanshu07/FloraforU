@@ -3,7 +3,7 @@ import ContactForm from "@/components/ContactForm";
 import EnquireButton from "@/components/EnquireButton";
 import {
   ClockIcon,
-  InstagramIcon,
+  InstagramColorIcon,
   MailIcon,
   PhoneIcon,
   PinIcon,
@@ -110,7 +110,7 @@ export default async function ContactPage() {
                 rel="noopener noreferrer"
                 className={`${contactBtn} btn-instagram`}
               >
-                <InstagramIcon className="h-4 w-4 shrink-0" />
+                <InstagramColorIcon className="h-4 w-4 shrink-0" />
                 Instagram
               </a>
             </div>

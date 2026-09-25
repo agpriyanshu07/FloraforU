@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import ProductGallery from "@/components/ProductGallery";
 import ProductGrid from "@/components/ProductGrid";
 import EnquireButton from "@/components/EnquireButton";
-import ShareToStory from "@/components/ShareToStory";
+import ShareToStory, { DOWNLOAD_CAPTION } from "@/components/ShareToStory";
 import WishlistButton from "@/components/WishlistButton";
 import StickyEnquireBar from "@/components/StickyEnquireBar";
 import ReviewCard from "@/components/ReviewCard";
@@ -12,7 +12,7 @@ import ReviewForm from "@/components/ReviewForm";
 import Price from "@/components/Price";
 import Countdown from "@/components/Countdown";
 import { AvailabilityTag, CategoryTag, NewBadge, OfferBadge } from "@/components/Badges";
-import { InstagramIcon, PhoneIcon, StarIcon } from "@/components/icons";
+import { InstagramColorIcon, PhoneIcon, StarIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { buildWhatsappUrl, instagramDmUrl, withUtm } from "@/lib/whatsapp";
@@ -343,46 +343,57 @@ export default async function ProductPage({
 
           {/* id is watched by the sticky bar, which shows itself only once
               this row has scrolled out of view. */}
-          <div id="product-actions" className="mt-7 flex flex-wrap gap-3">
+          {/* Two columns on a phone rather than a wrapping row. Left to wrap,
+              these five buttons sized themselves to their labels and broke into
+              a ragged staircase — one long button, then two, then one — which
+              reads as five unrelated things rather than one set of actions.
+              The primary spans both columns because it is the one to press. */}
+          <div
+            id="product-actions"
+            className="mt-7 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:gap-3"
+          >
             <EnquireButton
               href={waHref}
               productId={product.id}
               label="Enquire on WhatsApp"
               ariaLabel={`Enquire about ${product.name} on WhatsApp`}
-              className="btn-primary"
+              className="btn-primary col-span-2 w-full sm:col-auto sm:w-auto"
             />
             <EnquireButton
               href={`tel:${settings.phone.replace(/\s/g, "")}`}
               productId={product.id}
               channel="call"
               label="Call the shop"
-              className="btn-ghost"
+              className="btn-ghost w-full whitespace-nowrap max-sm:!px-3 sm:w-auto"
             />
             <a
               href={withUtm(instagramDmUrl(settings.instagram), "website", "product-dm")}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-instagram"
+              className="btn-instagram w-full whitespace-nowrap max-sm:!px-3 sm:w-auto"
             >
-              <InstagramIcon className="h-4 w-4" />
+              <InstagramColorIcon className="h-4 w-4 shrink-0" />
               DM on Instagram
             </a>
             <WishlistButton
               slug={product.slug}
               productName={product.name}
               variant="button"
+              className="w-full whitespace-nowrap max-sm:!px-3 sm:w-auto"
             />
-          </div>
-
-          <div className="mt-4">
             <ShareToStory
               productName={product.name}
               spec={product.spec}
               price={priceLabel}
               imageUrl={product.images[0]?.url}
               handle="@floralforu_"
+              className="w-full whitespace-nowrap max-sm:!px-3 sm:w-auto"
+              caption={false}
             />
           </div>
+
+          {/* Below the whole row, not inside one column of it. */}
+          <p className="mt-2.5 text-[13px] text-ink-600">{DOWNLOAD_CAPTION}</p>
 
           <p className="mt-5 flex items-start gap-2 rounded-xl bg-rose-50 p-3 text-[13px] text-ink-600">
             <PhoneIcon className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />

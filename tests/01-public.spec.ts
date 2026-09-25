@@ -746,6 +746,86 @@ test("every indexable page names its canonical URL", async ({ page }) => {
   expect(new URL(canonical!).search).toBe("");
 });
 
+test("the product actions line up instead of staggering down the page", async ({
+  page,
+}) => {
+  // Left to wrap, these five buttons sized themselves to their labels and broke
+  // into a staircase — one wide, then two, then one, then one — which reads as
+  // five unrelated things rather than one set of actions.
+  for (const width of [320, 360, 393, 414]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/product/foam-rose-garland-lardi");
+
+    const row = page.locator("#product-actions");
+    const boxes = await row.evaluate((el) =>
+      [...el.children].map((c) => {
+        const r = c.getBoundingClientRect();
+        return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top) };
+      }),
+    );
+    expect(boxes.length, `${width}px: five actions`).toBe(5);
+
+    const [primary, ...secondary] = boxes;
+    const widths = secondary.map((b) => b.w);
+    expect(
+      Math.max(...widths) - Math.min(...widths),
+      `${width}px: the four secondary buttons are one size`,
+    ).toBeLessThanOrEqual(1);
+    expect(primary.w, `${width}px: the main action is the widest`).toBeGreaterThan(widths[0]);
+
+    // Two per row, so four secondary buttons make exactly two rows.
+    const rows = new Set(secondary.map((b) => b.top));
+    expect(rows.size, `${width}px: secondary actions form two rows`).toBe(2);
+
+    // No label wrapping to a second line, which is what made rows uneven.
+    const heights = boxes.map((b) => b.h);
+    expect(
+      Math.max(...heights) - Math.min(...heights),
+      `${width}px: no button is taller than the rest`,
+    ).toBeLessThanOrEqual(1);
+  }
+});
+
+test("a shopper can take away one category instead of the whole catalogue", async ({
+  page,
+}) => {
+  // Most enquiries are about one kind of thing. Sending 97 products to answer
+  // "what backdrops do you have" is a lot to scroll on a phone.
+  await page.goto("/categories/lamps-diyas");
+  const link = page.getByRole("link", { name: /Download this category/i });
+  await expect(link).toBeVisible();
+  expect(await link.getAttribute("href")).toBe("/api/catalogue-pdf?category=lamps-diyas");
+
+  const one = await page.request.get("/api/catalogue-pdf?category=lamps-diyas");
+  expect(one.status()).toBe(200);
+  expect(one.headers()["content-type"]).toContain("application/pdf");
+  // Named for the category: a shop sending four of these in one thread cannot
+  // have them all called the same thing.
+  expect(one.headers()["content-disposition"]).toContain("floralforu-lamps-diyas-");
+
+  const all = await page.request.get("/api/catalogue-pdf");
+  expect(all.status()).toBe(200);
+  expect((await one.body()).length, "one category is smaller than the lot").toBeLessThan(
+    (await all.body()).length,
+  );
+
+  // A bad slug is a bad link, not a catalogue of nothing.
+  expect((await page.request.get("/api/catalogue-pdf?category=no-such-thing")).status()).toBe(404);
+
+  // And the catalogue's own button follows the filter.
+  await page.goto("/catalogue?category=lamps-diyas");
+  // Scoped to the page body: the footer carries a whole-catalogue link too.
+  const filtered = page.getByRole("main").getByRole("link", { name: /Download .* PDF/i });
+  expect(await filtered.getAttribute("href")).toBe("/api/catalogue-pdf?category=lamps-diyas");
+  await page.goto("/catalogue");
+  expect(
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: /Download catalogue PDF/i })
+      .getAttribute("href"),
+  ).toBe("/api/catalogue-pdf");
+});
+
 test("the contact actions stay on one row at every width", async ({ page }) => {
   // They used to wrap, dropping the last button onto a line of its own. The row
   // has to hold together on a 320px phone and a desktop card alike, and no label
@@ -846,59 +926,72 @@ test("the homepage content is visible with JavaScript disabled", async ({ browse
   await context.close();
 });
 
-test("every Instagram link carries the brand gradient, readable in white", async ({
+test("every Instagram link is recognisably Instagram, and readable", async ({
   page,
 }) => {
-  // Instagram's own gradient runs from pale yellow to blue, and white label text
-  // on the warm end measures ~2.4:1 — well under AA. The palette here is
-  // weighted to the pink-purple-blue half to clear it, which is easy to undo by
-  // "restoring" the real thing, so the stops are checked rather than trusted.
-  const contrastVsWhite = (r: number, g: number, b: number) => {
-    const channel = (c: number) => {
-      const v = c / 255;
-      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  // These buttons used to be filled with Instagram's gradient. Three saturated
+  // fills in one row of actions read as loud rather than branded, and white
+  // text over the warm end of that palette measured ~2.4:1, so the gradient had
+  // to stay anchored just so to clear AA at all. The surface is quiet now and
+  // the brand lives in the glyph.
+  const contrast = (fg: number[], bg: number[]) => {
+    const lum = ([r, g, b]: number[]) => {
+      const ch = (c: number) => {
+        const v = c / 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
     };
-    const luminance =
-      0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-    return 1.05 / (luminance + 0.05);
+    const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
   };
+  const rgb = (v: string) => [...v.matchAll(/\d+/g)].slice(0, 3).map(Number);
 
   for (const route of ["/", "/contact", "/reviews", "/product/lace-pot"]) {
     await page.goto(route);
 
-    // The action buttons, not every link that happens to point at Instagram —
-    // the feed's photo tiles link there too and are meant to look like photos.
     const links = page.locator("a.btn-instagram");
     const count = await links.count();
     expect(count, `Instagram buttons on ${route}`).toBeGreaterThan(0);
 
-    // And none of them has been quietly returned to the old plain treatment.
-    await expect(
-      page.locator('a[href*="instagram.com"].btn-ghost'),
-      `${route} still has a plain Instagram button`,
-    ).toHaveCount(0);
-
     for (let i = 0; i < count; i++) {
-      const background = await links
-        .nth(i)
-        .evaluate((el) => getComputedStyle(el).backgroundImage);
+      const link = links.nth(i);
 
-      expect(background, `${route} link ${i} has the gradient`).toContain("gradient");
+      // The mark, painted in Instagram's gradient. This is the part that says
+      // which service the button opens, so it has to be there and it has to be
+      // painted — the gradient was once defined inside the header's button,
+      // which is display:none on a phone, and a paint server inside a hidden
+      // subtree renders nothing: an invisible icon on a visible button.
+      const glyph = link.locator("svg").first();
+      await expect(glyph, `${route} link ${i} has a glyph`).toHaveCount(1);
+      const stroke = await glyph.evaluate((el) => getComputedStyle(el).stroke);
+      expect(stroke, `${route} link ${i} glyph paint`).toContain("ffu-ig");
 
-      // Every stop must clear AA on its own; a blend of two passing colours
-      // stays between them, so the whole sweep clears it too.
-      const stops = [...background.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)];
-      expect(stops.length, `${route} link ${i} colour stops`).toBeGreaterThan(1);
-
-      for (const [, r, g, b] of stops) {
-        const ratio = contrastVsWhite(Number(r), Number(g), Number(b));
-        expect(
-          ratio,
-          `${route} link ${i}: white on rgb(${r},${g},${b}) is ${ratio.toFixed(2)}:1`,
-        ).toBeGreaterThanOrEqual(4.5);
-      }
+      const { colour, background } = await link.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { colour: cs.color, background: cs.backgroundColor };
+      });
+      const ratio = contrast(rgb(colour), rgb(background));
+      expect(
+        ratio,
+        `${route} link ${i}: label contrast is ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(4.5);
     }
   }
+
+  // And the gradient itself is defined once, somewhere that is never hidden.
+  await page.goto("/");
+  const def = page.locator("#ffu-ig");
+  await expect(def).toHaveCount(1);
+  const hidden = await def.evaluate((el) => {
+    let node: Element | null = el.closest("svg");
+    while (node) {
+      if (getComputedStyle(node).display === "none") return true;
+      node = node.parentElement;
+    }
+    return false;
+  });
+  expect(hidden, "the gradient must not be defined inside a hidden element").toBe(false);
 });
 
 test("an offer shows the old price struck through beside the new one", async ({ page }) => {
@@ -1002,7 +1095,7 @@ test("the story button says it downloads a file, not that it posts for you", asy
   // the product on the customer's own story. It cannot: it makes a PNG.
   await expect(page.getByRole("button", { name: /Instagram Story/i })).toHaveCount(0);
 
-  const button = page.getByRole("button", { name: /Download product details/i });
+  const button = page.getByRole("button", { name: /^Download details/i });
   await expect(button).toBeVisible();
   await expect(page.getByText(/You post it yourself/i)).toBeVisible();
 });

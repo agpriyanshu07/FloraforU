@@ -28,6 +28,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const categorySlug = url.searchParams.get("category") ?? undefined;
 
+  // A slug that matches nothing would otherwise produce a cover page promising
+  // "0 products across 0 categories" — a valid PDF of nothing, which looks like
+  // the shop has no stock rather than like a bad link.
   const [settings, categories] = await Promise.all([
     getSettings(),
     db.category.findMany({
@@ -42,8 +45,18 @@ export async function GET(request: Request) {
     }),
   ]);
 
+  if (categorySlug && categories.length === 0) {
+    return NextResponse.json({ error: "No such category." }, { status: 404 });
+  }
+
+  const only = categorySlug ? categories[0] : null;
+
   const doc = await PDFDocument.create();
-  doc.setTitle(`${settings.businessName} — Product Catalogue`);
+  doc.setTitle(
+    only
+      ? `${settings.businessName} — ${only.name}`
+      : `${settings.businessName} — Product Catalogue`,
+  );
   doc.setAuthor(settings.businessName);
   doc.setSubject("Event décor, artificial flowers and SFX catalogue");
   doc.setCreationDate(new Date());
@@ -66,9 +79,13 @@ export async function GET(request: Request) {
     x: M, y: A4.h - 150, size: 40, font: bold, color: ROSE,
   });
   cover.drawText(settings.tagline, { x: M, y: A4.h - 182, size: 13, font: regular, color: MUTED });
-  cover.drawText("Product Catalogue", { x: M, y: A4.h - 330, size: 26, font: bold, color: INK });
+  cover.drawText(only ? only.name : "Product Catalogue", {
+    x: M, y: A4.h - 330, size: 26, font: bold, color: INK,
+  });
   cover.drawText(
-    `${totalProducts} products across ${categories.length} categories · Generated ${generatedOn}`,
+    only
+      ? `${totalProducts} product${totalProducts === 1 ? "" : "s"} in this category · Generated ${generatedOn}`
+      : `${totalProducts} products across ${categories.length} categories · Generated ${generatedOn}`,
     { x: M, y: A4.h - 356, size: 11, font: regular, color: MUTED },
   );
 
@@ -172,7 +189,11 @@ export async function GET(request: Request) {
   });
 
   const bytes = await doc.save();
-  const filename = `floralforu-catalogue-${new Date().toISOString().slice(0, 10)}.pdf`;
+  // The filename says which list it is: a shop that sends four category PDFs
+  // in one WhatsApp thread cannot have them all called the same thing.
+  const filename = `floralforu-${only ? only.slug : "catalogue"}-${new Date()
+    .toISOString()
+    .slice(0, 10)}.pdf`;
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {

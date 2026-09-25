@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CloseIcon, InstagramIcon, MenuIcon, WhatsappIcon } from "./icons";
+import { CloseIcon, InstagramColorIcon, MenuIcon, WhatsappIcon } from "./icons";
 import WishlistLink from "./WishlistLink";
 import SearchBar from "./SearchBar";
 
@@ -84,9 +84,12 @@ export default function SiteHeader({
             href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-whatsapp hidden w-11 !px-0 sm:inline-flex"
+            className="btn-whatsapp-quiet hidden w-11 !px-0 sm:inline-flex"
           >
-            <WhatsappIcon className="h-[18px] w-[18px] shrink-0" />
+            {/* The glyph carries WhatsApp's green now that the button does not.
+                Two saturated fills side by side in the header corner was the
+                loudest thing on an otherwise calm page. */}
+            <WhatsappIcon className="h-[18px] w-[18px] shrink-0 text-whatsapp" />
             <span className="sr-only">Chat with {businessName} on WhatsApp</span>
           </a>
           <a
@@ -95,7 +98,7 @@ export default function SiteHeader({
             rel="noopener noreferrer"
             className="btn-instagram hidden w-11 !px-0 sm:inline-flex"
           >
-            <InstagramIcon className="h-[18px] w-[18px] shrink-0" />
+            <InstagramColorIcon className="h-[18px] w-[18px] shrink-0" />
             <span className="sr-only">{businessName} on Instagram</span>
           </a>
 
@@ -140,9 +143,9 @@ export default function SiteHeader({
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-whatsapp min-w-0 !px-3"
+              className="btn-whatsapp-quiet min-w-0 !px-3"
             >
-              <WhatsappIcon className="h-4 w-4 shrink-0" />
+              <WhatsappIcon className="h-4 w-4 shrink-0 text-whatsapp" />
               WhatsApp
             </a>
             <a
@@ -151,7 +154,7 @@ export default function SiteHeader({
               rel="noopener noreferrer"
               className="btn-instagram min-w-0 !px-3"
             >
-              <InstagramIcon className="h-4 w-4 shrink-0" />
+              <InstagramColorIcon className="h-4 w-4 shrink-0" />
               Instagram
             </a>
           </li>

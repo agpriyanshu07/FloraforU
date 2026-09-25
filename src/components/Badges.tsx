@@ -27,8 +27,28 @@ export function CategoryTag({ children }: { children: ReactNode }) {
   );
 }
 
-export function AvailabilityTag({ availability }: { availability: string }) {
+/**
+ * `short` is for product cards, where this sits opposite the New/Offer badges
+ * over a photo about 170px wide on a phone. "Limited stock" and "Made to order"
+ * are simply too long for that: the two badge groups ran into each other and
+ * overlapped. The full wording stays on the product page, where there is room
+ * for it and where the shopper is deciding.
+ */
+export function AvailabilityTag({
+  availability,
+  short = false,
+}: {
+  availability: string;
+  short?: boolean;
+}) {
   if (availability === "in_stock") return null;
-  const label = availability === "limited" ? "Limited stock" : "Made to order";
+  const limited = availability === "limited";
+  const label = short
+    ? limited
+      ? "Limited"
+      : "To order"
+    : limited
+      ? "Limited stock"
+      : "Made to order";
   return <Pill className="bg-ink-900/85 text-white">{label}</Pill>;
 }

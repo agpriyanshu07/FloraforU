@@ -12,6 +12,14 @@ const THEME_HEX: Record<string, { bg: string; ink: string }> = {
   "midnight-gold": { bg: "#3d2c4f", ink: "#2c1f3a" },
 };
 
+/**
+ * What the button actually does, in words. Exported so a caller that lays the
+ * button out in a row ofother actions can place this line below the whole row
+ * rather than inside one narrow column.
+ */
+export const DOWNLOAD_CAPTION =
+  "Saves a picture to your device, sized for Instagram or WhatsApp Status. You post it yourself — nothing is shared from here.";
+
 export type StoryOffer = {
   title: string;
   discountLabel: string | null;
@@ -27,8 +35,8 @@ export type StoryOffer = {
  * The button used to read "Save as Instagram Story", which promised something
  * this cannot do: the site has no connection to anyone's Instagram account and
  * posts nothing. All it does is put an image in your downloads. The label says
- * that now — "Download product details" (the card carries the name, spec and
- * price) — and the caption underneath says what to do with it.
+ * that now — "Download details" — and the caption underneath says what to do
+ * with it.
  *
  * Two shapes: a product card (the original), or a campaign card when `offer` is
  * passed — same generator so both stay visually consistent as the brand evolves.
@@ -41,6 +49,8 @@ export default function ShareToStory({
   handle,
   offer,
   label,
+  className = "",
+  caption = true,
 }: {
   productName: string;
   spec: string;
@@ -50,6 +60,10 @@ export default function ShareToStory({
   /** When present, renders a campaign card instead of a product card. */
   offer?: StoryOffer;
   label?: string;
+  /** Extra classes for the button itself, e.g. to fill a grid cell. */
+  className?: string;
+  /** Set false when the caller prints DOWNLOAD_CAPTION itself. */
+  caption?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -147,23 +161,24 @@ export default function ShareToStory({
     }
   }
 
+  const button = (
+    <button
+      type="button"
+      onClick={makeStory}
+      className={`btn-ghost ${className}`}
+      disabled={busy}
+    >
+      <DownloadIcon className="h-4 w-4 shrink-0" />
+      {busy ? "Making the image…" : (label ?? "Download details")}
+    </button>
+  );
+
+  if (!caption || label) return button;
+
   return (
     <div>
-      <button
-        type="button"
-        onClick={makeStory}
-        className="btn-ghost btn-sm"
-        disabled={busy}
-      >
-        <DownloadIcon className="h-4 w-4 shrink-0" />
-        {busy ? "Making the image…" : (label ?? "Download product details")}
-      </button>
-      {!label && (
-        <p className="mt-1.5 text-[13px] text-ink-600">
-          Saves a picture to your device, sized for Instagram or WhatsApp Status.
-          You post it yourself — nothing is shared from here.
-        </p>
-      )}
+      {button}
+      <p className="mt-1.5 text-[13px] text-ink-600">{DOWNLOAD_CAPTION}</p>
     </div>
   );
 }

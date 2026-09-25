@@ -66,16 +66,20 @@ export const InstagramIcon = ({ className }: IconProps) => (
 );
 
 /**
- * The same mark painted in Instagram's gradient, for the places where it sits on
- * the page rather than on a button — where btn-instagram's gradient background
- * does the colouring instead and this glyph would be gradient on gradient.
+ * The gradient the Instagram mark is painted with, defined once per page.
  *
- * The gradient id is fixed rather than generated: repeated ids resolve to the
- * first definition in the document, which is exactly the same gradient, and a
- * generated one would differ between the server and client renders.
+ * It used to be carried inside every icon, on the reasoning that duplicate ids
+ * resolve to the first definition in the document and every definition was
+ * identical. That held until the first one landed inside something hidden: the
+ * header's Instagram button is `display:none` below the sm breakpoint, a
+ * paint server inside a hidden subtree is not available to reference, and so
+ * every Instagram glyph on a phone rendered as nothing at all — an invisible
+ * icon on a visible button.
+ *
+ * Rendered once in the site layout, in a zero-sized svg that is never hidden.
  */
-export const InstagramColorIcon = ({ className }: IconProps) => (
-  <svg {...base(className)} stroke="url(#ffu-ig)">
+export const InstagramGradientDef = () => (
+  <svg width="0" height="0" aria-hidden="true" focusable="false" className="absolute">
     <defs>
       <linearGradient id="ffu-ig" x1="0" y1="1" x2="1" y2="0">
         <stop offset="0%" stopColor="#da2f69" />
@@ -84,9 +88,23 @@ export const InstagramColorIcon = ({ className }: IconProps) => (
         <stop offset="100%" stopColor="#2a51d8" />
       </linearGradient>
     </defs>
+  </svg>
+);
+
+/**
+ * The mark painted in Instagram's gradient, for the places where it sits on a
+ * quiet surface rather than on a coloured fill.
+ *
+ * The paint carries a fallback colour after the reference — `url(#id) #c13584`
+ * is SVG's own syntax for "use this gradient, or this colour if it is not
+ * there". Anywhere the def above is missing, the glyph is still an Instagram
+ * purple mark rather than an invisible one.
+ */
+export const InstagramColorIcon = ({ className }: IconProps) => (
+  <svg {...base(className)} stroke="url(#ffu-ig) #c13584">
     <rect x="2" y="2" width="20" height="20" rx="5" />
     <circle cx="12" cy="12" r="4" />
-    <circle cx="17.5" cy="6.5" r="1" fill="url(#ffu-ig)" stroke="none" />
+    <circle cx="17.5" cy="6.5" r="1" fill="url(#ffu-ig) #c13584" stroke="none" />
   </svg>
 );
 

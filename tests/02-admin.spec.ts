@@ -63,6 +63,61 @@ test("a filtered product list never hides the filter that narrowed it", async ({
   await expect(page.getByRole("link", { name: "Reset" })).toBeVisible();
 });
 
+test("a card carrying every badge at once still fits a 320px phone", async ({
+  page,
+}) => {
+  // Offer and stock badges sit at opposite ends of the same strip over a photo
+  // about 150px wide on the narrowest phone in use. They used to be two
+  // absolutely positioned corners with nothing stopping them meeting in the
+  // middle, and on a product that was both on offer and low on stock they
+  // overlapped — the screenshot that started this showed "OFFER" printed
+  // through "LIMITED STOCK".
+  //
+  // The seed happens to contain very few products wearing two badges, so this
+  // builds the worst case rather than hoping to find it: a product already in
+  // the live campaign, marked new, and set to limited stock.
+  await signIn(page);
+  await page.goto("/admin/products?q=Marigold%20Lardi");
+  await page.click("table tbody tr a[href^='/admin/products/']");
+  await page.waitForURL(/\/admin\/products\/[^/]+$/);
+  const editUrl = page.url();
+  await page.selectOption("#availability", "limited");
+  await page.click('button:has-text("Save")');
+  await page.waitForURL(/\/admin\/products(\?|$)/);
+
+  try {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto("/catalogue?q=Marigold%20Lardi");
+    const card = page.locator("article").first();
+
+    const badges = card.locator("span.rounded-full").filter({ hasText: /^(New|Offer|Limited)$/ });
+    expect(await badges.count(), "the worst case really is on screen").toBeGreaterThan(1);
+    await expect(card.getByText("Limited", { exact: true })).toBeVisible();
+
+    const boxes = await badges.evaluateAll((els) =>
+      els.map((e) => e.getBoundingClientRect()).map((r) => ({ l: r.left, r: r.right, t: r.top, b: r.bottom })),
+    );
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const c = boxes[j];
+        const overlap = a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b;
+        expect(overlap, `badge ${i} overlaps badge ${j}`).toBe(false);
+      }
+    }
+
+    // The long wording belongs on the product page, where there is room for it.
+    await page.goto("/product/marigold-lardi-genda-phool");
+    await expect(page.getByText("Limited stock").first()).toBeVisible();
+  } finally {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(editUrl);
+    await page.selectOption("#availability", "in_stock");
+    await page.click('button:has-text("Save")');
+    await page.waitForURL(/\/admin\/products(\?|$)/);
+  }
+});
+
 test("a wrong password is rejected and the email is kept", async ({ page }) => {
   await page.goto("/admin/login");
   await page.fill("#email", ADMIN_EMAIL);

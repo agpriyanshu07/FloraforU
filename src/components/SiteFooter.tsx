@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { InstagramIcon, MailIcon, PhoneIcon, PinIcon, WhatsappIcon } from "./icons";
+import { InstagramColorIcon, MailIcon, PhoneIcon, PinIcon, WhatsappIcon } from "./icons";
 import type { SiteSettings } from "@/lib/settings";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 
@@ -116,7 +116,7 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
               rel="noopener noreferrer"
               className="btn-instagram btn-sm"
             >
-              <InstagramIcon className="h-4 w-4" />
+              <InstagramColorIcon className="h-4 w-4" />
               Instagram
             </a>
           </div>

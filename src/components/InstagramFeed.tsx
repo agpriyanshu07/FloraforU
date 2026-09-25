@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { InstagramIcon } from "./icons";
+import { InstagramColorIcon } from "./icons";
 import { withUtm } from "@/lib/whatsapp";
 import { db } from "@/lib/db";
 
@@ -50,7 +50,7 @@ export default async function InstagramFeed({
           </p>
         </div>
         <a href={profileHref} target="_blank" rel="noopener noreferrer" className="btn-instagram">
-          <InstagramIcon className="h-4 w-4" />
+          <InstagramColorIcon className="h-4 w-4" />
           Open Instagram
         </a>
       </div>

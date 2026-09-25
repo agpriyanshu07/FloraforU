@@ -40,6 +40,10 @@ export default async function CataloguePage({
     queryCatalogue(params),
   ]);
 
+  const activeCategory = params.category
+    ? (categories.find((c) => c.slug === params.category) ?? null)
+    : null;
+
   return (
     <div className="shell py-10">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -50,9 +54,19 @@ export default async function CataloguePage({
             message us on WhatsApp for bulk rates and current availability.
           </p>
         </div>
-        <a href="/api/catalogue-pdf" className="btn-ghost">
-          <DownloadIcon className="h-4 w-4" />
-          Download catalogue PDF
+        {/* Filtered to one category? Then the PDF follows the filter, because
+            that is almost always what the shopper wants to be sent — the whole
+            97-product list is a lot to scroll on a phone. */}
+        <a
+          href={
+            activeCategory
+              ? `/api/catalogue-pdf?category=${activeCategory.slug}`
+              : "/api/catalogue-pdf"
+          }
+          className="btn-ghost shrink-0"
+        >
+          <DownloadIcon className="h-4 w-4 shrink-0" />
+          {activeCategory ? `Download ${activeCategory.name} PDF` : "Download catalogue PDF"}
         </a>
       </header>
 
