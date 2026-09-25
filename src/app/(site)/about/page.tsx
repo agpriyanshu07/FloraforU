@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "About us",
   description:
     "FloralforU is a one-stop event décor, artificial flower and SFX supplier in Bank More, Dhanbad — serving brides, event planners and shopkeepers across Jharkhand.",
+  alternates: { canonical: "/about" },
 };
 
 const VALUES = [

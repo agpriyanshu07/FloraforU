@@ -101,32 +101,48 @@ export default async function AdminProductsPage({
         <Banner tone="error">Choose the category to move the selected products into.</Banner>
       )}
 
-      <form method="get" className="card mb-4 grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto_auto]">
-        <div>
-          <label htmlFor="q" className="field-label">Search</label>
-          <input id="q" name="q" defaultValue={q} className="field" placeholder="Name, code or spec" />
-        </div>
-        <div>
-          <label htmlFor="categoryId" className="field-label">Category</label>
-          <select id="categoryId" name="categoryId" defaultValue={categoryId} className="field sm:w-48">
-            <option value="">All</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="status" className="field-label">Status</label>
-          <select id="status" name="status" defaultValue={status} className="field sm:w-36">
-            <option value="">All</option>
-            <option value="live">Live</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
-        <div className="flex items-end gap-2">
+      {/* Search stays out in the open because it is the one people use; the
+          other two fold away. On a phone this panel used to push the first
+          product row 832px down the page — a whole screen of controls before
+          any of the stock the shop came here to edit. The fold opens itself
+          whenever a filter is actually set, so a narrowed list never looks
+          like the whole catalogue. */}
+      <form method="get" className="card mb-4 p-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[12rem] flex-1">
+            <label htmlFor="q" className="field-label">Search</label>
+            <input id="q" name="q" defaultValue={q} className="field" placeholder="Name, code or spec" />
+          </div>
           <button type="submit" className="btn-primary">Filter</button>
-          <Link href="/admin/products" className="btn-ghost">Reset</Link>
+          {(q || categoryId || status) && (
+            <Link href="/admin/products" className="btn-ghost">Reset</Link>
+          )}
         </div>
+
+        <details open={Boolean(categoryId || status)} className="mt-3">
+          <summary className="cursor-pointer text-sm text-ink-600 hover:text-rose-700">
+            Category and status
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[auto_auto] sm:justify-start">
+            <div>
+              <label htmlFor="categoryId" className="field-label">Category</label>
+              <select id="categoryId" name="categoryId" defaultValue={categoryId} className="field sm:w-48">
+                <option value="">All</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="status" className="field-label">Status</label>
+              <select id="status" name="status" defaultValue={status} className="field sm:w-36">
+                <option value="">All</option>
+                <option value="live">Live</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+          </div>
+        </details>
       </form>
 
       <BulkBar categories={categories} />
@@ -154,7 +170,13 @@ export default async function AdminProductsPage({
               )}
             </EmptyRow>
           ) : (
-            products.map((p) => (
+            products.map((p) => {
+              const offer = offerTerms.get(p.id);
+              const sale = offerPriceOf(p.price, p.priceOnEnquiry, offer);
+              const priceLabel =
+                sale === null ? formatPrice(p.price, p.priceOnEnquiry) : formatPrice(sale, false);
+
+              return (
               <tr key={p.id}>
                 <td className="px-4 py-3">
                   <input type="checkbox" name="ids" value={p.id} aria-label={`Select ${p.name}`} className="h-4 w-4 accent-[#9b2c5a]" />
@@ -173,27 +195,39 @@ export default async function AdminProductsPage({
                       <span className="block text-[12px] text-ink-600">
                         {p.code ? `Code ${p.code} · ` : ""}{p.spec || "No spec line"}
                       </span>
+                      {/* The table is wider than a phone, so price and status
+                          sit off-screen behind a sideways scroll. They are the
+                          two things you check before deciding whether to open a
+                          product, so they are repeated here where the thumb
+                          already is. */}
+                      <span className="mt-1 flex items-center gap-2 text-[12px] sm:hidden">
+                        <span className="font-medium">{priceLabel}</span>
+                        {sale !== null && (
+                          <span className="text-ink-600 line-through">
+                            {formatPrice(p.price, p.priceOnEnquiry)}
+                          </span>
+                        )}
+                        <span className={p.published ? "text-sage-700" : "text-marigold-700"}>
+                          {p.published ? "Live" : "Draft"}
+                        </span>
+                      </span>
                     </span>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-ink-600">{p.category.name}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  {(() => {
-                    const offer = offerTerms.get(p.id);
-                    const sale = offerPriceOf(p.price, p.priceOnEnquiry, offer);
-                    if (sale === null) return formatPrice(p.price, p.priceOnEnquiry);
-                    return (
-                      <>
-                        <span className="font-medium">{formatPrice(sale, false)}</span>{" "}
-                        <span className="text-ink-600 line-through">
-                          {formatPrice(p.price, p.priceOnEnquiry)}
-                        </span>
-                        <span className="mt-0.5 block text-[11px] text-marigold-700">
-                          {offer?.title}
-                        </span>
-                      </>
-                    );
-                  })()}
+                  <span className="font-medium">{priceLabel}</span>
+                  {sale !== null && (
+                    <>
+                      {" "}
+                      <span className="text-ink-600 line-through">
+                        {formatPrice(p.price, p.priceOnEnquiry)}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-marigold-700">
+                        {offer?.title}
+                      </span>
+                    </>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className="flex flex-wrap gap-1 text-[11px] font-bold uppercase tracking-wider">
@@ -220,7 +254,8 @@ export default async function AdminProductsPage({
                   {p.updatedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </TableShell>
       </form>

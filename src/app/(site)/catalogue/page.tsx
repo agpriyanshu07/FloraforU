@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   title: "Catalogue",
   description:
     "Search and filter the full FloralforU catalogue — artificial flowers, backdrops, lights, lamps, pots, SFX machines, packing material and more. Enquire on WhatsApp.",
+  // Every search, sort, category filter and page of this grid is the same
+  // inventory rearranged, and the grid links to a lot of those combinations.
+  // They all point here so the permutations do not compete with each other in
+  // search results. Nothing is lost by collapsing them: the sitemap lists every
+  // product individually, so each one is still discovered on its own URL.
+  alternates: { canonical: "/catalogue" },
 };
 
 export default async function CataloguePage({

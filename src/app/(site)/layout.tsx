@@ -1,13 +1,14 @@
 import SiteHeader from "@/components/SiteHeader";
+import { LocalBusinessJsonLd } from "@/components/JsonLd";
 import SiteFooter from "@/components/SiteFooter";
 import BackToTop from "@/components/BackToTop";
 import OfferRibbon from "@/components/OfferRibbon";
 import { getSettings } from "@/lib/settings";
-import { getActiveOffers } from "@/lib/queries";
+import { getActiveOfferHeadlines } from "@/lib/queries";
 import { buildWhatsappUrl, withUtm } from "@/lib/whatsapp";
 
 export default async function SiteLayout({ children }: LayoutProps<"/">) {
-  const [settings, offers] = await Promise.all([getSettings(), getActiveOffers()]);
+  const [settings, offers] = await Promise.all([getSettings(), getActiveOfferHeadlines()]);
 
   const whatsappHref = withUtm(
     buildWhatsappUrl({
@@ -18,7 +19,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
     "header",
   );
 
-  // getActiveOffers already sorts by priority then soonest-ending, so the
+  // getActiveOfferHeadlines already sorts by priority then soonest-ending, so the
   // ribbon carries whichever campaign the shop most wants seen. It sits above
   // the header rather than fixed over the page: a persistent fixed bar would
   // eat vertical space on every scroll and is a known focus-order hazard.
@@ -26,6 +27,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-full flex-col">
+      <LocalBusinessJsonLd settings={settings} />
       <a href="#main" className="skip-link">
         Skip to main content
       </a>

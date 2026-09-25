@@ -10,6 +10,7 @@ import { SearchIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { queryCatalogue, type CatalogueParams } from "@/lib/catalogue";
+import { BreadcrumbJsonLd } from "@/components/JsonLd";
 
 // Stays dynamic: the filter, sort and pagination searchParams make every
 // request a different page, so there is nothing stable to cache.
@@ -55,6 +56,14 @@ export default async function CategoryPage({
 
   return (
     <div className="shell py-10">
+      <BreadcrumbJsonLd
+        siteUrl={settings.siteUrl}
+        trail={[
+          { name: "Home", path: "/" },
+          { name: "Categories", path: "/categories" },
+          { name: category.name, path: `/categories/${category.slug}` },
+        ]}
+      />
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-ink-600">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>

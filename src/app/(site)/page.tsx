@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import ProductGrid from "@/components/ProductGrid";
@@ -18,6 +19,12 @@ import {
   getOfferEnquiryCount,
   PUBLIC_REVIEW_WHERE,
 } from "@/lib/queries";
+
+// The title and description come from the settings via the root layout; this
+// only pins the canonical, which the homepage was missing entirely.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 // Cached, with admin edits pushing through immediately via revalidatePath.
 // The short window is a backstop for offers starting or ending on their own.

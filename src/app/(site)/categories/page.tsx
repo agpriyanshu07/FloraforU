@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "All categories",
   description:
     "Browse every FloralforU category — artificial flowers, backdrops and cloths, lights, lamps and diyas, pots, SFX, Rajasthani décor, packing material, gift boxes, carpets and more.",
+  alternates: { canonical: "/categories" },
 };
 
 export default async function CategoriesPage() {

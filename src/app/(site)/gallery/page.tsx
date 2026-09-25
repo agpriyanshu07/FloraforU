@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Our work & dispatch",
   description:
     "Real FloralforU event setups and real dispatch photos — see how orders are packed and what actually turns up at your venue.",
+  alternates: { canonical: "/gallery" },
 };
 
 const GROUPS = [

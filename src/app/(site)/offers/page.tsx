@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Current offers",
   description:
     "Named, time-bound seasonal sales from FloralforU — festive décor, lamps, flowers and event equipment at our best rates. Enquire on WhatsApp before the offer ends.",
+  alternates: { canonical: "/offers" },
 };
 
 const dateFmt = (d: Date) =>
@@ -83,7 +84,11 @@ export default async function OffersPage() {
                     <div className="relative aspect-[16/6] bg-marigold-50">
                       <Image
                         src={offer.bannerUrl}
-                        alt={`${offer.title} banner (placeholder artwork, awaiting real campaign banner)`}
+                        // Decorative: the campaign's own title, its discount
+                        // badge and the live countdown are all real text within
+                        // a few pixels of this image, so describing it again
+                        // only makes a screen reader say everything twice.
+                        alt=""
                         fill
                         sizes="(max-width: 1200px) 100vw, 1160px"
                         className="object-cover"
