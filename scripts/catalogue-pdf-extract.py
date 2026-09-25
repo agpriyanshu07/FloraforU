@@ -118,9 +118,15 @@ def main() -> None:
         # listed by name alone. When the first line is not a code it is the
         # start of the name, and dropping it silently renamed "BADA SHAGUN
         # CHAIR" to "CHAIR".
-        has_code = bool(lines) and bool(re.fullmatch(r"\d{3,6}", lines[0]))
-        code = lines[0] if has_code else None
-        body = lines[1:] if has_code else lines
+        # The code sits on a line of its own, but not always the first one: on
+        # the newer pages the size arrows are typeset above it, so the page
+        # opens "(6 Feet)" and the code follows. Looking only at line one lost
+        # the code on those pages entirely.
+        code_at = next(
+            (i for i, ln in enumerate(lines[:3]) if re.fullmatch(r"\d{3,6}", ln)), None
+        )
+        code = lines[code_at] if code_at is not None else None
+        body = [ln for i, ln in enumerate(lines) if i != code_at]
         price_at = next((i for i, ln in enumerate(body) if re.match(r"(?i)price", ln)), None)
         name_lines = body[:price_at] if price_at is not None else body
         price_lines = body[price_at:] if price_at is not None else []
