@@ -190,9 +190,16 @@ export async function importProducts(
       ),
     ];
 
+    // Code first, name second. Not everything in the catalogue is numbered —
+    // the furniture and the LED lights are listed by name alone — and without
+    // the fallback a second upload of the same file silently creates a second
+    // copy of every one of them.
     const existing = code
       ? await db.product.findFirst({ where: { code }, select: { id: true, slug: true } })
-      : null;
+      : await db.product.findFirst({
+          where: { name: { equals: name, mode: "insensitive" } },
+          select: { id: true, slug: true },
+        });
 
     const data = {
       name,

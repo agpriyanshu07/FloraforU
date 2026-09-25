@@ -9,12 +9,20 @@ wording, guess a category or invent a spec line. Those are judgement calls and
 they are made once, in the open, in catalogue-rows.json, rather than hidden in
 a regex here.
 
-How the product photo is picked: every page carries the same decorative
-border and the same little bouquet icon, so the images that repeat across
-pages are decoration by definition. Hash them all, keep the ones unique to a
-single page, and the largest of those is the product. That holds without
-knowing anything about the layout, which matters because the sample is 25
-pages and the real catalogue will not be.
+How the product photo is picked, by elimination:
+
+  * an image that repeats across pages is the border or the bouquet icon;
+  * an image that repeats within one page is a decorative motif — the floral
+    sprays are placed two and three times to a page;
+  * an image the size and shape of the page is the page background.
+
+Whatever survives is the product, largest first. All three rules are about
+how a thing is used rather than what it looks like, which is why they hold
+on a catalogue this script has never seen.
+
+It is not infallible: a page whose only decoration appears once still offers
+it as a candidate. Every photo is written out and the order is reported, so a
+wrong pick is visible in the audit rather than silent.
 
 A page can carry several photos of the same item — a pack shot and a close-up,
 or the colour range — and all of them are kept, largest first. The shop's
@@ -87,34 +95,49 @@ def main() -> None:
     per_page: dict[int, list[Path]] = {}
     digests: dict[Path, str] = {}
     counts: dict[str, int] = {}
+    repeated_within_page: set[str] = set()
+    page_aspect = 594.96 / 842.25
     for page in range(1, pages + 1):
         files = page_images(pdf, page, work)
         per_page[page] = files
-        seen_on_page = set()
+        seen_on_page: dict[str, int] = {}
         for f in files:
             d = hashlib.md5(f.read_bytes()).hexdigest()
             digests[f] = d
-            if d not in seen_on_page:            # count each image once per page
-                seen_on_page.add(d)
-                counts[d] = counts.get(d, 0) + 1
+            seen_on_page[d] = seen_on_page.get(d, 0) + 1
+        for d, n in seen_on_page.items():
+            counts[d] = counts.get(d, 0) + 1      # count each image once per page
+            if n > 1:
+                repeated_within_page.add(d)       # placed twice: decoration
 
     # Pass 2 — text, and the one image that belongs to this page alone.
     rows = []
     for page in range(1, pages + 1):
         lines = page_text(pdf, page)
-        code = lines[0] if lines and re.fullmatch(r"\d{3,6}", lines[0]) else None
-        price_at = next((i for i, ln in enumerate(lines) if re.match(r"(?i)price", ln)), None)
-        name_lines = lines[1:price_at] if price_at else lines[1:]
-        price_lines = lines[price_at:] if price_at is not None else []
+        # Not every page carries a code: the furniture and the LED lights are
+        # listed by name alone. When the first line is not a code it is the
+        # start of the name, and dropping it silently renamed "BADA SHAGUN
+        # CHAIR" to "CHAIR".
+        has_code = bool(lines) and bool(re.fullmatch(r"\d{3,6}", lines[0]))
+        code = lines[0] if has_code else None
+        body = lines[1:] if has_code else lines
+        price_at = next((i for i, ln in enumerate(body) if re.match(r"(?i)price", ln)), None)
+        name_lines = body[:price_at] if price_at is not None else body
+        price_lines = body[price_at:] if price_at is not None else []
 
         candidates = []
         for f in per_page[page]:
             if counts[digests[f]] > 1:           # appears on other pages: decoration
                 continue
+            if digests[f] in repeated_within_page:
+                continue
             im = Image.open(f)
             if im.mode == "L":                   # a soft mask, not an image
                 continue
-            candidates.append((im.size[0] * im.size[1], f, im.size))
+            w, h = im.size
+            if w * h > 1_000_000 and abs(w / h - page_aspect) < 0.02:
+                continue                          # the page itself, not a product
+            candidates.append((w * h, f, im.size))
         candidates.sort(reverse=True)
 
         saved = []
