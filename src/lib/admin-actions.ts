@@ -190,14 +190,26 @@ export async function saveProductAction(
     categoryId: d.categoryId,
   };
 
+  // Renaming a product has always moved it to a new URL. Remember where it
+  // used to live, so the link the shop sent a customer last week still opens
+  // the product instead of a not-found page.
+  const before = id
+    ? await db.product.findUnique({ where: { id }, select: { slug: true } })
+    : null;
+  const moved = Boolean(before && before.slug !== slug);
+
   const product = id
-    ? await db.product.update({ where: { id }, data })
+    ? await db.product.update({
+        where: { id },
+        data: moved ? { ...data, previousSlugs: { push: before!.slug } } : data,
+      })
     : await db.product.create({ data });
 
   await writeImages(product.id, d.imageUrls, product.name);
 
   refreshPublicPages();
   revalidatePath(`/product/${slug}`);
+  if (moved) revalidatePath(`/product/${before!.slug}`);
   revalidatePath("/admin/products");
   redirect(`/admin/products?saved=${encodeURIComponent(product.name)}`);
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import ProductGallery from "@/components/ProductGallery";
 import ProductGrid from "@/components/ProductGrid";
 import EnquireButton from "@/components/EnquireButton";
@@ -92,7 +92,18 @@ export default async function ProductPage({
       images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
     },
   });
-  if (!product || !product.published) notFound();
+  if (!product || !product.published) {
+    // The product may simply have been renamed. This shop's links live in
+    // WhatsApp threads for months, so an old URL redirects to where the
+    // product moved rather than dying — permanently, so search engines follow
+    // it too.
+    const moved = await db.product.findFirst({
+      where: { previousSlugs: { has: slug }, published: true },
+      select: { slug: true },
+    });
+    if (moved) permanentRedirect(`/product/${moved.slug}`);
+    notFound();
+  }
 
   const [settings, offerTerms, related, reviews] = await Promise.all([
     getSettings(),
