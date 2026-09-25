@@ -669,6 +669,31 @@ test("a reseed never overwrites real artwork", async () => {
   }
 });
 
+test("every page shares with a preview image messengers can actually render", async ({
+  page,
+}) => {
+  // WhatsApp is how this shop's links travel, and WhatsApp renders no SVG. The
+  // product pages used to point og:image straight at the product photo, which
+  // is an SVG placeholder — so a forwarded link previewed with no image at all,
+  // while the tag looked perfectly present. Every page must offer a raster
+  // card, and it must actually load.
+  for (const route of ["/", "/catalogue", "/offers", "/product/dry-flower-bunch-assorted"]) {
+    await page.goto(route);
+    const src = await page
+      .locator('meta[property="og:image"]')
+      .first()
+      .getAttribute("content");
+    expect(src, `${route} has no og:image`).toBeTruthy();
+    expect(src!.toLowerCase(), `${route} shares an SVG`).not.toContain(".svg");
+
+    const res = await page.request.get(src!);
+    expect(res.status(), `${route} og:image did not load`).toBe(200);
+    expect(res.headers()["content-type"], `${route} og:image is not an image`).toMatch(
+      /^image\/(png|jpeg|webp)/,
+    );
+  }
+});
+
 test("the contact actions stay on one row at every width", async ({ page }) => {
   // They used to wrap, dropping the last button onto a line of its own. The row
   // has to hold together on a 320px phone and a desktop card alike, and no label

@@ -42,16 +42,25 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await db.product.findUnique({
-    where: { slug },
-    include: { category: true, images: { take: 1, orderBy: { position: "asc" } } },
-  });
+  const [product, terms] = await Promise.all([
+    db.product.findUnique({
+      where: { slug },
+      include: { category: true },
+    }),
+    getActiveOfferTerms(),
+  ]);
   if (!product) return { title: "Product not found" };
 
-  const description = `${product.name} — ${product.spec}. ${formatPrice(
-    product.price,
-    product.priceOnEnquiry,
-  )}. Enquire on WhatsApp with FloralforU, ${product.category.name} in Dhanbad.`;
+  // The price a shopper would actually be quoted. Quoting the pre-sale price
+  // in the search result and the link preview, while the page itself shows the
+  // sale price, advertises the wrong number.
+  const pricing = pricingFor(product.price, product.priceOnEnquiry, terms.get(product.id));
+  const price =
+    pricing.percentOff !== null
+      ? `${pricing.currentLabel} (was ${pricing.originalLabel}, ${pricing.percentOff}% off)`
+      : formatPrice(product.price, product.priceOnEnquiry);
+
+  const description = `${product.name} — ${product.spec}. ${price}. Enquire on WhatsApp with FloralforU, ${product.category.name} in Dhanbad.`;
 
   return {
     title: product.name,
@@ -60,7 +69,10 @@ export async function generateMetadata({
       title: product.name,
       description,
       type: "article",
-      images: product.images[0] ? [{ url: product.images[0].url }] : undefined,
+      // No `images` here on purpose. Setting it overrides the generated card in
+      // opengraph-image.tsx, and what it used to set was the product's own photo
+      // URL — an SVG placeholder today, which neither WhatsApp nor Facebook will
+      // render, so a forwarded product link previewed with no image at all.
     },
     alternates: { canonical: `/product/${product.slug}` },
   };
