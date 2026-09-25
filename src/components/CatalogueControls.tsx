@@ -8,8 +8,6 @@ export const SORT_OPTIONS = [
   { value: "newest", label: "Newest first" },
   { value: "price-asc", label: "Price: low to high" },
   { value: "price-desc", label: "Price: high to low" },
-  { value: "name-asc", label: "Name: A to Z" },
-  { value: "name-desc", label: "Name: Z to A" },
 ] as const;
 
 type Category = { slug: string; name: string };
@@ -60,6 +58,7 @@ export default function CatalogueControls({
   const category = params.get("category") ?? "";
   const isNew = params.get("new") === "1";
   const onOffer = params.get("offer") === "1";
+  const limited = params.get("limited") === "1";
 
   const toggle = (key: string, on: boolean) =>
     push((p) => (on ? p.delete(key) : p.set(key, "1")));
@@ -144,7 +143,17 @@ export default function CatalogueControls({
         >
           On offer
         </button>
-        {(query || category || isNew || onOffer || sort !== "newest") && (
+        {/* The shop's own reason for wanting this: these are the lines being
+            run down, and they are the ones worth enquiring about today. */}
+        <button
+          type="button"
+          aria-pressed={limited}
+          onClick={() => toggle("limited", limited)}
+          className={limited ? "btn-accent btn-sm" : "btn-ghost btn-sm"}
+        >
+          Limited stock
+        </button>
+        {(query || category || isNew || onOffer || limited || sort !== "newest") && (
           <button
             type="button"
             onClick={() => {

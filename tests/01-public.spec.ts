@@ -154,16 +154,9 @@ test("the category filter restricts the grid to that category", async ({ page })
   expect(tags).toContain("SFX & Special Effects");
 });
 
-test("all five sort options order the grid correctly", async ({ page }) => {
-  await page.goto("/catalogue?sort=name-asc");
-  const asc = await gridNames(page);
-  expect(asc).toEqual([...asc].sort((a, b) => a.localeCompare(b)));
-
-  await page.goto("/catalogue?sort=name-desc");
-  const desc = await gridNames(page);
-  expect(desc).toEqual([...desc].sort((a, b) => b.localeCompare(a)));
-  expect(asc).not.toEqual(desc);
-
+test("the sort options order the grid correctly, and a retired one still loads", async ({
+  page,
+}) => {
   const prices = async () =>
     page.$$eval("article p.text-lg", (els) =>
       els
@@ -180,12 +173,23 @@ test("all five sort options order the grid correctly", async ({ page }) => {
   await page.goto("/catalogue?sort=price-desc");
   const down = await prices();
   expect(down).toEqual([...down].sort((a, b) => b - a));
+  expect(up).not.toEqual(down);
 
   await page.goto("/catalogue?sort=newest");
-  expect(await gridNames(page)).not.toEqual(up.length ? asc : []);
+  const newest = await gridNames(page);
+  expect(newest.length).toBeGreaterThan(1);
+
+  // Only three sorts are offered now; nobody shops décor alphabetically.
+  const offered = await page.$$eval("select#catalogue-sort option", (o) => o.map((e) => e.textContent!.trim()));
+  expect(offered).toEqual(["Newest first", "Price: low to high", "Price: high to low"]);
+
+  // A link someone bookmarked or sent on WhatsApp while A-Z existed must still
+  // open the catalogue, not break it — it falls back to the default order.
+  await page.goto("/catalogue?sort=name-asc");
+  expect(await gridNames(page)).toEqual(newest);
 });
 
-test("the New and On-offer quick filters each narrow the set", async ({ page }) => {
+test("each quick filter narrows the set to its own products", async ({ page }) => {
   await page.goto("/catalogue");
   const all = await resultCount(page);
 
@@ -195,9 +199,31 @@ test("the New and On-offer quick filters each narrow the set", async ({ page }) 
   await page.goto("/catalogue?offer=1");
   const onOffer = await resultCount(page);
 
+  await page.goto("/catalogue?limited=1");
+  const limited = await resultCount(page);
+
   expect(isNew).not.toBe(all);
   expect(onOffer).not.toBe(all);
+  expect(limited).not.toBe(all);
   expect(isNew).not.toBe(onOffer);
+
+  // The stock filter must actually mean stock: every card in it says so.
+  // (resultCount returns the whole "N products · page 1 of 1" line.)
+  expect(Number.parseInt(String(limited), 10)).toBeGreaterThan(0);
+  const cards = page.locator("article");
+  const count = await cards.count();
+  for (let i = 0; i < count; i++) {
+    await expect(
+      cards.nth(i).getByText("Limited", { exact: true }),
+      `card ${i} in the limited filter`,
+    ).toBeVisible();
+  }
+
+  // And it is reachable by pressing the button, not only by typing the URL.
+  await page.goto("/catalogue");
+  await page.getByRole("button", { name: "Limited stock" }).click();
+  await expect.poll(() => resultCount(page)).toBe(limited);
+  expect(new URL(page.url()).searchParams.get("limited")).toBe("1");
 });
 
 test("a zero-result search shows a real empty state, not a blank grid", async ({ page }) => {

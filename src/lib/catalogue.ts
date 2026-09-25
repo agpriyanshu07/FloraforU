@@ -11,15 +11,17 @@ export type CatalogueParams = {
   sort?: string;
   new?: string;
   offer?: string;
+  limited?: string;
   page?: string;
 };
 
+// A-Z and Z-A were dropped: nobody shops décor alphabetically, and any link
+// still carrying `sort=name-asc` falls through to the default below rather than
+// erroring, so old bookmarks and shared URLs keep working.
 const ORDER_BY: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
   newest: [{ createdAt: "desc" }],
   "price-asc": [{ price: "asc" }, { name: "asc" }],
   "price-desc": [{ price: "desc" }, { name: "asc" }],
-  "name-asc": [{ name: "asc" }],
-  "name-desc": [{ name: "desc" }],
 };
 
 /** Shared query used by /catalogue and /categories/[slug]. */
@@ -62,6 +64,10 @@ export async function queryCatalogue(
 
   if (params.offer === "1") {
     where.id = { in: [...offerTerms.keys()] };
+  }
+
+  if (params.limited === "1") {
+    where.availability = "limited";
   }
 
   // Price sorts must not scatter "Price on Enquiry" items through the middle of
