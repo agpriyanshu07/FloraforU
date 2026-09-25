@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { db } from "./db";
 import { offerPriceOf, type OfferTerms } from "./pricing";
 import { Prisma } from "@/generated/prisma";
@@ -58,7 +59,7 @@ export type ActiveOfferTerms = OfferTerms & {
   endsAt: Date;
 };
 
-export async function getActiveOfferTerms(): Promise<Map<string, ActiveOfferTerms>> {
+export const getActiveOfferTerms = cache(async function getActiveOfferTerms(): Promise<Map<string, ActiveOfferTerms>> {
   const now = new Date();
   const rows = await db.offerProduct.findMany({
     where: {
@@ -95,9 +96,37 @@ export async function getActiveOfferTerms(): Promise<Map<string, ActiveOfferTerm
     }
   }
   return best;
-}
+});
 
-export async function getActiveOffers(): Promise<OfferWithProducts[]> {
+/**
+ * Just enough of the live campaigns to draw the ribbon that sits above every
+ * page.
+ *
+ * `getActiveOffers` includes each offer's products and their images, because
+ * the homepage strip draws them. The ribbon draws a title, a badge and a
+ * countdown — and it is in the site layout, so the full version meant every
+ * dynamic page fetched every campaign's product rows and image rows to render
+ * one line of text. Against the hosted database that is several round trips a
+ * shopper waits for and never sees the result of.
+ */
+export const getActiveOfferHeadlines = cache(async function getActiveOfferHeadlines() {
+  const now = new Date();
+  return db.offer.findMany({
+    where: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
+    orderBy: [{ priority: "desc" }, { endsAt: "asc" }],
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      discountLabel: true,
+      endsAt: true,
+      theme: true,
+      urgentWithinHours: true,
+    },
+  });
+});
+
+export const getActiveOffers = cache(async function getActiveOffers(): Promise<OfferWithProducts[]> {
   const now = new Date();
   return db.offer.findMany({
     where: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
@@ -106,7 +135,7 @@ export async function getActiveOffers(): Promise<OfferWithProducts[]> {
     orderBy: [{ priority: "desc" }, { endsAt: "asc" }],
     include: OFFER_WITH_PRODUCTS,
   });
-}
+});
 
 /**
  * How many real enquiries landed this week against the products in a given
@@ -137,12 +166,12 @@ export async function getPastOffers() {
   });
 }
 
-export async function getCategoriesWithCounts() {
+export const getCategoriesWithCounts = cache(async function getCategoriesWithCounts() {
   return db.category.findMany({
     orderBy: { displayOrder: "asc" },
     include: { _count: { select: { products: { where: { published: true } } } } },
   });
-}
+});
 
 export async function getNewArrivals(limit = 8): Promise<ProductCardData[]> {
   const pinned = await db.product.findMany({

@@ -13,6 +13,12 @@ export const alt = "Product at FloralforU";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
+// This card quotes a price, so it cannot be frozen at build time — a campaign
+// starting would leave every shared link advertising the old number. It is
+// cached for an hour instead, matching the product page's own revalidate, so a
+// link doing the rounds on WhatsApp does not re-render the PNG per fetch.
+export const revalidate = 3600;
+
 /**
  * The preview card for a single product — the one that matters, because a
  * product link is what actually gets forwarded on WhatsApp.

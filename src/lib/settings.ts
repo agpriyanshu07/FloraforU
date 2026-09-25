@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "./db";
 
 /**
@@ -66,7 +67,17 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   instagramCommentsEnabled: "false",
 };
 
-export async function getSettings(): Promise<SiteSettings> {
+/**
+ * Wrapped in React's `cache` so one render is one query.
+ *
+ * Thirty-odd call sites read the settings — the layout, the header, the
+ * footer, most pages, and several components — and each was its own round
+ * trip. That is invisible against a local database and expensive against the
+ * hosted one in Singapore, where every trip is real latency on a page the
+ * shopper is waiting for. The cache lives for a single request, so an admin
+ * saving settings still sees the new values on the next one.
+ */
+export const getSettings = cache(async function getSettings(): Promise<SiteSettings> {
   const rows = await db.setting.findMany();
   const overrides = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const merged = { ...DEFAULT_SETTINGS };
@@ -75,7 +86,7 @@ export async function getSettings(): Promise<SiteSettings> {
     if (typeof v === "string" && v.trim() !== "") merged[key] = v;
   }
   return merged;
-}
+});
 
 export async function saveSettings(values: Partial<SiteSettings>) {
   const entries = Object.entries(values).filter(([, v]) => v !== undefined);
