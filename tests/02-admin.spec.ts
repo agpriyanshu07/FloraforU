@@ -18,6 +18,51 @@ const FIXTURE = path.join(process.cwd(), "fixtures", "sample-import.csv");
 // NOTE: on any admin page the *first* submit button is the header "Sign out".
 // Always target buttons by their label.
 
+test("the products list is usable on the phone the shop actually runs on", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await page.goto("/admin/products");
+
+  // The filter panel used to push the first product a full screen down the
+  // page. The work has to start above the fold.
+  const firstRow = page.locator("table tbody tr").first();
+  const top = (await firstRow.boundingBox())!.y;
+  expect(top, "the first product must be reachable without a scroll").toBeLessThan(700);
+
+  // The table is wider than the screen, so price and status live off to the
+  // right. They are repeated in the row itself.
+  await expect(firstRow.getByText(/^₹|On enquiry/).first()).toBeVisible();
+  await expect(firstRow.getByText(/^(Live|Draft)$/).first()).toBeVisible();
+
+  // Bulk controls stay folded away until they can do something, then say how
+  // many rows they would act on — the count matters most before a delete.
+  await expect(page.getByText(/Tick rows below/)).toBeVisible();
+  await page.locator('input[name="ids"]').nth(0).check();
+  await page.locator('input[name="ids"]').nth(1).check();
+  await expect(page.getByText("2 products selected.")).toBeVisible();
+  await page.locator('input[name="ids"]').nth(1).uncheck();
+  await expect(page.getByText("1 product selected.")).toBeVisible();
+});
+
+test("a filtered product list never hides the filter that narrowed it", async ({
+  page,
+}) => {
+  // Category and status fold away to save room. If they stayed folded on a
+  // filtered view, a list showing 12 of 97 products would look like the whole
+  // catalogue — the kind of thing that ends with someone re-adding stock they
+  // already have.
+  await signIn(page);
+
+  await page.goto("/admin/products");
+  await expect(page.locator("details").first()).not.toHaveAttribute("open", /.*/);
+
+  await page.goto("/admin/products?status=draft");
+  await expect(page.locator("details").first()).toHaveAttribute("open", /.*/);
+  await expect(page.getByRole("link", { name: "Reset" })).toBeVisible();
+});
+
 test("a wrong password is rejected and the email is kept", async ({ page }) => {
   await page.goto("/admin/login");
   await page.fill("#email", ADMIN_EMAIL);
@@ -595,7 +640,11 @@ test("the admin product list shows the price a sale is currently charging", asyn
 
   // Without this the table shows the everyday rate while the site charges less,
   // and prices get edited without anyone knowing a campaign is running.
+  // The row carries the price twice: the Price column, and the phone-sized
+  // summary under the product name (the table is wider than a phone). This
+  // asserts on the column's copy — the summary is covered by the mobile test.
   const row = page.locator("tr", { hasText: "Marigold Lardi" }).first();
-  await expect(row.locator(".line-through")).toBeVisible();
+  const priceCell = row.locator("td").filter({ hasText: /₹/ }).last();
+  await expect(priceCell.locator(".line-through")).toBeVisible();
   await expect(row.getByText("Ganesh Puja Sale")).toBeVisible();
 });
