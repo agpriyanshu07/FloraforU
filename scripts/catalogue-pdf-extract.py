@@ -125,20 +125,34 @@ def main() -> None:
         name_lines = body[:price_at] if price_at is not None else body
         price_lines = body[price_at:] if price_at is not None else []
 
-        candidates = []
-        for f in per_page[page]:
-            if counts[digests[f]] > 1:           # appears on other pages: decoration
-                continue
-            if digests[f] in repeated_within_page:
-                continue
-            im = Image.open(f)
-            if im.mode == "L":                   # a soft mask, not an image
-                continue
-            w, h = im.size
-            if w * h > 1_000_000 and abs(w / h - page_aspect) < 0.02:
-                continue                          # the page itself, not a product
-            candidates.append((w * h, f, im.size))
-        candidates.sort(reverse=True)
+        def collect(drop_repeats: bool) -> list:
+            out = []
+            for f in per_page[page]:
+                if counts[digests[f]] > 1:       # appears on other pages: decoration
+                    continue
+                if drop_repeats and digests[f] in repeated_within_page:
+                    continue
+                im = Image.open(f)
+                if im.mode == "L":               # a soft mask, not an image
+                    continue
+                w, h = im.size
+                if w * h > 1_000_000 and abs(w / h - page_aspect) < 0.02:
+                    continue                      # the page itself, not a product
+                out.append((w * h, f, im.size))
+            out.sort(reverse=True)
+            return out
+
+        candidates = collect(drop_repeats=True)
+        if not candidates:
+            # Some layouts print the product photo twice on its own page, which
+            # the within-page rule reads as decoration and throws away. Stripping
+            # decoration must never strip everything: when it does, keep the
+            # repeats — a duplicated photo beats no photo.
+            seen: set[str] = set()
+            candidates = [
+                c for c in collect(drop_repeats=False)
+                if not (digests[c[1]] in seen or seen.add(digests[c[1]]))
+            ]
 
         saved = []
         stem = code or f"page{page:03d}"
