@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { queryCatalogue, type CatalogueParams } from "@/lib/catalogue";
 import { BreadcrumbJsonLd } from "@/components/JsonLd";
+import { DownloadIcon } from "@/components/icons";
 
 // Stays dynamic: the filter, sort and pagination searchParams make every
 // request a different page, so there is nothing stable to cache.
@@ -82,11 +83,24 @@ export default async function CategoryPage({
         </ol>
       </nav>
 
-      <header className="mb-6 max-w-3xl">
-        <h1 className="font-display text-[clamp(2rem,5vw,2.75rem)]">
-          {category.name}
-        </h1>
-        <p className="mt-2 text-ink-600">{category.description}</p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-3xl">
+          <h1 className="font-display text-[clamp(2rem,5vw,2.75rem)]">
+            {category.name}
+          </h1>
+          <p className="mt-2 text-ink-600">{category.description}</p>
+        </div>
+        {/* Most enquiries are about one kind of thing — a backdrop, a set of
+            lamps. Sending the whole 97-product catalogue to answer that is a
+            lot for the customer to scroll on a phone, so each category can be
+            sent on its own. */}
+        <a
+          href={`/api/catalogue-pdf?category=${category.slug}`}
+          className="btn-ghost shrink-0"
+        >
+          <DownloadIcon className="h-4 w-4 shrink-0" />
+          Download this category
+        </a>
       </header>
 
       <Suspense fallback={<div className="card mb-6 h-40 animate-pulse" />}>

@@ -45,14 +45,19 @@ export default function ProductCard({ product, settings, offer, priority }: Prop
           priority={priority}
         />
 
-        {(isNew || onOffer) && (
-          <span className="absolute left-2 top-2 z-10 flex flex-wrap gap-1.5">
-            {isNew && <NewBadge />}
-            {onOffer && <OfferBadge />}
+        {/* One wrapping row, not two positioned corners and not two groups.
+            A card is about 150px wide on a 320px phone, so "New", "Offer" and
+            the stock badge together cannot fit on one line — and as two groups
+            pinned left and right they simply overlapped. As siblings in a
+            single wrapping flow the last one drops to its own line instead,
+            which cannot collide with anything. `ml-auto` keeps the stock badge
+            to the right while there is room for it. */}
+        <span className="pointer-events-none absolute inset-x-2 top-2 z-10 flex flex-wrap items-start gap-1.5">
+          {isNew && <NewBadge />}
+          {onOffer && <OfferBadge />}
+          <span className="ml-auto">
+            <AvailabilityTag availability={product.availability} short />
           </span>
-        )}
-        <span className="absolute right-2 top-2 z-10">
-          <AvailabilityTag availability={product.availability} />
         </span>
 
         <WishlistButton

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ReviewCard from "@/components/ReviewCard";
 import ReviewForm from "@/components/ReviewForm";
 import EmptyState from "@/components/EmptyState";
-import { HeartIcon, InstagramIcon, WhatsappIcon } from "@/components/icons";
+import { HeartIcon, InstagramColorIcon, WhatsappIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { PUBLIC_REVIEW_WHERE } from "@/lib/queries";
@@ -127,7 +127,7 @@ export default async function ReviewsPage() {
               rel="noopener noreferrer"
               className="btn-instagram"
             >
-              <InstagramIcon className="h-4 w-4" />
+              <InstagramColorIcon className="h-4 w-4" />
               DM on Instagram
             </a>
           </div>
