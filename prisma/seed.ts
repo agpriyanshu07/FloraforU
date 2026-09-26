@@ -130,12 +130,26 @@ async function main() {
   console.log(`Seeded ${PRODUCTS.length} products across ${CATEGORIES.length} categories.`);
 
   // --- Offers: one active, one expired (per the Definition of Done) ---------
+  // Both lists are ordered, because findMany without orderBy returns rows in
+  // whatever order the database feels like — which made the seeded sale differ
+  // between runs and the offers page fail intermittently on whichever product
+  // happened to land first.
   const activeProducts = await db.product.findMany({
-    where: { category: { slug: { in: ["festive-puja-items", "lamps-diyas", "artificial-flowers-greenery"] } } },
-    take: 10,
+    where: {
+      category: { slug: { in: ["festive-puja-items", "lamps-diyas", "artificial-flowers-greenery"] } },
+      // A percentage campaign has nothing to show on a price-on-enquiry
+      // product: there is no old rate to strike through. Those belong in a
+      // sale only with a price of their own.
+      price: { not: null },
+      priceOnEnquiry: false,
+    },
+    // No cap: the campaign is "20% off everything in it", and its own blurb
+    // names the marigold lardi, which an arbitrary take of 10 cut out.
+    orderBy: { name: "asc" },
   });
   const expiredProducts = await db.product.findMany({
     where: { category: { slug: { in: ["carpets-flooring", "cooler-fan"] } } },
+    orderBy: { name: "asc" },
     take: 6,
   });
 
