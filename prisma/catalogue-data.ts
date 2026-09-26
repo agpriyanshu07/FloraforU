@@ -201,7 +201,7 @@ export const PRODUCTS: SeedProduct[] = [
   // --- SFX (600s) ---
   { category: "sfx-special-effects", code: "601", name: "Fog Machine 1500W", spec: "With wired remote, 1 ltr tank", price: 6500, isNew: true, description: "Workhorse fog machine for entries and first dances. Fog liquid sold separately." },
   { category: "sfx-special-effects", code: "602", name: "Bubble Machine (Double Wheel)", spec: "Per pc with 1 ltr bubble solution", price: 3800 },
-  { category: "sfx-special-effects", code: "603", name: "8 Channel Payro Remote Machine", spec: "8 channel cold pyro controller, remote operated", price: 12500, availability: "limited" },
+  { category: "sfx-special-effects", code: "603", name: "8 Channel Pyro Remote Machine", spec: "8 channel cold pyro controller, remote operated", price: 12500, availability: "limited" },
   { category: "sfx-special-effects", code: "604", name: "Cold Pyro Powder", spec: "Pack of 10 sachets, 20 sec burn", price: 900 },
   { category: "sfx-special-effects", code: "605", name: "Confetti Blaster (Handheld)", spec: "Pack of 12 pcs, 12 inch, metallic", price: 640 },
   { category: "sfx-special-effects", code: "606", name: "Balloon Blower Machine", spec: "Twin nozzle, 680W, per pc", price: 4200 },
