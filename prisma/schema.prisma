@@ -40,6 +40,11 @@ model Category {
 model Product {
   id             String         @id @default(cuid())
   slug           String         @unique
+  /// Slugs this product used to live at. A product link is the thing this shop
+  /// actually sends people — it sits in WhatsApp threads for months — so when a
+  /// rename moves the product to a new URL, the old one redirects here instead
+  /// of dying.
+  previousSlugs  String[]       @default([])
   name           String
   code           String?
   spec           String         @default("") // free text: real spec lines are messy

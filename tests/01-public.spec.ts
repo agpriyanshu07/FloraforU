@@ -852,6 +852,27 @@ test("a shopper can take away one category instead of the whole catalogue", asyn
   ).toBe("/api/catalogue-pdf");
 });
 
+test("the longest category name does not push the catalogue sideways", async ({
+  page,
+}) => {
+  // The per-category download button carries the category's own name, and the
+  // longest one — "Gift Boxes, Trays, Bags & Baskets" — is wider than a phone.
+  // Pinned to one line it made the whole page scroll horizontally.
+  const longest = "gift-boxes-trays-bags-baskets";
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`/catalogue?category=${longest}`);
+    await expect(
+      page.getByRole("main").getByRole("link", { name: /Download .* PDF/i }),
+    ).toBeVisible();
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth, `no sideways scroll at ${width}px`).toBeLessThanOrEqual(clientWidth);
+  }
+});
+
 test("the contact actions stay on one row at every width", async ({ page }) => {
   // They used to wrap, dropping the last button onto a line of its own. The row
   // has to hold together on a 320px phone and a desktop card alike, and no label

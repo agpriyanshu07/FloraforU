@@ -25,7 +25,7 @@ export const IMPORT_COLUMNS = [
   { key: "code", label: "code", required: false, note: "Your product code" },
   { key: "description", label: "description", required: false, note: "Longer text for the product page" },
   { key: "availability", label: "availability", required: false, note: "in_stock | limited | made_to_order" },
-  { key: "image", label: "image", required: false, note: "Image URL or path" },
+  { key: "image", label: "image", required: false, note: "Image URL or path. Several photos of the same item: separate them with | (the first is the main one)" },
   { key: "published", label: "published", required: false, note: "yes/no — defaults to yes" },
 ] as const;
 
@@ -176,11 +176,30 @@ export async function importProducts(
 
     const publishedRaw = normaliseKey(row.published ?? "yes");
     const published = !["no", "false", "0", "draft"].includes(publishedRaw);
-    const image = (row.image ?? "").trim();
+    // One cell, several photos. Décor sells on how it looks and most of these
+    // items come in a range of colours, which the product card already pages
+    // through — so a catalogue page showing four views should not lose three of
+    // them on the way in. The first is the primary; blanks and duplicates are
+    // dropped so a trailing "|" or a repeated path cannot create empty rows.
+    const images = [
+      ...new Set(
+        (row.image ?? "")
+          .split("|")
+          .map((v) => v.trim())
+          .filter(Boolean),
+      ),
+    ];
 
+    // Code first, name second. Not everything in the catalogue is numbered —
+    // the furniture and the LED lights are listed by name alone — and without
+    // the fallback a second upload of the same file silently creates a second
+    // copy of every one of them.
     const existing = code
-      ? await db.product.findFirst({ where: { code }, select: { id: true } })
-      : null;
+      ? await db.product.findFirst({ where: { code }, select: { id: true, slug: true } })
+      : await db.product.findFirst({
+          where: { name: { equals: name, mode: "insensitive" } },
+          select: { id: true, slug: true },
+        });
 
     const data = {
       name,
@@ -194,22 +213,42 @@ export async function importProducts(
       categoryId: categoryId!,
     };
 
+    const photoRows = (productId: string) =>
+      images.map((url, i) => ({
+        productId,
+        url,
+        alt: `${name} — FloralforU`,
+        position: i,
+        isPrimary: i === 0,
+      }));
+
     if (existing) {
-      await db.product.update({ where: { id: existing.id }, data });
-      if (image) {
+      // A row matched by code can carry a different name — that is the whole
+      // point of re-importing a corrected price list. The slug has to follow,
+      // or a product ends up living at someone else's URL: importing this
+      // catalogue over the seeded placeholders put "Paper Fan" on
+      // /product/glue-stick. The old slug is kept so any link already sent on
+      // WhatsApp redirects to the new one rather than 404ing.
+      const slug = await freeSlug(name, existing.id);
+      const moved = slug !== existing.slug;
+      await db.product.update({
+        where: { id: existing.id },
+        data: moved
+          ? { ...data, slug, previousSlugs: { push: existing.slug } }
+          : data,
+      });
+      // Only when the row actually carries photos: an import meant to correct
+      // prices must not strip the pictures off every product it touches.
+      if (images.length > 0) {
         await db.productImage.deleteMany({ where: { productId: existing.id } });
-        await db.productImage.create({
-          data: { productId: existing.id, url: image, alt: `${name} — FloralforU`, isPrimary: true },
-        });
+        await db.productImage.createMany({ data: photoRows(existing.id) });
       }
       result.updated += 1;
     } else {
       const slug = await freeSlug(name);
       const created = await db.product.create({ data: { ...data, slug } });
-      if (image) {
-        await db.productImage.create({
-          data: { productId: created.id, url: image, alt: `${name} — FloralforU`, isPrimary: true },
-        });
+      if (images.length > 0) {
+        await db.productImage.createMany({ data: photoRows(created.id) });
       }
       result.imported += 1;
     }
@@ -218,11 +257,18 @@ export async function importProducts(
   return result;
 }
 
-async function freeSlug(name: string): Promise<string> {
+async function freeSlug(name: string, ignoreId?: string): Promise<string> {
   const seed = slugify(name);
   let candidate = seed;
   let n = 2;
-  while (await db.product.findUnique({ where: { slug: candidate }, select: { id: true } })) {
+  // `ignoreId` keeps a product from colliding with itself on re-import, which
+  // would walk its own slug to -2, -3, -4 on every run.
+  while (
+    await db.product.findFirst({
+      where: { slug: candidate, ...(ignoreId ? { NOT: { id: ignoreId } } : {}) },
+      select: { id: true },
+    })
+  ) {
     candidate = `${seed}-${n++}`;
   }
   return candidate;

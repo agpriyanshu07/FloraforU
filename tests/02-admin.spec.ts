@@ -232,6 +232,108 @@ test("the bulk importer validates per row, then imports the good ones", async ({
   await expect(page.getByText("Price on Enquiry").first()).toBeVisible();
 });
 
+test("an imported row can carry several photos, and a rename keeps the old link alive", async ({
+  page,
+}) => {
+  // Two things the real catalogue import depends on.
+  //
+  // One: a catalogue page often shows the same item several ways — the pack
+  // shot and the colour range — and the product card already pages through
+  // them. One photo per row would have thrown the rest away.
+  //
+  // Two: rows are matched on code, so a re-import with corrected names moves
+  // products to new URLs. Loading the shop's own catalogue over the seeded
+  // placeholders renamed nineteen products at once. Without the redirect, every
+  // link already sent on WhatsApp for those would have died — and one product
+  // would have been sitting at another's address.
+  const multi = path.join(process.cwd(), "fixtures", "multi-photo-import.csv");
+  const renamed = path.join(process.cwd(), "fixtures", "multi-photo-rename.csv");
+
+  const runImport = async (file: string) => {
+    await page.goto("/admin/products/import");
+    await page.setInputFiles("#file", file);
+    await page.uncheck('input[name="dryRun"]');
+    await page.click('button:has-text("Upload and import")');
+    await expect(page.getByRole("heading", { name: "Import results" })).toBeVisible({
+      timeout: 90_000,
+    });
+  };
+
+  await signIn(page);
+  await runImport(multi);
+
+  // All three photos arrived, in the order the row listed them.
+  await page.goto("/product/gallery-test-bunch");
+  await expect(
+    page.getByRole("heading", { name: "Gallery Test Bunch", exact: true, level: 1 }),
+  ).toBeVisible();
+  const sources = await page.$$eval("img", (imgs) =>
+    imgs.map((i) => i.getAttribute("src") ?? "").filter((s) => s.includes("2001") || s.includes("2304")),
+  );
+  expect(sources.length, "three photos on the product page").toBeGreaterThanOrEqual(3);
+
+  // Rename it. The row carries no image column, which must leave the photos
+  // alone — an import meant to fix a price cannot strip pictures.
+  await runImport(renamed);
+
+  await page.goto("/product/gallery-test-bunch-renamed");
+  await expect(
+    page.getByRole("heading", { name: "Gallery Test Bunch Renamed", exact: true, level: 1 }),
+  ).toBeVisible();
+  const afterRename = await page.$$eval("img", (imgs) =>
+    imgs.map((i) => i.getAttribute("src") ?? "").filter((s) => s.includes("2001") || s.includes("2304")),
+  );
+  expect(afterRename.length, "photos survive a row with no image column").toBeGreaterThanOrEqual(3);
+
+  // And the URL it used to live at still reaches it.
+  const old = await page.request.get("/product/gallery-test-bunch", { maxRedirects: 0 });
+  expect(old.status(), "the old link redirects rather than 404ing").toBe(308);
+  expect(old.headers()["location"]).toContain("/product/gallery-test-bunch-renamed");
+
+  // Clean up so the catalogue is left as the seed made it.
+  await page.goto("/admin/products?q=Gallery%20Test%20Bunch");
+  await page.click("table tbody tr a[href^='/admin/products/']");
+  page.once("dialog", (d) => d.accept());
+  await page.click('button:has-text("Delete product")');
+  await page.waitForURL(/\/admin\/products\?deleted=1/);
+});
+
+test("re-importing a row with no code updates it instead of duplicating it", async ({
+  page,
+}) => {
+  // Not everything in the shop's catalogue is numbered — the furniture and the
+  // LED lights are listed by name alone. Rows match on code, so without a
+  // fallback a second upload of the same file quietly creates a second copy of
+  // every one of them, and the owner finds out by seeing the catalogue twice.
+  const file = path.join(process.cwd(), "fixtures", "no-code-import.csv");
+  const importOnce = async () => {
+    await page.goto("/admin/products/import");
+    await page.setInputFiles("#file", file);
+    await page.uncheck('input[name="dryRun"]');
+    await page.click('button:has-text("Upload and import")');
+    await expect(page.getByRole("heading", { name: "Import results" })).toBeVisible({
+      timeout: 90_000,
+    });
+    return page.evaluate(() => document.body.innerText);
+  };
+
+  await signIn(page);
+  const first = await importOnce();
+  expect(Number(first.match(/Created\n(\d+)/)?.[1]), "created on the first run").toBe(1);
+
+  const second = await importOnce();
+  expect(Number(second.match(/Created\n(\d+)/)?.[1]), "nothing new on the second").toBe(0);
+  expect(Number(second.match(/Updated\n(\d+)/)?.[1]), "updated instead").toBe(1);
+
+  await page.goto("/admin/products?q=Codeless%20Test%20Lamp");
+  await expect(page.locator("table tbody tr")).toHaveCount(1);
+
+  await page.click("table tbody tr a[href^='/admin/products/']");
+  page.once("dialog", (d) => d.accept());
+  await page.click('button:has-text("Delete product")');
+  await page.waitForURL(/\/admin\/products\?deleted=1/);
+});
+
 test("a product name cannot inject script into the public page", async ({ page }) => {
   // A name containing `</script>` used to close the JSON-LD block early and
   // execute — stored XSS reachable from this very form, or from an imported

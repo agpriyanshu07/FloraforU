@@ -63,10 +63,15 @@ export default async function CataloguePage({
               ? `/api/catalogue-pdf?category=${activeCategory.slug}`
               : "/api/catalogue-pdf"
           }
-          className="btn-ghost shrink-0"
+          className="btn-ghost max-w-full text-center sm:shrink-0"
         >
           <DownloadIcon className="h-4 w-4 shrink-0" />
-          {activeCategory ? `Download ${activeCategory.name} PDF` : "Download catalogue PDF"}
+          {/* Category names run long ("Gift Boxes, Trays, Bags & Baskets"), so
+              the label has to wrap — pinned at one line it pushed the whole
+              page sideways on a phone. */}
+          <span className="min-w-0">
+            {activeCategory ? `Download ${activeCategory.name} PDF` : "Download catalogue PDF"}
+          </span>
         </a>
       </header>
 
