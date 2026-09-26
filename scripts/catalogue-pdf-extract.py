@@ -195,7 +195,11 @@ def main() -> None:
             ]
 
         saved = []
-        stem = code or f"page{page:03d}"
+        # Named by page, not by code. Codes are not unique — file 22 prints
+        # 3921 on nine different backdrops — and naming by code meant each of
+        # those pages overwrote the last one's photograph, leaving nine
+        # products sharing one picture of the ninth.
+        stem = f"{code}-p{page:03d}" if code else f"page{page:03d}"
         for n, (_, rgb, size) in enumerate(candidates, start=1):
             # The mask is the greyscale image *immediately* after its own image.
             # Searching a window instead let a photo with no mask of its own
