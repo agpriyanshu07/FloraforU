@@ -1,0 +1,38 @@
+[
+ {
+  "source": "ex25",
+  "page": 1,
+  "code": "1703",
+  "name": "Jute Net Roll",
+  "source_name": "JUTE NET ROLL Size: 55cm*4.5mtr",
+  "source_price": "Price : 330/-Per Roll All Color / Price : 360/- Per Roll / GOLDEN & SILVER",
+  "price": 330,
+  "spec": "55 cm × 4.5 m roll · ₹330 any colour · ₹360 golden or silver",
+  "photos": 4,
+  "check": null
+ },
+ {
+  "source": "ex25",
+  "page": 2,
+  "code": "1704",
+  "name": "Tissue Net",
+  "source_name": "tissue NET Size: 100cm Wide",
+  "source_price": "Price : 28/- Per Mtr",
+  "price": 28,
+  "spec": "100 cm wide · per metre",
+  "photos": 2,
+  "check": null
+ },
+ {
+  "source": "ex25",
+  "page": 3,
+  "code": "1705",
+  "name": "Chunari Net",
+  "source_name": "chunari NET Size: 60Cm*60mtr",
+  "source_price": "Price : 330/- Per Roll (Pink) / Price : 360/- Per Roll(Color)",
+  "price": 330,
+  "spec": "60 cm × 60 m roll · ₹330 pink · ₹360 other colours",
+  "photos": 1,
+  "check": null
+ }
+]

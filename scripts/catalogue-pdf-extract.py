@@ -80,6 +80,38 @@ def composite(rgb: Path, mask: Path | None) -> Image.Image:
     return out
 
 
+# The shop's flower-bag motif sits on nearly every page. Usually it repeats, so
+# the cross-page rule removes it — but it is redrawn on a black field in some
+# files, which makes it a different image, unique to its page, and it survives
+# as the "product". Matching by bytes cannot see that those are the same
+# picture, so match by shape instead: a difference hash is unchanged by the
+# background it is drawn on.
+#
+# The two references below are that motif as it appears in files 16 and 25.
+# Measured against every photograph in six files, the motif's own instances sit
+# within 5 of each other and the nearest real product is 17 away, so a cut at 8
+# separates them with room to spare.
+MOTIF_HASHES = (0x00B2F070B2B00010, 0x04B0F072B2B20030)
+MOTIF_CUTOFF = 8
+
+
+def dhash(im: Image.Image, size: int = 8) -> int:
+    """Row-wise difference hash: which way the brightness steps, not its value."""
+    small = im.convert("L").resize((size + 1, size), Image.LANCZOS)
+    px = list(small.getdata())
+    bits = 0
+    for r in range(size):
+        row = px[r * (size + 1):(r + 1) * (size + 1)]
+        for c in range(size):
+            bits = (bits << 1) | (1 if row[c] < row[c + 1] else 0)
+    return bits
+
+
+def is_decoration(im: Image.Image) -> bool:
+    h = dhash(im)
+    return any(bin(h ^ k).count("1") <= MOTIF_CUTOFF for k in MOTIF_HASHES)
+
+
 def main() -> None:
     pdf = Path(sys.argv[1])
     out_dir = Path(sys.argv[2])
@@ -144,6 +176,8 @@ def main() -> None:
                 w, h = im.size
                 if w * h > 1_000_000 and abs(w / h - page_aspect) < 0.02:
                     continue                      # the page itself, not a product
+                if is_decoration(im):
+                    continue                      # the flower-bag motif, whatever it is drawn on
                 out.append((w * h, f, im.size))
             out.sort(reverse=True)
             return out
@@ -161,7 +195,11 @@ def main() -> None:
             ]
 
         saved = []
-        stem = code or f"page{page:03d}"
+        # Named by page, not by code. Codes are not unique — file 22 prints
+        # 3921 on nine different backdrops — and naming by code meant each of
+        # those pages overwrote the last one's photograph, leaving nine
+        # products sharing one picture of the ninth.
+        stem = f"{code}-p{page:03d}" if code else f"page{page:03d}"
         for n, (_, rgb, size) in enumerate(candidates, start=1):
             # The mask is the greyscale image *immediately* after its own image.
             # Searching a window instead let a photo with no mask of its own
