@@ -163,14 +163,17 @@ def main() -> None:
         saved = []
         stem = code or f"page{page:03d}"
         for n, (_, rgb, size) in enumerate(candidates, start=1):
-            # The mask is the greyscale image of identical size that follows it.
+            # The mask is the greyscale image *immediately* after its own image.
+            # Searching a window instead let a photo with no mask of its own
+            # claim the next photo's, which composited one picture's shape onto
+            # another and shredded it — a pine box came out in ribbons.
             idx = per_page[page].index(rgb)
             mask = None
-            for f in per_page[page][idx + 1: idx + 3]:
-                im = Image.open(f)
+            if idx + 1 < len(per_page[page]):
+                nxt = per_page[page][idx + 1]
+                im = Image.open(nxt)
                 if im.mode == "L" and im.size == size:
-                    mask = f
-                    break
+                    mask = nxt
             img = composite(rgb, mask)
             name = f"{stem}.webp" if n == 1 else f"{stem}-{n}.webp"
             img.save(photos / name, "WEBP", quality=88, method=6)
