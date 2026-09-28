@@ -21,10 +21,17 @@ export default function ImageUploader({
   name,
   defaultValue,
   uploadsEnabled,
+  label = "Product photos",
+  max = MAX_IMAGES,
+  noun = "product",
 }: {
   name: string;
   defaultValue: string;
   uploadsEnabled: boolean;
+  /** Heading above the control. The gallery uses one photo, not a product's set. */
+  label?: string;
+  max?: number;
+  noun?: string;
 }) {
   const [urls, setUrls] = useState<string[]>(() =>
     defaultValue.split("\n").map((u) => u.trim()).filter(Boolean),
@@ -61,9 +68,13 @@ export default function ImageUploader({
     if (!fileList || fileList.length === 0) return;
     setError(null);
 
-    const room = MAX_IMAGES - urls.length;
+    const room = max - urls.length;
     if (room <= 0) {
-      setError(`That's already ${MAX_IMAGES} photos — remove one first.`);
+      setError(
+        max === 1
+          ? "There is already a photo here — remove it first."
+          : `That's already ${max} photos — remove one first.`,
+      );
       return;
     }
 
@@ -117,7 +128,7 @@ export default function ImageUploader({
 
   return (
     <div>
-      <span className="field-label">Product photos</span>
+      <span className="field-label">{label}</span>
 
       {uploadsEnabled && (
         <div
@@ -139,8 +150,8 @@ export default function ImageUploader({
             ref={inputRef}
             type="file"
             accept={ACCEPTED.join(",")}
-            multiple
-            disabled={busy || urls.length >= MAX_IMAGES}
+            multiple={max > 1}
+            disabled={busy || urls.length >= max}
             onChange={(e) => void handleFiles(e.target.files)}
             className="sr-only"
             id={`${name}-file`}
@@ -148,17 +159,20 @@ export default function ImageUploader({
           <label
             htmlFor={`${name}-file`}
             className={`btn-secondary inline-block ${
-              busy || urls.length >= MAX_IMAGES ? "pointer-events-none opacity-50" : "cursor-pointer"
+              busy || urls.length >= max ? "pointer-events-none opacity-50" : "cursor-pointer"
             }`}
           >
             {busy
               ? progress
                 ? `Uploading ${progress.done + 1} of ${progress.total}…`
                 : "Uploading…"
-              : "Choose photos"}
+              : max === 1
+                ? "Choose a photo"
+                : "Choose photos"}
           </label>
           <p className="mt-2 text-[13px] text-ink-600">
-            or drag them here · JPEG, PNG or WebP · up to {MAX_IMAGES} per product
+            {max === 1 ? "or drag one here" : "or drag them here"} · JPEG, PNG or WebP
+            {max > 1 ? ` · up to ${max} per ${noun}` : ""}
           </p>
         </div>
       )}
@@ -232,27 +246,35 @@ export default function ImageUploader({
           only way to set a photo and a collapsed section would hide it. */}
       <details className="mt-3" open={!uploadsEnabled}>
         <summary className="cursor-pointer text-[13px] text-ink-600">
-          Edit image URLs directly
+          {max === 1 ? "Edit the image URL directly" : "Edit image URLs directly"}
         </summary>
         <textarea
           id={name}
           name={name}
-          rows={4}
+          rows={max === 1 ? 2 : 4}
           value={urls.join("\n")}
           onChange={(e) =>
             setUrls(e.target.value.split("\n").map((u) => u.trim()).filter(Boolean))
           }
           className="field mt-2 font-mono text-[13px]"
-          placeholder={"/img/categories/pots-vases.svg\nhttps://res.cloudinary.com/…/pot-2.jpg"}
+          placeholder={
+            max === 1
+              ? "https://res.cloudinary.com/…/setup.jpg"
+              : "/img/products/3301.webp\nhttps://res.cloudinary.com/…/pot-2.jpg"
+          }
         />
         <span className="field-hint">
-          One URL per line, up to {MAX_IMAGES}. The first is the main photo. Alt text is written for you.
+          {max === 1
+            ? "One image URL."
+            : `One URL per line, up to ${max}. The first is the main photo. Alt text is written for you.`}
         </span>
       </details>
 
       {!uploadsEnabled && (
         <p className="field-hint mt-2">
-          Uploads are switched off until Cloudinary is configured. Paste image URLs above for now.
+          Uploads are switched off until Cloudinary is configured. Paste
+          {max === 1 ? " an image URL " : " image URLs "}
+          above for now.
         </p>
       )}
     </div>

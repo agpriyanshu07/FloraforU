@@ -4,13 +4,24 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionState } from "@/lib/admin-actions";
+import ImageUploader from "./ImageUploader";
 
 export type FieldSpec =
   | { kind: "text"; name: string; label: string; hint?: string; required?: boolean; placeholder?: string; mono?: boolean }
   | { kind: "textarea"; name: string; label: string; hint?: string; required?: boolean; rows?: number; placeholder?: string }
   | { kind: "number"; name: string; label: string; hint?: string; min?: number; max?: number }
   | { kind: "select"; name: string; label: string; hint?: string; options: { value: string; label: string }[] }
-  | { kind: "checkbox"; name: string; label: string; hint?: string };
+  | { kind: "checkbox"; name: string; label: string; hint?: string }
+  | {
+      // One uploaded photo, sharing the product uploader so the gallery does
+      // not need its own. Falls back to a pasteable URL when Cloudinary is
+      // not configured, exactly as the product form does.
+      kind: "image";
+      name: string;
+      label: string;
+      hint?: string;
+      uploadsEnabled: boolean;
+    };
 
 function Save({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -102,6 +113,22 @@ export default function SimpleForm({
                 {f.hint && <span className="block text-[13px] text-ink-600">{f.hint}</span>}
               </span>
             </label>
+          );
+        }
+
+        if (f.kind === "image") {
+          return (
+            <div key={f.name}>
+              <ImageUploader
+                name={f.name}
+                defaultValue={String(val(f.name))}
+                uploadsEnabled={f.uploadsEnabled}
+                label={f.label}
+                max={1}
+              />
+              {f.hint && <span className="field-hint">{f.hint}</span>}
+              {err(f.name) && <span className="field-error">{err(f.name)}</span>}
+            </div>
           );
         }
 

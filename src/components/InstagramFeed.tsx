@@ -28,10 +28,20 @@ export default async function InstagramFeed({
     take: 6,
   });
 
+  // Generated placeholder artwork is excluded. It is the only SVG here — a
+  // real photo is a webp, a jpg or a pasted URL — and six placeholder tiles
+  // under a "Follow us" heading look worse than the empty state below, which
+  // at least sends people to the live profile. This is the same reason the
+  // gallery page was retired.
   const photos = reels.length
     ? []
     : await db.galleryItem.findMany({
-        where: { visible: true, kind: "photo" },
+        where: {
+          visible: true,
+          kind: "photo",
+          imageUrl: { not: null },
+          NOT: { imageUrl: { endsWith: ".svg" } },
+        },
         orderBy: { displayOrder: "asc" },
         take: 6,
       });

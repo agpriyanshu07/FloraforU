@@ -15,12 +15,13 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
     <footer className="mt-20 border-t border-line bg-rose-50">
       <div className="shell grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
+          {/* Room here for the full lockup, wordmark and all. */}
           <Image
-            src="/img/brand/logo-mark-full.svg"
+            src="/img/brand/logo-ffu.svg"
             alt=""
-            width={96}
-            height={96}
-            className="mb-3 h-28 w-28"
+            width={127}
+            height={112}
+            className="mb-3 h-28 w-auto"
           />
           <p className="font-display text-2xl">{settings.businessName}</p>
           <p className="mt-2 text-sm text-ink-600">{settings.tagline}</p>

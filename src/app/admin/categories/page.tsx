@@ -4,6 +4,7 @@ import { PageHeader, TableShell, EmptyRow, Banner } from "@/components/admin/ui"
 import CategoryForm from "@/components/admin/CategoryForm";
 import DeleteCategory from "@/components/admin/DeleteCategory";
 import { db } from "@/lib/db";
+import { resolveCategoryImage } from "@/lib/category-image";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,12 @@ export default async function AdminCategoriesPage({
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-3">
                     <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-rose-50">
-                      {c.imageUrl && <Image src={c.imageUrl} alt="" fill sizes="44px" className="object-cover" />}
+                      {/* Resolved the same way the public cards resolve it, so this thumbnail
+    shows what the site shows. The form below still holds the stored value,
+    so editing a category cannot silently rewrite it. */}
+{resolveCategoryImage(c.slug, c.imageUrl) && (
+  <Image src={resolveCategoryImage(c.slug, c.imageUrl)!} alt="" fill sizes="44px" className="object-cover" />
+)}
                     </span>
                     <span>
                       <span className="block font-medium">{c.name}</span>

@@ -10,6 +10,9 @@ const NAV = [
   { href: "/admin/offers", label: "Offers" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/homepage", label: "Homepage" },
+  // The public gallery page is gone, but these items still feed the Instagram
+  // strip on the homepage, so the link is named for the job it now does.
+  { href: "/admin/gallery", label: "Instagram" },
   { href: "/admin/enquiries", label: "Enquiries" },
   { href: "/admin/settings", label: "Settings" },
 ];
@@ -27,11 +30,11 @@ export default function AdminShell({
         <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center gap-3 px-4 py-3">
           <Link href="/admin" className="flex items-center gap-2">
             <Image
-              src="/img/brand/mark.svg"
+              src="/img/brand/logo-ffu-mark.svg"
               alt=""
-              width={36}
+              width={41}
               height={36}
-              className="h-9 w-9 rounded-full"
+              className="h-9 w-auto"
             />
             <span className="font-display text-lg">Admin</span>
           </Link>
