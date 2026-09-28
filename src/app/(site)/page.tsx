@@ -117,8 +117,8 @@ export default async function HomePage() {
 
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line lg:aspect-[5/4]">
             <Image
-              src="/img/hero.svg"
-              alt="FloralforU event décor — artificial flower arrangements, lamps and backdrops (placeholder artwork, awaiting real shop photography)"
+              src="/img/brand/shopfront.webp"
+              alt="The FloralforU shop at Shree Shyam Enterprises — Shop LGF A1, Newtech Villa, Dari Mohalla, Bank More, Dhanbad — its pink signboard lit up over the open shopfront."
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 560px"
