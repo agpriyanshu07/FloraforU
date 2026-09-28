@@ -93,10 +93,10 @@ categories.forEach((c, i) => {
   write(`categories/${c.slug}.svg`, tile({ label: c.short, sub: "placeholder photo", scheme: i, seed: i + 1 }));
 });
 
-// Hero and gallery. The campaign banners under public/img/offers/ are NOT
-// generated here any more: they are drawn artwork, committed to the repo, and
-// this script has no business rewriting them.
-write("hero.svg", tile({ label: "FloralforU", sub: "event décor · dhanbad", w: 1200, h: 800, scheme: 0, seed: 77 }));
+// Gallery. The campaign banners under public/img/offers/ are NOT generated
+// here any more: they are drawn artwork, committed to the repo, and this
+// script has no business rewriting them. The homepage hero is no longer
+// generated either -- it is a photograph of the shop.
 // Labels must match the tags the seed assigns: g1-g5 event, g6-g8 dispatch,
 // g9 the shop counter. A tile captioned "Our shop counter" that reads
 // "Dispatch" looks like a mistake, because it is one.
