@@ -13,6 +13,9 @@ export const dynamic = "force-dynamic";
 
 const PER_PAGE = 25;
 
+/** Seeded placeholder artwork lives here; a real product photo never does. */
+const PLACEHOLDER_PREFIX = "/img/categories/";
+
 export default async function AdminProductsPage({
   searchParams,
 }: {
@@ -22,6 +25,7 @@ export default async function AdminProductsPage({
   const q = sp.q?.trim() ?? "";
   const categoryId = sp.categoryId ?? "";
   const status = sp.status ?? "";
+  const photo = sp.photo ?? "";
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
 
   const where: Prisma.ProductWhereInput = {};
@@ -33,6 +37,13 @@ export default async function AdminProductsPage({
   if (categoryId) where.categoryId = categoryId;
   if (status === "draft") where.published = false;
   if (status === "live") where.published = true;
+  // The seeded demo stock is the only thing carrying a category SVG as its
+  // photo, so this is how you find it once real stock is in — and, the other
+  // way round, which real products are still waiting on a photo.
+  if (photo === "placeholder") {
+    where.images = { some: { url: { startsWith: PLACEHOLDER_PREFIX } } };
+  }
+  if (photo === "none") where.images = { none: {} };
 
   const [categories, products, total] = await Promise.all([
     db.category.findMany({ orderBy: { displayOrder: "asc" }, select: { id: true, name: true } }),
@@ -60,6 +71,7 @@ export default async function AdminProductsPage({
     if (q) s.set("q", q);
     if (categoryId) s.set("categoryId", categoryId);
     if (status) s.set("status", status);
+    if (photo) s.set("photo", photo);
     if (p > 1) s.set("page", String(p));
     const v = s.toString();
     return v ? `/admin/products?${v}` : "/admin/products";
@@ -114,14 +126,14 @@ export default async function AdminProductsPage({
             <input id="q" name="q" defaultValue={q} className="field" placeholder="Name, code or spec" />
           </div>
           <button type="submit" className="btn-primary">Filter</button>
-          {(q || categoryId || status) && (
+          {(q || categoryId || status || photo) && (
             <Link href="/admin/products" className="btn-ghost">Reset</Link>
           )}
         </div>
 
-        <details open={Boolean(categoryId || status)} className="mt-3">
+        <details open={Boolean(categoryId || status || photo)} className="mt-3">
           <summary className="cursor-pointer text-sm text-ink-600 hover:text-rose-700">
-            Category and status
+            Category, status and photo
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-[auto_auto] sm:justify-start">
             <div>
@@ -139,6 +151,14 @@ export default async function AdminProductsPage({
                 <option value="">All</option>
                 <option value="live">Live</option>
                 <option value="draft">Draft</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="photo" className="field-label">Photo</label>
+              <select id="photo" name="photo" defaultValue={photo} className="field sm:w-52">
+                <option value="">All</option>
+                <option value="placeholder">Placeholder artwork</option>
+                <option value="none">No photo at all</option>
               </select>
             </div>
           </div>
@@ -163,7 +183,7 @@ export default async function AdminProductsPage({
         >
           {products.length === 0 ? (
             <EmptyRow colSpan={7}>
-              {q || categoryId || status ? (
+              {q || categoryId || status || photo ? (
                 <>No products match those filters. <Link href="/admin/products" className="text-rose-600">Clear them</Link>.</>
               ) : (
                 <>No products yet. <Link href="/admin/products/new" className="text-rose-600">Add one</Link> or <Link href="/admin/products/import" className="text-rose-600">bulk import a spreadsheet</Link>.</>

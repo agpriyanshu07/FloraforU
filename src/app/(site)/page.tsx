@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [settings, categories, arrivals, offers, offerTerms, reviews, gallery] =
+  const [settings, categories, arrivals, offers, offerTerms, reviews] =
     await Promise.all([
       getSettings(),
       getCategoriesWithCounts(),
@@ -42,11 +42,6 @@ export default async function HomePage() {
         where: PUBLIC_REVIEW_WHERE,
         orderBy: { displayOrder: "asc" },
         take: 3,
-      }),
-      db.galleryItem.findMany({
-        where: { visible: true, kind: "photo" },
-        orderBy: { displayOrder: "asc" },
-        take: 8,
       }),
     ]);
 
@@ -243,51 +238,6 @@ export default async function HomePage() {
           )}
         </div>
       </section>
-
-      {/* --------------------------------------------------------- See us work */}
-      {/* Rendered only when there are photos: a heading and a "view all" button
-          over an empty grid reads as a broken section, not an empty one. */}
-      {gallery.length > 0 && (
-        <section aria-labelledby="gallery-heading" className="shell py-14">
-          <Reveal>
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 id="gallery-heading" className="font-display text-3xl">
-                  See us in action
-                </h2>
-                <p className="mt-1 text-ink-600">
-                  Real setups and real dispatch — so you know exactly what turns up.
-                </p>
-              </div>
-              <Link href="/gallery" className="btn-ghost btn-sm">
-                Open the gallery
-              </Link>
-            </div>
-          </Reveal>
-
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {gallery.map((g, i) => (
-              <li key={g.id}>
-                {/* The Reveal itself carries the card, so it is the positioned
-                    ancestor the fill image needs — a wrapper inside the tile
-                    would animate an empty box while the photo stayed put. */}
-                <Reveal
-                  className="card relative block aspect-square overflow-hidden"
-                  delayMs={(i % 4) * 70}
-                >
-                  <Image
-                    src={g.imageUrl ?? "/img/hero.svg"}
-                    alt={g.alt || g.title}
-                    fill
-                    sizes="(max-width: 640px) 50vw, 280px"
-                    className="object-cover"
-                  />
-                </Reveal>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {/* ----------------------------------------------------------- Instagram */}
       <div className="border-t border-line">
