@@ -168,6 +168,14 @@ export default async function AdminProductsPage({
       <BulkBar categories={categories} />
 
       <form id="products-form">
+        {/* The bulk action reads these back so the list stays filtered after
+            it runs. Clearing 47 rows takes two passes at 25 a page, and
+            without this the second "select all" would be pointing at the
+            whole catalogue rather than at what is left of the filter. */}
+        <input type="hidden" name="filter_q" value={q} />
+        <input type="hidden" name="filter_categoryId" value={categoryId} />
+        <input type="hidden" name="filter_status" value={status} />
+        <input type="hidden" name="filter_photo" value={photo} />
         <TableShell
           head={
             <tr>

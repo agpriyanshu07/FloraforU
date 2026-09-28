@@ -232,8 +232,23 @@ export async function bulkProductAction(formData: FormData) {
   const action = String(formData.get("bulkAction") ?? "");
   const targetCategory = String(formData.get("bulkCategoryId") ?? "");
 
+  // Whatever the list was filtered to has to survive the round trip. A bulk
+  // delete only ever clears one page of 25, so anything larger takes several
+  // passes; dropping the filter in between would leave the next "select all"
+  // pointing at the whole catalogue instead of the rows being cleared out.
+  const filters = new URLSearchParams();
+  for (const key of ["q", "categoryId", "status", "photo"]) {
+    const value = String(formData.get(`filter_${key}`) ?? "");
+    if (value) filters.set(key, value);
+  }
+  const back = (extra: Record<string, string>) => {
+    const qs = new URLSearchParams(filters);
+    for (const [k, v] of Object.entries(extra)) qs.set(k, v);
+    return `/admin/products?${qs.toString()}`;
+  };
+
   if (ids.length === 0 || !action) {
-    redirect("/admin/products?error=nothing-selected");
+    redirect(back({ error: "nothing-selected" }));
   }
 
   switch (action) {
@@ -244,7 +259,7 @@ export async function bulkProductAction(formData: FormData) {
       await db.product.updateMany({ where: { id: { in: ids } }, data: { published: false } });
       break;
     case "recategorise":
-      if (!targetCategory) redirect("/admin/products?error=no-target-category");
+      if (!targetCategory) redirect(back({ error: "no-target-category" }));
       await db.product.updateMany({
         where: { id: { in: ids } },
         data: { categoryId: targetCategory },
@@ -254,12 +269,14 @@ export async function bulkProductAction(formData: FormData) {
       await db.product.deleteMany({ where: { id: { in: ids } } });
       break;
     default:
-      redirect("/admin/products?error=unknown-action");
+      redirect(back({ error: "unknown-action" }));
   }
 
   refreshPublicPages();
   revalidatePath("/admin/products");
-  redirect(`/admin/products?bulk=${action}&count=${ids.length}`);
+  // Deliberately no `page`: the rows just went, so page 3 of the old list may
+  // not exist any more. Back to the first page of the same filter.
+  redirect(back({ bulk: action, count: String(ids.length) }));
 }
 
 // ============================================================ CATEGORIES ===
