@@ -1,10 +1,23 @@
 import "dotenv/config";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma";
 import { CATEGORIES, PRODUCTS } from "./catalogue-data";
 
 const db = new PrismaClient();
+
+/**
+ * A category shows its own stock when there is a cover built from real
+ * product photos, and falls back to the placeholder artwork when there
+ * is not — which is still the case for the two categories that are down
+ * to one product and none. Dropping a new <slug>-cover.webp into
+ * public/img/categories is all it takes to switch one over.
+ */
+function categoryImage(slug: string) {
+  const cover = `/img/categories/${slug}-cover.webp`;
+  return existsSync(`public${cover}`) ? cover : `/img/categories/${slug}.svg`;
+}
 
 function slugify(value: string): string {
   return (
@@ -56,7 +69,7 @@ async function main() {
         slug: c.slug,
         name: c.name,
         description: c.description,
-        imageUrl: `/img/categories/${c.slug}.svg`,
+        imageUrl: categoryImage(c.slug),
         displayOrder: i,
       },
     });
