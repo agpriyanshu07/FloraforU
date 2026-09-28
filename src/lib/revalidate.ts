@@ -22,7 +22,6 @@ export function refreshPublicPages() {
     // for up to an hour after the sale goes live.
     "/wishlist",
     "/reviews",
-    "/gallery",
     "/about",
     "/contact",
     "/sitemap.xml",

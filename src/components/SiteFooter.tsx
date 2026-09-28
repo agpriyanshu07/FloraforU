@@ -47,7 +47,6 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
               ["/catalogue", "Full catalogue"],
               ["/categories", "All categories"],
               ["/offers", "Current offers"],
-              ["/gallery", "Our work & dispatch"],
               ["/reviews", "Customer reviews"],
             ].map(([href, label]) => (
               <li key={href}>

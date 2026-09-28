@@ -56,7 +56,6 @@ export const PUBLIC_ROUTES = [
   "/catalogue",
   "/product/lace-pot",
   "/offers",
-  "/gallery",
   "/reviews",
   "/about",
   "/contact",
