@@ -10,6 +10,9 @@ const NAV = [
   { href: "/admin/offers", label: "Offers" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/homepage", label: "Homepage" },
+  // The public gallery page is gone, but these items still feed the Instagram
+  // strip on the homepage, so the link is named for the job it now does.
+  { href: "/admin/gallery", label: "Instagram" },
   { href: "/admin/enquiries", label: "Enquiries" },
   { href: "/admin/settings", label: "Settings" },
 ];

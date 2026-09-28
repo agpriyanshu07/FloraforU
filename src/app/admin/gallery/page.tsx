@@ -20,8 +20,8 @@ export default async function AdminGalleryPage({
   return (
     <>
       <PageHeader
-        title="Gallery & dispatch"
-        description="Event setups, packed-for-delivery photos and Instagram reels. Reel links added here also power the Instagram section on the homepage."
+        title="Instagram strip"
+        description="What shows in the Instagram section on the homepage. Paste a post or reel link and it embeds as a real Instagram post; add photos instead and those are used until a reel exists. The separate gallery page this once fed has been retired."
       />
 
       {sp.saved && <Banner tone="success">Gallery item saved.</Banner>}
