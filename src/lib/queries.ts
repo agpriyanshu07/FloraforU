@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { db } from "./db";
 import { resolveCategoryImage } from "./category-image";
+import { withPhotoFallbacks } from "./photo-fallback";
 import { offerPriceOf, type OfferTerms } from "./pricing";
 import { Prisma } from "@/generated/prisma";
 
@@ -185,7 +186,7 @@ export async function getNewArrivals(limit = 8): Promise<ProductCardData[]> {
     select: PRODUCT_CARD_SELECT,
     take: limit,
   });
-  if (pinned.length >= limit) return pinned;
+  if (pinned.length >= limit) return withPhotoFallbacks(pinned);
 
   const rest = await db.product.findMany({
     where: { published: true, id: { notIn: pinned.map((p) => p.id) } },
@@ -193,7 +194,7 @@ export async function getNewArrivals(limit = 8): Promise<ProductCardData[]> {
     select: PRODUCT_CARD_SELECT,
     take: limit - pinned.length,
   });
-  return [...pinned, ...rest];
+  return withPhotoFallbacks([...pinned, ...rest]);
 }
 
 /**

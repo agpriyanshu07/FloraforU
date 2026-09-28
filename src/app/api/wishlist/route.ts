@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { PRODUCT_CARD_SELECT } from "@/lib/queries";
+import { withPhotoFallbacks } from "@/lib/photo-fallback";
 
 /**
  * Resolves saved slugs into products for the wishlist page.
@@ -29,10 +30,12 @@ export async function POST(request: Request) {
   const slugs = parsed.data.slugs.filter(Boolean);
   if (slugs.length === 0) return NextResponse.json({ ok: true, products: [] });
 
-  const products = await db.product.findMany({
-    where: { slug: { in: slugs }, published: true },
-    select: PRODUCT_CARD_SELECT,
-  });
+  const products = withPhotoFallbacks(
+    await db.product.findMany({
+      where: { slug: { in: slugs }, published: true },
+      select: PRODUCT_CARD_SELECT,
+    }),
+  );
 
   // Returned in the order the customer saved them, not the order the database
   // happened to return. Unpublished or deleted items simply fall out of the
