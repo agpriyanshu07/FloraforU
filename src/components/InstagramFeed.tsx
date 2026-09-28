@@ -1,8 +1,8 @@
-import Image from "next/image";
 import { InstagramColorIcon } from "./icons";
 import { withUtm } from "@/lib/whatsapp";
 import { db } from "@/lib/db";
 import { INSTAGRAM_FALLBACK } from "@/lib/photo-fallback";
+import PhotoLightbox, { type LightboxPhoto } from "./PhotoLightbox";
 
 /**
  * Instagram section.
@@ -44,15 +44,22 @@ export default async function InstagramFeed({
           NOT: { imageUrl: { endsWith: ".svg" } },
         },
         orderBy: { displayOrder: "asc" },
-        take: 6,
+        take: 10,
       });
 
   // Photos the shop sent but could not upload, because Cloudinary is not
   // configured yet, are committed to the repo instead. They show only while
   // the gallery holds nothing real of its own, so a reel or an uploaded photo
   // added later replaces them without this being touched.
-  const photos: { id: string; title: string; imageUrl: string | null; alt?: string | null }[] =
-    reels.length > 0 || stored.length > 0 ? stored : [...INSTAGRAM_FALLBACK];
+  const source = reels.length > 0 || stored.length > 0 ? stored : [...INSTAGRAM_FALLBACK];
+
+  const photos: LightboxPhoto[] = source
+    .filter((p): p is typeof p & { imageUrl: string } => Boolean(p.imageUrl))
+    .map((p) => ({
+      id: p.id,
+      url: p.imageUrl,
+      alt: ("alt" in p ? p.alt : null) || p.title,
+    }));
 
   const profileHref = withUtm(instagramUrl, "website", "instagram-section");
 
@@ -88,32 +95,11 @@ export default async function InstagramFeed({
           ))}
         </ul>
       ) : photos.length > 0 ? (
-        // Same shape as the reels grid above. These are Instagram posts, which
-        // are portrait; squeezing them into squares at six across cropped the
-        // caption off the bottom of every one -- "READY MADE GARLAND" came out
-        // as "READY MADE". 4:5 is Instagram's own portrait ratio.
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {photos.map((p) => (
-            <li key={p.id} className="card overflow-hidden">
-              <a
-                href={profileHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative block aspect-[4/5] bg-rose-50"
-              >
-                {p.imageUrl && (
-                  <Image
-                    src={p.imageUrl}
-                    alt={p.alt || p.title}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 380px"
-                    className="object-cover"
-                  />
-                )}
-              </a>
-            </li>
-          ))}
-        </ul>
+        // Small tiles, five across on a wide screen. The photographs are only
+        // 335px wide, so anything larger was upscaling them into softness --
+        // at this size the browser scales them DOWN, which is sharp. Tapping
+        // one enlarges it in place instead of leaving the site.
+        <PhotoLightbox photos={photos} />
       ) : (
         // Nothing to show yet: an empty grid would read as a broken section, so
         // point people at the live profile instead.
