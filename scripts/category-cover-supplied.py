@@ -59,6 +59,14 @@ CROPS: dict[str, tuple[int, int, int, int] | None] = {
     # or painted out.
     "packing-bouquet-accessories": None,
     "festive-puja-items": None,
+    # Portrait source; centre lands on the brass turtle diya, which is the
+    # one thing in focus.
+    "lamps-diyas": None,
+    # A flat illustration rather than a photograph, unlike every other cover.
+    # The butterfly still sits inside the 5:3 window at centre.
+    "accessories": None,
+    # Already close to 5:3; centre keeps the full stack of rolls.
+    "carpets-flooring": None,
 }
 
 

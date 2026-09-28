@@ -138,11 +138,22 @@ def compose(entries: list[tuple[str, float]]) -> Image.Image:
     return sheet
 
 
+SUPPLIED = REPO / "data/categories"
+
 if __name__ == "__main__":
-    total = 0
+    total = skipped = 0
     for slug, entries in COVERS.items():
+        # A photograph the owner supplied beats a montage assembled from
+        # product shots, and both scripts write the same <slug>-cover.webp.
+        # Without this the two would fight over twelve of these files and
+        # whichever ran last would win, which is not something you would
+        # notice until a cover quietly changed back.
+        if next(SUPPLIED.glob(f"{slug}.*"), None) is not None:
+            print(f"{slug:<34} skipped — data/categories has a supplied photo")
+            skipped += 1
+            continue
         path = OUT / f"{slug}-cover.webp"
         compose(entries).save(path, "WEBP", quality=88, method=6)
         total += path.stat().st_size
         print(f"{slug:<34} {len(entries)} photo(s)  {path.stat().st_size // 1024:>4} KB")
-    print(f"\n{len(COVERS)} covers, {total // 1024} KB total")
+    print(f"\n{len(COVERS) - skipped} montages, {total // 1024} KB total; {skipped} left to supplied photos")
