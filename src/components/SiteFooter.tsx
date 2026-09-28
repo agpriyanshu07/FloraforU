@@ -15,12 +15,15 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
     <footer className="mt-20 border-t border-line bg-rose-50">
       <div className="shell grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
+          {/* The same mark the header carries. The outline lockup that was
+              here renders as a thin broken arc at this size — no fill, no
+              monogram, and it reads as a failed image rather than a logo. */}
           <Image
-            src="/img/brand/logo-mark-full.svg"
+            src="/img/brand/mark.svg"
             alt=""
-            width={96}
-            height={96}
-            className="mb-3 h-28 w-28"
+            width={112}
+            height={112}
+            className="mb-3 h-20 w-20 rounded-full"
           />
           <p className="font-display text-2xl">{settings.businessName}</p>
           <p className="mt-2 text-sm text-ink-600">{settings.tagline}</p>
