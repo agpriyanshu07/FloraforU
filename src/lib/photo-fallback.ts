@@ -60,4 +60,7 @@ export const INSTAGRAM_FALLBACK = [
   { id: "ig-signboard", title: "The shop at Bank More, Dhanbad", imageUrl: "/img/instagram/shopfront-signboard.webp" },
   { id: "ig-opening", title: "Opening day at the Bank More shop", imageUrl: "/img/instagram/shop-opening.webp" },
   { id: "ig-wholesale", title: "Wholesale prices in Dhanbad", imageUrl: "/img/instagram/wholesale-dhanbad.webp" },
+  { id: "ig-heads", title: "Loose flower heads by the bag", imageUrl: "/img/instagram/loose-flower-heads.webp" },
+  { id: "ig-ribbons", title: "Ribbons, beads and craft supplies", imageUrl: "/img/instagram/ribbons-and-craft-supplies.webp" },
+  { id: "ig-baskets", title: "Cane baskets, laces and trims", imageUrl: "/img/instagram/baskets-and-trims.webp" },
 ] as const;
