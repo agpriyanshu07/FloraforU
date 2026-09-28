@@ -138,6 +138,21 @@ def compose(entries: list[tuple[str, float]]) -> Image.Image:
     return sheet
 
 
+def write_manifest() -> int:
+    """Record which slugs have a cover, for src/lib/category-image.ts.
+
+    The site cannot read public/ at request time on a serverless host, so the
+    list has to be committed. Both cover scripts call this, and both scan the
+    output directory rather than their own table, so either one alone leaves a
+    correct manifest.
+    """
+    import json
+
+    slugs = sorted(p.name[: -len("-cover.webp")] for p in OUT.glob("*-cover.webp"))
+    (REPO / "src/lib/category-covers.json").write_text(json.dumps(slugs, indent=1) + "\n")
+    return len(slugs)
+
+
 SUPPLIED = REPO / "data/categories"
 
 if __name__ == "__main__":
@@ -157,3 +172,4 @@ if __name__ == "__main__":
         total += path.stat().st_size
         print(f"{slug:<34} {len(entries)} photo(s)  {path.stat().st_size // 1024:>4} KB")
     print(f"\n{len(COVERS) - skipped} montages, {total // 1024} KB total; {skipped} left to supplied photos")
+    print(f"manifest: {write_manifest()} slugs have a cover")

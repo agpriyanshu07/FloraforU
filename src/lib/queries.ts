@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { db } from "./db";
+import { resolveCategoryImage } from "./category-image";
 import { offerPriceOf, type OfferTerms } from "./pricing";
 import { Prisma } from "@/generated/prisma";
 
@@ -167,10 +168,14 @@ export async function getPastOffers() {
 }
 
 export const getCategoriesWithCounts = cache(async function getCategoriesWithCounts() {
-  return db.category.findMany({
+  const categories = await db.category.findMany({
     orderBy: { displayOrder: "asc" },
     include: { _count: { select: { products: { where: { published: true } } } } },
   });
+  // Both public pages that show category cards read this, so resolving here
+  // means a database still holding the seeded placeholder URLs shows the real
+  // covers without anyone editing sixteen categories by hand.
+  return categories.map((c) => ({ ...c, imageUrl: resolveCategoryImage(c.slug, c.imageUrl) }));
 });
 
 export async function getNewArrivals(limit = 8): Promise<ProductCardData[]> {

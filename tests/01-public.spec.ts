@@ -1166,3 +1166,26 @@ test("the homepage offer card announces itself as one campaign, not its whole te
   const anchor = href.split("#")[1];
   await expect(page.locator(`#${anchor}`)).toBeVisible();
 });
+
+test("category cards show their real cover even when the database still holds the seeded placeholder", async ({ page }) => {
+  // The seed stores /img/categories/<slug>.svg on every category, which is
+  // exactly the state a long-running database is in: the cover files shipped
+  // later, but nothing rewrote the stored URLs. The cards must resolve to the
+  // covers anyway, or the photographs never appear on the live site.
+  for (const path of ["/", "/categories"]) {
+    await page.goto(path);
+    await loadLazyImages(page);
+
+    // Scoped to category cards by the link they wrap. Seeded demo products
+    // also carry /img/categories/*.svg as their photo, so a selector on the
+    // URL alone matches product cards too and proves nothing.
+    const srcs = await page
+      .locator('article:has(a[href^="/categories/"]) img')
+      .evaluateAll((imgs) => imgs.map((i) => decodeURIComponent((i as HTMLImageElement).src)));
+
+    expect(srcs.length, `${path} should render category cards`).toBeGreaterThan(0);
+    const placeholders = srcs.filter((s) => /\/img\/categories\/[a-z0-9-]+\.svg/.test(s));
+    expect(placeholders, `${path} still renders placeholder artwork`).toEqual([]);
+    expect(srcs.some((s) => s.includes("-cover.webp"))).toBe(true);
+  }
+});
