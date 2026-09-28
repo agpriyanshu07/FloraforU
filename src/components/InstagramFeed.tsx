@@ -80,21 +80,25 @@ export default async function InstagramFeed({
           ))}
         </ul>
       ) : photos.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        // Same shape as the reels grid above. These are Instagram posts, which
+        // are portrait; squeezing them into squares at six across cropped the
+        // caption off the bottom of every one -- "READY MADE GARLAND" came out
+        // as "READY MADE". 4:5 is Instagram's own portrait ratio.
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {photos.map((p) => (
             <li key={p.id} className="card overflow-hidden">
               <a
                 href={profileHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative block aspect-square bg-rose-50"
+                className="relative block aspect-[4/5] bg-rose-50"
               >
                 {p.imageUrl && (
                   <Image
                     src={p.imageUrl}
                     alt={p.alt || p.title}
                     fill
-                    sizes="(max-width: 640px) 50vw, 180px"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 380px"
                     className="object-cover"
                   />
                 )}
