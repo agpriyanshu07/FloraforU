@@ -5,6 +5,7 @@ import SimpleForm from "@/components/admin/SimpleForm";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { deleteGalleryAction, saveGalleryAction } from "@/lib/admin-actions";
 import { db } from "@/lib/db";
+import { isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,13 @@ export default async function AdminGalleryPage({
                 { value: "shop", label: "At the shop" },
               ],
             },
-            { kind: "text", name: "imageUrl", label: "Image URL (photos)", mono: true, placeholder: "/img/gallery/g1.svg" },
+            {
+              kind: "image",
+              name: "imageUrl",
+              label: "Photo",
+              uploadsEnabled: isCloudinaryConfigured(),
+              hint: "Only used for Photo items. A reel link below takes precedence.",
+            },
             {
               kind: "text",
               name: "embedUrl",
