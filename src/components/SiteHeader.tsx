@@ -40,12 +40,17 @@ export default function SiteHeader({
     <header className="sticky top-0 z-40 border-b border-line bg-cream/95 backdrop-blur supports-[backdrop-filter]:bg-cream/80">
       <div className="shell flex h-16 items-center justify-between gap-3">
         <Link href="/" className="flex items-center gap-2.5">
+          {/* The shop's own mark, traced from its logo. 584x515, so it is
+              sized by height and left to find its own width -- forcing it
+              square squashes the circle. The wordmark variant is not used
+              here: at this size its lettering is a smudge, and the name is
+              already set in text beside it. */}
           <Image
-            src="/img/brand/mark.svg"
+            src="/img/brand/logo-ffu-mark.svg"
             alt=""
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-full"
+            width={45}
+            height={40}
+            className="h-10 w-auto"
           />
           <span className="font-display text-xl leading-none">{businessName}</span>
         </Link>
