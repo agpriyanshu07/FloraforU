@@ -19,6 +19,7 @@ import { buildWhatsappUrl, instagramDmUrl, withUtm } from "@/lib/whatsapp";
 import { formatPrice, isProductNew, AVAILABILITY_LABELS } from "@/lib/format";
 import { enquiryPriceNote, offerPriceOf, pricingFor } from "@/lib/pricing";
 import { PRODUCT_CARD_SELECT, PUBLIC_REVIEW_WHERE, getActiveOfferTerms } from "@/lib/queries";
+import { withPhotoFallback, withPhotoFallbacks } from "@/lib/photo-fallback";
 import { BreadcrumbJsonLd, JsonLd } from "@/components/JsonLd";
 
 // Cached; admin writes revalidate this path explicitly, so the window is a backstop.
@@ -85,13 +86,15 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
 
-  const product = await db.product.findUnique({
+  const found = await db.product.findUnique({
     where: { slug },
     include: {
       category: true,
       images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
     },
   });
+  // A photo committed to the repo but never imported still shows here.
+  const product = found && withPhotoFallback(found);
   if (!product || !product.published) {
     // The product may simply have been renamed. This shop's links live in
     // WhatsApp threads for months, so an old URL redirects to where the
@@ -117,7 +120,7 @@ export default async function ProductPage({
       orderBy: { createdAt: "desc" },
       take: 4,
       select: PRODUCT_CARD_SELECT,
-    }),
+    }).then(withPhotoFallbacks),
     // Product pages showed no reviews at all before this — a review could not
     // even be attached to a product.
     db.review.findMany({

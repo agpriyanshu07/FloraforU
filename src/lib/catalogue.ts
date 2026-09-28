@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { PRODUCT_CARD_SELECT, getActiveOfferTerms } from "./queries";
+import { withPhotoFallbacks } from "./photo-fallback";
 import type { Prisma } from "@/generated/prisma";
 
 export const PAGE_SIZE = 24;
@@ -93,7 +94,7 @@ export async function queryCatalogue(
     take: PAGE_SIZE,
   });
 
-  return { products, total, page, pageCount, offerTerms, sort };
+  return { products: withPhotoFallbacks(products), total, page, pageCount, offerTerms, sort };
 }
 
 function sort_valid(s: string) {

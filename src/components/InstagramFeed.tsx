@@ -2,6 +2,7 @@ import Image from "next/image";
 import { InstagramColorIcon } from "./icons";
 import { withUtm } from "@/lib/whatsapp";
 import { db } from "@/lib/db";
+import { INSTAGRAM_FALLBACK } from "@/lib/photo-fallback";
 
 /**
  * Instagram section.
@@ -33,7 +34,7 @@ export default async function InstagramFeed({
   // under a "Follow us" heading look worse than the empty state below, which
   // at least sends people to the live profile. This is the same reason the
   // gallery page was retired.
-  const photos = reels.length
+  const stored = reels.length
     ? []
     : await db.galleryItem.findMany({
         where: {
@@ -45,6 +46,13 @@ export default async function InstagramFeed({
         orderBy: { displayOrder: "asc" },
         take: 6,
       });
+
+  // Photos the shop sent but could not upload, because Cloudinary is not
+  // configured yet, are committed to the repo instead. They show only while
+  // the gallery holds nothing real of its own, so a reel or an uploaded photo
+  // added later replaces them without this being touched.
+  const photos: { id: string; title: string; imageUrl: string | null; alt?: string | null }[] =
+    reels.length > 0 || stored.length > 0 ? stored : [...INSTAGRAM_FALLBACK];
 
   const profileHref = withUtm(instagramUrl, "website", "instagram-section");
 
