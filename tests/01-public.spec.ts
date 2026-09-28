@@ -1189,3 +1189,108 @@ test("category cards show their real cover even when the database still holds th
     expect(srcs.some((s) => s.includes("-cover.webp"))).toBe(true);
   }
 });
+
+test("an Instagram photo opens in place instead of leaving the site", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const section = page.locator('section[aria-labelledby="instagram-heading"]');
+  await section.scrollIntoViewIfNeeded();
+
+  const tiles = section.locator("ul button");
+  const count = await tiles.count();
+  expect(count, "no photo tiles to click").toBeGreaterThan(0);
+
+  // Every tile used to be an <a> to instagram.com, so a customer could not
+  // look at one of the shop's own photos without being sent off the site. The
+  // one link out is the "Open Instagram" button beside the heading.
+  await expect(section.locator('ul a[href*="instagram.com"]')).toHaveCount(0);
+  await expect(section.locator("a.btn-instagram")).toHaveCount(1);
+
+  const before = page.url();
+  await tiles.first().click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  expect(page.url(), "clicking a photo navigated away").toBe(before);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});
+
+// A retina screen asks for twice the pixels, which is where the stretching
+// actually showed -- at the default scale factor of 1 the old layout came out
+// at 0.94 of what it needed and this test passed while the photos were visibly
+// blurry on the shop owner's Mac. Checked by reverting the layout: at 2x the
+// old sizing fails this, at 1x it does not.
+test.describe("on a retina screen", () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test("the Instagram photos are not blown up past what the files hold", async ({
+    page,
+  }) => {
+    // These are frames from the shop's reels at 335px across. The section used
+    // to draw them three-across at ~360 CSS px, which on a retina screen asked
+    // 720 device pixels of a 335-pixel file — that, not the files, is why they
+    // looked blurry. A little over 1:1 is invisible; a factor of two is not.
+    await page.goto("/");
+    const section = page.locator('section[aria-labelledby="instagram-heading"]');
+
+    // Deliberately not loadLazyImages(): it scrolls to the bottom and back to
+    // the top, which puts this section out of view again before the browser
+    // has started fetching anything, and all five tiles then sit at
+    // complete=false with currentSrc="" forever. Scroll to it and stay there.
+    await section.scrollIntoViewIfNeeded();
+
+    // An image still loading reports currentSrc as "", which resolves against
+    // the page and hands back the HTML document -- that is the "source image
+    // cannot be decoded" this first failed CI with, not a real problem with
+    // the photos.
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll('section[aria-labelledby="instagram-heading"] ul img')].every(
+          (i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).currentSrc !== "",
+        ),
+    );
+
+    // naturalWidth on the tile itself is no use: with a w-descriptor srcset the
+    // browser reports a density-corrected size, not the file's pixels. Loading
+    // the same URL into a bare Image, which has no srcset, gives the real one.
+    const tiles = await section.locator("ul img").evaluateAll(async (els) => {
+      const out = [];
+      for (const el of els as HTMLImageElement[]) {
+        const css = el.getBoundingClientRect().width;
+        const probe = new Image();
+        await new Promise((resolve, reject) => {
+          probe.onload = resolve;
+          probe.onerror = () => reject(new Error(`could not load ${probe.src}`));
+          probe.src = el.currentSrc;
+        });
+        out.push({ wanted: css * devicePixelRatio, got: probe.naturalWidth });
+      }
+      return out;
+    });
+
+    expect(tiles.length, "no photos measured").toBeGreaterThan(0);
+    for (const t of tiles) {
+      expect(
+        t.got / t.wanted,
+        `a ${t.got}px photo is being stretched across ${Math.round(t.wanted)} device pixels`,
+      ).toBeGreaterThan(0.9);
+    }
+  });
+});
+
+test("the browser tab shows the shop's own logo, not the build-time placeholder", () => {
+  // The placeholder was a rose disc with "FfU" set in Georgia, drawn before
+  // the shop supplied artwork. scripts/brand-icons.mjs replaced it with the
+  // traced logo, which is vector outlines — no <text>, no font-family.
+  const icon = fs.readFileSync(path.join(process.cwd(), "src/app/icon.svg"), "utf8");
+  expect(icon, "icon.svg is still the lettered placeholder").not.toContain("<text");
+  expect(icon).not.toContain("font-family");
+  expect(icon, "icon.svg has no traced artwork in it").toMatch(/<path[^>]+ d="M/);
+
+  // The .ico carries three sizes; a single-size file means the 16px slot fell
+  // back to a downscaled full mark, which is the illegible smudge this avoids.
+  const ico = fs.readFileSync(path.join(process.cwd(), "src/app/favicon.ico"));
+  expect(ico.readUInt16LE(4), "favicon.ico should hold 16, 32 and 48px").toBe(3);
+});
