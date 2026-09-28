@@ -40,6 +40,25 @@ CROPS: dict[str, tuple[int, int, int, int] | None] = {
     # Portrait source. This window holds the name cutout, both rings and the
     # flowered hoop; centre would have been close but loses the top roses.
     "ring-platter-varmala": None,
+    # Top of frame only: lower down, the solar panel and the wall anchors come
+    # into shot and it stops reading as lighting and starts reading as a
+    # packaging photo.
+    "lights-lighting-decor": (0, 0, 1500, 900),
+    # Already wider than 5:3, so this trims the sides; the fan stays whole.
+    "cooler-fan": None,
+    # Portrait source; centre keeps the sofa, the table and the rug.
+    "sofa-chair": None,
+    # Near 5:3 already, so centre only trims a little off the top and bottom.
+    "pots-vases": None,
+    # Wider than 5:3; centre keeps the crate, the basket and the ribbons.
+    "gift-boxes-trays-bags-baskets": None,
+    # These two carry another company's watermark across the middle of the
+    # photograph -- "www.ArpanFlowers.com" and "dreamstime". Both were flagged
+    # and the owner chose to use them anyway, so they are centre-cropped like
+    # any other and the watermark stays where it is. It is not cropped around
+    # or painted out.
+    "packing-bouquet-accessories": None,
+    "festive-puja-items": None,
 }
 
 
