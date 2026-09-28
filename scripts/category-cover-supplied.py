@@ -98,3 +98,7 @@ if __name__ == "__main__":
         w, h, size = build(slug, box)
         print(f"{slug:<34} {w:>4}x{h:<4} {size // 1024:>4} KB")
     print(f"\n{len(CROPS)} covers written to public/img/categories/")
+    import json
+    slugs = sorted(p.name[: -len("-cover.webp")] for p in OUT.glob("*-cover.webp"))
+    (REPO / "src/lib/category-covers.json").write_text(json.dumps(slugs, indent=1) + "\n")
+    print(f"manifest: {len(slugs)} slugs have a cover")
