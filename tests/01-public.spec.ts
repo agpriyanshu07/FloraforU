@@ -1234,16 +1234,38 @@ test.describe("on a retina screen", () => {
     // looked blurry. A little over 1:1 is invisible; a factor of two is not.
     await page.goto("/");
     const section = page.locator('section[aria-labelledby="instagram-heading"]');
-    await section.scrollIntoViewIfNeeded();
-    await loadLazyImages(page);
 
+    // Deliberately not loadLazyImages(): it scrolls to the bottom and back to
+    // the top, which puts this section out of view again before the browser
+    // has started fetching anything, and all five tiles then sit at
+    // complete=false with currentSrc="" forever. Scroll to it and stay there.
+    await section.scrollIntoViewIfNeeded();
+
+    // An image still loading reports currentSrc as "", which resolves against
+    // the page and hands back the HTML document -- that is the "source image
+    // cannot be decoded" this first failed CI with, not a real problem with
+    // the photos.
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll('section[aria-labelledby="instagram-heading"] ul img')].every(
+          (i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).currentSrc !== "",
+        ),
+    );
+
+    // naturalWidth on the tile itself is no use: with a w-descriptor srcset the
+    // browser reports a density-corrected size, not the file's pixels. Loading
+    // the same URL into a bare Image, which has no srcset, gives the real one.
     const tiles = await section.locator("ul img").evaluateAll(async (els) => {
       const out = [];
       for (const el of els as HTMLImageElement[]) {
         const css = el.getBoundingClientRect().width;
-        const blob = await (await fetch(el.currentSrc)).blob();
-        const bitmap = await createImageBitmap(blob);
-        out.push({ wanted: css * devicePixelRatio, got: bitmap.width });
+        const probe = new Image();
+        await new Promise((resolve, reject) => {
+          probe.onload = resolve;
+          probe.onerror = () => reject(new Error(`could not load ${probe.src}`));
+          probe.src = el.currentSrc;
+        });
+        out.push({ wanted: css * devicePixelRatio, got: probe.naturalWidth });
       }
       return out;
     });
