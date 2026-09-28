@@ -805,3 +805,54 @@ test("the admin product list shows the price a sale is currently charging", asyn
   await expect(priceCell.locator(".line-through")).toBeVisible();
   await expect(row.getByText("Ganesh Puja Sale")).toBeVisible();
 });
+
+test("the photo filter separates seeded placeholder stock from real photos", async ({ page }) => {
+  await signIn(page);
+
+  // Every seeded product carries category artwork as its photo, so on a fresh
+  // seed the placeholder filter is the whole catalogue. The two products made
+  // below are what gives the filter something to tell apart.
+  const stamp = Date.now();
+  const real = `QA Real Photo ${stamp}`;
+  const bare = `QA No Photo ${stamp}`;
+
+  for (const [name, url] of [[real, "/img/products/3301.webp"], [bare, ""]] as const) {
+    await page.goto("/admin/products/new");
+    await page.fill("#name", name);
+    await page.selectOption("#categoryId", { label: "Pots & Vases" });
+    await page.fill("#spec", "QA photo filter row");
+    await page.fill("#price", "111");
+    if (url) {
+      const details = page.locator("details:has(#imageUrls)");
+      if ((await details.getAttribute("open")) === null) {
+        await details.locator("summary").click();
+      }
+      await page.fill("#imageUrls", url);
+    }
+    await page.click('button:has-text("Create product")');
+    await page.waitForURL(/\/admin\/products(\?|$)/);
+  }
+
+  // A real photo is neither "placeholder" nor "no photo at all".
+  await page.goto(`/admin/products?q=${encodeURIComponent(real)}&photo=placeholder`);
+  await expect(page.getByRole("link", { name: real })).toHaveCount(0);
+  await page.goto(`/admin/products?q=${encodeURIComponent(real)}&photo=none`);
+  await expect(page.getByRole("link", { name: real })).toHaveCount(0);
+  await page.goto(`/admin/products?q=${encodeURIComponent(real)}`);
+  await expect(page.getByRole("link", { name: real })).toHaveCount(1);
+
+  // A product with no photo shows under "none" only — importantly it must not
+  // be swept up by the placeholder filter, which is what bulk delete runs on.
+  await page.goto(`/admin/products?q=${encodeURIComponent(bare)}&photo=none`);
+  await expect(page.getByRole("link", { name: bare })).toHaveCount(1);
+  await page.goto(`/admin/products?q=${encodeURIComponent(bare)}&photo=placeholder`);
+  await expect(page.getByRole("link", { name: bare })).toHaveCount(0);
+
+  // And a seeded product is caught by the placeholder filter.
+  await page.goto("/admin/products?q=Lace%20Pot&photo=placeholder");
+  await expect(page.getByRole("link", { name: /Lace Pot/ })).not.toHaveCount(0);
+
+  // The filter survives into the reset control and the empty-state copy.
+  await page.goto("/admin/products?photo=none&q=zzz-nothing-matches");
+  await expect(page.getByText("No products match those filters")).toBeVisible();
+});
