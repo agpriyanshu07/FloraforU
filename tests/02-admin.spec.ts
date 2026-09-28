@@ -856,3 +856,46 @@ test("the photo filter separates seeded placeholder stock from real photos", asy
   await page.goto("/admin/products?photo=none&q=zzz-nothing-matches");
   await expect(page.getByText("No products match those filters")).toBeVisible();
 });
+
+test("a bulk action keeps the list filtered, so the next select-all is still scoped", async ({ page }) => {
+  await signIn(page);
+
+  // Two throwaway products that share a search term, so the filtered list is
+  // a known, small set that is nothing like the whole catalogue.
+  const tag = `QABulk${Date.now()}`;
+  for (const n of [1, 2]) {
+    await page.goto("/admin/products/new");
+    await page.fill("#name", `${tag} Item ${n}`);
+    await page.selectOption("#categoryId", { label: "Pots & Vases" });
+    await page.fill("#spec", "QA bulk filter row");
+    await page.fill("#price", "222");
+    await page.click('button:has-text("Create product")');
+    await page.waitForURL(/\/admin\/products(\?|$)/);
+  }
+
+  await page.goto(`/admin/products?q=${tag}&photo=none`);
+  await expect(page.locator('#products-form input[name="ids"]')).toHaveCount(2);
+
+  // Unpublish one of them through the bulk bar.
+  await page.locator('#products-form input[name="ids"]').first().check();
+  await page.selectOption("#bulkAction", "unpublish");
+  await page.click('button:has-text("Apply")');
+  await page.waitForURL(/bulk=unpublish/);
+
+  // The whole point: the filter survived, so the list is still those two rows
+  // and not the entire catalogue. Without this the next select-all would be
+  // ticking 25 unrelated products — and the action next to it is Delete.
+  await expect(page).toHaveURL(/q=QABulk/);
+  await expect(page).toHaveURL(/photo=none/);
+  await expect(page.locator('#products-form input[name="ids"]')).toHaveCount(2);
+  await expect(page.getByText(/2 products matching the current filters/)).toBeVisible();
+
+  // Clean up via the same path, which also exercises delete keeping the filter.
+  await page.locator('input[aria-label="Select all products on this page"]').check();
+  await page.selectOption("#bulkAction", "delete");
+  page.once("dialog", (d) => d.accept());
+  await page.click('button:has-text("Apply")');
+  await page.waitForURL(/bulk=delete/);
+  await expect(page).toHaveURL(/q=QABulk/);
+  await expect(page.locator('#products-form input[name="ids"]')).toHaveCount(0);
+});
