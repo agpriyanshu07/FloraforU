@@ -54,6 +54,10 @@ export const INSTAGRAM_FALLBACK = [
   { id: "ig-roses", title: "Artificial roses — more variety in stock", imageUrl: "/img/instagram/artificial-roses-variety.webp" },
   { id: "ig-garlands", title: "Ready-made garlands", imageUrl: "/img/instagram/ready-made-garlands.webp" },
   { id: "ig-bunches", title: "Rose bunches in every shade", imageUrl: "/img/instagram/rose-bunches.webp" },
+  { id: "ig-roses-dalia-peony", title: "Roses, dahlias and peonies by the bunch", imageUrl: "/img/instagram/rose-dalia-peony.webp" },
+  { id: "ig-vases", title: "Decorative vases with made-up stems", imageUrl: "/img/instagram/vases-and-stems.webp" },
+  { id: "ig-hangings", title: "Garlands, jhumars and bell hangings in the shop", imageUrl: "/img/instagram/come-visit-us.webp" },
   { id: "ig-signboard", title: "The shop at Bank More, Dhanbad", imageUrl: "/img/instagram/shopfront-signboard.webp" },
+  { id: "ig-opening", title: "Opening day at the Bank More shop", imageUrl: "/img/instagram/shop-opening.webp" },
   { id: "ig-wholesale", title: "Wholesale prices in Dhanbad", imageUrl: "/img/instagram/wholesale-dhanbad.webp" },
 ] as const;

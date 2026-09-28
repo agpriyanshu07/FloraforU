@@ -95,10 +95,14 @@ export default async function InstagramFeed({
           ))}
         </ul>
       ) : photos.length > 0 ? (
-        // Small tiles, five across on a wide screen. The photographs are only
+        // Small tiles, six across on a wide screen. The photographs are only
         // 335px wide, so anything larger was upscaling them into softness --
-        // at this size the browser scales them DOWN, which is sharp. Tapping
-        // one enlarges it in place instead of leaving the site.
+        // at this size the browser scales them DOWN, which is sharp.
+        //
+        // The 4:5 tile still crops a 9:16 reel frame, so a caption sitting at
+        // the very bottom is clipped. That was worth avoiding when the tile
+        // was the only way to see a photo; it is not now, because tapping one
+        // opens the whole frame in place.
         <PhotoLightbox photos={photos} />
       ) : (
         // Nothing to show yet: an empty grid would read as a broken section, so
