@@ -100,3 +100,22 @@ export async function saveSettings(values: Partial<SiteSettings>) {
     ),
   );
 }
+
+/**
+ * Which contact and URL settings are still the build-time placeholders.
+ *
+ * These are the fields nothing else can catch. An unset WhatsApp number points
+ * every Enquire button on the site at wa.me/910000000000, and an unset site URL
+ * puts localhost in every canonical tag and in the whole sitemap — neither
+ * shows up as a broken page, a console error or a failing test. So the warning
+ * is raised in the two places the owner actually looks: the Settings page that
+ * fixes it, and the dashboard they land on.
+ */
+export function placeholderSettings(settings: SiteSettings): string[] {
+  return [
+    settings.whatsapp === DEFAULT_SETTINGS.whatsapp && "WhatsApp number",
+    settings.phone.includes("00000") && "Phone number",
+    settings.email === DEFAULT_SETTINGS.email && "Email address",
+    settings.siteUrl.includes("localhost") && "Site URL",
+  ].filter(Boolean) as string[];
+}

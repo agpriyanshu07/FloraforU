@@ -55,11 +55,25 @@ test("a filtered product list never hides the filter that narrowed it", async ({
   // already have.
   await signIn(page);
 
+  // Checked on a phone, where the panel is collapsed by default to keep the
+  // first product above the fold. On a wide screen it is open either way, so
+  // the unfiltered half of this would pass for the wrong reason.
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const toggle = page.getByRole("button", { name: /Category, status and photo/ });
+  const fields = page.locator("#product-filters");
+
   await page.goto("/admin/products");
-  await expect(page.locator("details").first()).not.toHaveAttribute("open", /.*/);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(fields).toBeHidden();
 
   await page.goto("/admin/products?status=draft");
-  await expect(page.locator("details").first()).toHaveAttribute("open", /.*/);
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(fields).toBeVisible();
+  await expect(page.locator("#status")).toHaveValue("draft");
+  // And the toggle itself says how many are applied, so it reads as filtered
+  // even at a glance.
+  await expect(toggle).toContainText("1");
   await expect(page.getByRole("link", { name: "Reset" })).toBeVisible();
 });
 
@@ -898,4 +912,44 @@ test("a bulk action keeps the list filtered, so the next select-all is still sco
   await page.waitForURL(/bulk=delete/);
   await expect(page).toHaveURL(/q=QABulk/);
   await expect(page.locator('#products-form input[name="ids"]')).toHaveCount(0);
+});
+
+test("a picked product survives a filter that hides it, and still saves", async ({ page }) => {
+  // The offer picker used to render a checkbox for every product -- 608 form
+  // fields with a 590-product catalogue. It now draws everything already
+  // picked, plus a capped window of the rest.
+  //
+  // That cap is only safe because these checkboxes ARE the submission: they
+  // carry name="productIds", so a picked product left out of the DOM would be
+  // dropped from the campaign on save, silently, while the screen still
+  // claimed it was in. This is that guarantee.
+  await signIn(page);
+  await page.goto("/admin/offers");
+
+  const boxes = page.locator('input[name="productIds"]');
+  const drawn = await boxes.count();
+  const total = await page.locator("#offer-filter").evaluate(() => {
+    // The hint only appears when the list is capped.
+    return document.body.textContent?.match(/Showing \d+ of (\d+) other products/)?.[1] ?? "0";
+  });
+  expect(drawn, "the picker is drawing every product again").toBeLessThan(Number(total) || Infinity);
+
+  await page.fill("#offer-filter", "lace pot");
+  const pick = boxes.first();
+  const picked = (await pick.evaluate((e) => e.closest("label")!.textContent!.trim().split("\n")[0]));
+  await pick.check();
+
+  // A filter that matches nothing at all.
+  await page.fill("#offer-filter", "zzzz-no-such-product");
+  await expect(boxes.locator("..").locator("..")).toHaveCount(1);
+  await expect(page.locator('input[name="productIds"]:checked')).toHaveCount(1);
+
+  await page.fill("#title", "Filter survival check");
+  await page.fill("#endsAt", "2030-12-31");
+  await page.click('button:has-text("Create campaign")');
+  await page.waitForURL("**/admin/offers**");
+
+  const row = page.locator("tr", { hasText: "Filter survival check" });
+  await expect(row, "the campaign did not save").toHaveCount(1);
+  await expect(row, `"${picked}" was dropped while hidden by the filter`).toContainText("1");
 });

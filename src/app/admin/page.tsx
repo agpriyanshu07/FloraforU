@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PageHeader, StatTile, TableShell, EmptyRow } from "@/components/admin/ui";
+import { PageHeader, StatTile, TableShell, EmptyRow, Banner } from "@/components/admin/ui";
+import { getSettings, placeholderSettings } from "@/lib/settings";
 import { db } from "@/lib/db";
 import { daysAgo, formatPrice } from "@/lib/format";
 
@@ -42,6 +43,8 @@ export default async function AdminDashboard() {
     db.product.count({ where: { images: { none: {} } } }),
   ]);
 
+  const placeholders = placeholderSettings(await getSettings());
+
   return (
     <>
       <PageHeader
@@ -53,6 +56,24 @@ export default async function AdminDashboard() {
           </Link>
         }
       />
+
+      {/* Above the stat tiles, not in "Worth doing" below them. An unset
+          WhatsApp number sends every Enquire button on the site to a number
+          that does not exist, and nothing else on the site looks wrong when it
+          happens -- no broken page, no error, no failing test. It is the one
+          thing worth interrupting for. */}
+      {placeholders.length > 0 && (
+        <Banner tone="error">
+          <strong>{placeholders.join(", ")}</strong>{" "}
+          {placeholders.length === 1 ? "is" : "are"} still set to the placeholder
+          {placeholders.length === 1 ? " value" : " values"} from the build.
+          {placeholders.includes("WhatsApp number") &&
+            " Every Enquire button on the site currently opens a chat with a number that does not exist."}{" "}
+          <Link href="/admin/settings" className="font-semibold underline">
+            Fix in Settings
+          </Link>
+        </Banner>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
