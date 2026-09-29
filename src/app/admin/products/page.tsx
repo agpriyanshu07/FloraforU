@@ -8,6 +8,8 @@ import { formatPrice } from "@/lib/format";
 import { offerPriceOf } from "@/lib/pricing";
 import { getActiveOfferTerms } from "@/lib/queries";
 import type { Prisma } from "@/generated/prisma";
+import Pagination from "@/components/Pagination";
+import FilterPanel from "@/components/admin/FilterPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -66,16 +68,6 @@ export default async function AdminProductsPage({
   const offerTerms = await getActiveOfferTerms();
 
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
-  const qs = (p: number) => {
-    const s = new URLSearchParams();
-    if (q) s.set("q", q);
-    if (categoryId) s.set("categoryId", categoryId);
-    if (status) s.set("status", status);
-    if (photo) s.set("photo", photo);
-    if (p > 1) s.set("page", String(p));
-    const v = s.toString();
-    return v ? `/admin/products?${v}` : "/admin/products";
-  };
 
   return (
     <>
@@ -131,10 +123,7 @@ export default async function AdminProductsPage({
           )}
         </div>
 
-        <details open={Boolean(categoryId || status || photo)} className="mt-3">
-          <summary className="cursor-pointer text-sm text-ink-600 hover:text-rose-700">
-            Category, status and photo
-          </summary>
+        <FilterPanel activeCount={[categoryId, status, photo].filter(Boolean).length}>
           <div className="mt-3 grid gap-3 sm:grid-cols-[auto_auto] sm:justify-start">
             <div>
               <label htmlFor="categoryId" className="field-label">Category</label>
@@ -162,7 +151,7 @@ export default async function AdminProductsPage({
               </select>
             </div>
           </div>
-        </details>
+        </FilterPanel>
       </form>
 
       <BulkBar categories={categories} />
@@ -186,11 +175,12 @@ export default async function AdminProductsPage({
               <th scope="col" className="px-4 py-3">Flags</th>
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3">Updated</th>
+              <th scope="col" className="px-4 py-3 text-right">Actions</th>
             </tr>
           }
         >
           {products.length === 0 ? (
-            <EmptyRow colSpan={7}>
+            <EmptyRow colSpan={8}>
               {q || categoryId || status || photo ? (
                 <>No products match those filters. <Link href="/admin/products" className="text-rose-600">Clear them</Link>.</>
               ) : (
@@ -281,6 +271,15 @@ export default async function AdminProductsPage({
                 <td className="px-4 py-3 whitespace-nowrap text-ink-600">
                   {p.updatedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                 </td>
+                {/* The product name is a link, but it is set in the same plain
+                    ink as the rest of the row, so nothing says so. A button
+                    that looks like a button is the difference between knowing
+                    how to edit a product and guessing. */}
+                <td className="px-4 py-3 text-right">
+                  <Link href={`/admin/products/${p.id}`} className="btn-ghost btn-sm">
+                    Edit
+                  </Link>
+                </td>
               </tr>
               );
             })
@@ -288,13 +287,16 @@ export default async function AdminProductsPage({
         </TableShell>
       </form>
 
-      {pageCount > 1 && (
-        <nav aria-label="Product pages" className="mt-5 flex items-center justify-center gap-3 text-sm">
-          {page > 1 ? <Link href={qs(page - 1)} className="btn-ghost btn-sm">Previous</Link> : <span aria-disabled="true" className="btn-ghost btn-sm cursor-not-allowed text-ink-600">Previous</span>}
-          <span>Page {page} of {pageCount}</span>
-          {page < pageCount ? <Link href={qs(page + 1)} className="btn-ghost btn-sm">Next</Link> : <span aria-disabled="true" className="btn-ghost btn-sm cursor-not-allowed text-ink-600">Next</span>}
-        </nav>
-      )}
+      {/* Reuses the public catalogue's pager rather than a second one: with
+          590 products this list runs to 24 pages, and Previous/Next alone
+          meant 23 clicks to reach the end. */}
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        basePath="/admin/products"
+        params={{ q, categoryId, status, photo }}
+        label="Product pages"
+      />
     </>
   );
 }

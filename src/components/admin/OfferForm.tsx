@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { saveOfferAction, type ActionState } from "@/lib/admin-actions";
 import { formatPrice } from "@/lib/format";
 import { OFFER_THEMES, OFFER_THEME_NAMES } from "@/lib/offers";
+import { StickyActions } from "./ui";
 
 type Product = {
   id: string;
@@ -14,6 +15,9 @@ type Product = {
   price: number | null;
   priceOnEnquiry: boolean;
 };
+
+/** How many unpicked products the browse list draws before asking you to type. */
+const BROWSE_LIMIT = 30;
 
 function Save({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
@@ -114,21 +118,31 @@ export default function OfferForm({
     sent ? (sent.theme ?? "marigold") : (values.theme ?? "marigold"),
   );
 
-  const matches = filter
+  const needle = filter.trim().toLowerCase();
+  const matches = needle
     ? products.filter(
         (p) =>
-          p.name.toLowerCase().includes(filter.toLowerCase()) ||
-          p.categoryName.toLowerCase().includes(filter.toLowerCase()),
+          p.name.toLowerCase().includes(needle) ||
+          p.categoryName.toLowerCase().includes(needle),
       )
     : products;
 
-  // Everything already in the campaign floats to the top. Alphabetically, a
-  // ten-item sale was scattered through ninety-seven rows, so editing one meant
-  // scrolling the whole list to find out what was even in it.
-  const visible = [
-    ...matches.filter((p) => selected.has(p.id)),
-    ...matches.filter((p) => !selected.has(p.id)),
-  ];
+  // Everything already in the campaign is rendered, always, whatever the
+  // filter says and however long the list gets. These checkboxes ARE the
+  // submission -- they carry name="productIds" -- so a picked product left out
+  // of the DOM would be quietly dropped from the campaign on save. Drawing
+  // them first is also the useful order: it answers "what is in this sale"
+  // without scrolling.
+  const picked = products.filter((p) => selected.has(p.id));
+
+  // The rest is capped. With 590 products this list was rendering 590
+  // checkboxes and 590 price overrides on one page -- 608 form fields, and
+  // 5502px of it on a phone. Nobody picks a sale item by scrolling 590 rows;
+  // they type a name.
+  const rest = matches.filter((p) => !selected.has(p.id));
+  const shown = rest.slice(0, BROWSE_LIMIT);
+  const hidden = rest.length - shown.length;
+  const visible = [...picked, ...shown];
 
   return (
     <form key={state.nonce ?? "initial"} action={formAction} className="grid gap-6 lg:grid-cols-[1fr_1fr]">
@@ -309,10 +323,10 @@ export default function OfferForm({
           </span>
         </label>
 
-        <div className="flex gap-3 pt-2">
+        <StickyActions>
           <Save isEdit={isEdit} />
           <Link href="/admin/offers" className="btn-ghost">Cancel</Link>
-        </div>
+        </StickyActions>
       </div>
 
       <div className="card p-5">
@@ -338,6 +352,12 @@ export default function OfferForm({
             ? "Nothing picked yet — a campaign with no products still shows its banner, but there is nothing to browse."
             : `${selected.size} ${selected.size === 1 ? "product" : "products"} in this campaign, listed first below.`}
         </p>
+        {hidden > 0 && (
+          <p className="mt-1 text-[13px] text-ink-600">
+            Showing {shown.length} of {rest.length} other products
+            {needle ? " that match" : ""} — type above to narrow it down.
+          </p>
+        )}
 
         <ul className="mt-3 max-h-[26rem] space-y-1 overflow-y-auto pr-1">
           {visible.length === 0 ? (

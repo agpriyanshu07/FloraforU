@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { PageHeader, Banner } from "@/components/admin/ui";
+import { PageHeader, Banner, StickyActions } from "@/components/admin/ui";
 import { saveHomepageAction } from "@/lib/admin-actions";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
@@ -106,7 +106,9 @@ export default async function AdminHomepagePage({
           </ul>
         </section>
 
-        <button type="submit" className="btn-primary">Save homepage</button>
+        <StickyActions>
+          <button type="submit" className="btn-primary">Save homepage</button>
+        </StickyActions>
       </form>
     </>
   );

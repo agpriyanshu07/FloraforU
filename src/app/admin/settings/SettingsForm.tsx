@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveSettingsAction, type ActionState } from "@/lib/admin-actions";
 import type { SiteSettings } from "@/lib/settings";
+import { StickyActions } from "@/components/admin/ui";
 
 type Field = {
   name: keyof SiteSettings;
@@ -177,7 +178,9 @@ export default function SettingsForm({ settings }: { settings: SiteSettings }) {
         </section>
       ))}
 
-      <Save />
+      <StickyActions>
+        <Save />
+      </StickyActions>
     </form>
   );
 }

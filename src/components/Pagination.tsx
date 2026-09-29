@@ -5,11 +5,14 @@ export default function Pagination({
   pageCount,
   basePath,
   params,
+  label = "Catalogue pages",
 }: {
   page: number;
   pageCount: number;
   basePath: string;
   params: Record<string, string | undefined>;
+  /** Names the nav landmark. The admin reuses this for its product list. */
+  label?: string;
 }) {
   if (pageCount <= 1) return null;
 
@@ -28,7 +31,7 @@ export default function Pagination({
   );
 
   return (
-    <nav aria-label="Catalogue pages" className="mt-8 flex justify-center">
+    <nav aria-label={label} className="mt-8 flex justify-center">
       <ul className="flex flex-wrap items-center gap-2">
         <li>
           {page > 1 ? (

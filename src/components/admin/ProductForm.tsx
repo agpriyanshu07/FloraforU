@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveProductAction, type ActionState } from "@/lib/admin-actions";
 import ImageUploader from "./ImageUploader";
+import { StickyActions } from "./ui";
 
 type Category = { id: string; name: string };
 
@@ -246,10 +247,10 @@ export default function ProductForm({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <StickyActions>
           <Save isEdit={isEdit} />
           <Link href="/admin/products" className="btn-ghost">Cancel</Link>
-        </div>
+        </StickyActions>
       </div>
     </form>
   );

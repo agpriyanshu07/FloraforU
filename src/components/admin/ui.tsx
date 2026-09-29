@@ -90,3 +90,24 @@ export function EmptyRow({ colSpan, children }: { colSpan: number; children: Rea
     </tr>
   );
 }
+
+/**
+ * Keeps a form's buttons in reach on a long page.
+ *
+ * Settings runs to 3487px on a phone and the homepage editor to 7168px, and
+ * both had their only Save button at the very bottom: change one field near
+ * the top and you scroll eight screens to commit it, or lose the edit by
+ * navigating away. `sticky bottom-0` pins the bar to the foot of the viewport
+ * while the form is taller than it, and lets it settle in place at the end,
+ * so short forms look no different.
+ *
+ * The negative margins let the bar span the full width of a card it sits
+ * inside, rather than leaving a strip of card either side of it.
+ */
+export function StickyActions({ children }: { children: ReactNode }) {
+  return (
+    <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-wrap items-center gap-3 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      {children}
+    </div>
+  );
+}
