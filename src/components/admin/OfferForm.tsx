@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveOfferAction, type ActionState } from "@/lib/admin-actions";
@@ -13,6 +14,7 @@ type Product = {
   name: string;
   categoryName: string;
   price: number | null;
+  imageUrl: string | null;
   priceOnEnquiry: boolean;
 };
 
@@ -145,7 +147,7 @@ export default function OfferForm({
   const visible = [...picked, ...shown];
 
   return (
-    <form key={state.nonce ?? "initial"} action={formAction} className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+    <form key={state.nonce ?? "initial"} action={formAction} className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {values.id && <input type="hidden" name="id" value={values.id} />}
       {/* One field rather than an input per product: the server needs the whole
           map at once, and this is what gets replayed when a submit is rejected. */}
@@ -330,9 +332,24 @@ export default function OfferForm({
       </div>
 
       <div className="card p-5">
-        <h2 className="font-display text-xl">Products in this offer</h2>
+        {/* Three stacked grey paragraphs used to sit between the heading and
+            the list -- what the panel does, how many were picked, how many
+            were hidden -- so the products themselves started below a wall of
+            hint text. The count is a chip on the heading now, and the
+            hidden-count line sits under the list it describes. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-xl">Products in this offer</h2>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+              selected.size > 0 ? "bg-rose-100 text-rose-700" : "bg-line text-ink-600"
+            }`}
+          >
+            {selected.size} picked
+          </span>
+        </div>
         <p className="mt-1 text-[13px] text-ink-600">
-          Tick any products to include. They get an OFFER badge everywhere on the site while the campaign is live.
+          Anything picked here carries an OFFER badge across the site while the
+          campaign runs.
         </p>
 
         <div className="mt-4">
@@ -342,32 +359,39 @@ export default function OfferForm({
             type="search"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter by product or category…"
+            placeholder="Search by product or category…"
             className="field"
           />
         </div>
 
-        <p className="mt-2 text-[13px] text-ink-600">
-          {selected.size === 0
-            ? "Nothing picked yet — a campaign with no products still shows its banner, but there is nothing to browse."
-            : `${selected.size} ${selected.size === 1 ? "product" : "products"} in this campaign, listed first below.`}
-        </p>
-        {hidden > 0 && (
-          <p className="mt-1 text-[13px] text-ink-600">
-            Showing {shown.length} of {rest.length} other products
-            {needle ? " that match" : ""} — type above to narrow it down.
-          </p>
-        )}
-
         <ul className="mt-3 max-h-[26rem] space-y-1 overflow-y-auto pr-1">
+          {picked.length > 0 && (
+            <li className="px-1 pb-1 pt-2 text-[12px] font-bold uppercase tracking-wider text-ink-600">
+              In this campaign
+            </li>
+          )}
           {visible.length === 0 ? (
             <li className="px-1 py-6 text-center text-sm text-ink-600">
               No products match “{filter}”.
             </li>
           ) : (
-            visible.map((p) => (
+            visible.map((p, rowIndex) => (
               <li key={p.id}>
-                <label className="flex items-start gap-2.5 rounded-lg p-2 text-sm hover:bg-rose-50">
+                {/* The divider between what is in the sale and what is not.
+                    Without it a ten-item campaign ran straight into thirty
+                    unrelated products with nothing marking the join. */}
+                {picked.length > 0 && rowIndex === picked.length && (
+                  <span className="mt-3 block px-1 pb-1 pt-2 text-[12px] font-bold uppercase tracking-wider text-ink-600">
+                    Other products
+                  </span>
+                )}
+                <label
+                  className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2 text-sm transition-colors duration-150 ${
+                    selected.has(p.id)
+                      ? "border-rose-200 bg-rose-50/70"
+                      : "border-transparent hover:bg-rose-50"
+                  }`}
+                >
                   <input
                     type="checkbox"
                     name="productIds"
@@ -381,11 +405,19 @@ export default function OfferForm({
                         return next;
                       })
                     }
-                    className="mt-0.5 h-4 w-4 accent-[#9b2c5a]"
+                    className="h-5 w-5 shrink-0 accent-[#9b2c5a]"
                   />
+                  {/* Every other product list in the admin carries a
+                      thumbnail. Picking a sale item out of 590 by name alone
+                      was the one place that made you read rather than look. */}
+                  <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-line bg-rose-50">
+                    {p.imageUrl && (
+                      <Image src={p.imageUrl} alt="" fill sizes="40px" className="object-cover" />
+                    )}
+                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{p.name}</span>
-                    <span className="block text-[12px] text-ink-600">
+                    <span className="block truncate font-medium">{p.name}</span>
+                    <span className="block truncate text-[12px] text-ink-600">
                       {p.categoryName}
                       {p.priceOnEnquiry
                         ? " · price on enquiry"
@@ -426,6 +458,15 @@ export default function OfferForm({
             ))
           )}
         </ul>
+        {hidden > 0 && (
+          <p className="mt-2 text-[13px] text-ink-600">
+            {hidden} more{" "}
+            {needle
+              ? hidden === 1 ? "match" : "matches"
+              : hidden === 1 ? "product" : "products"}{" "}
+            not shown — search to narrow it down.
+          </p>
+        )}
       </div>
     </form>
   );

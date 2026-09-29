@@ -70,7 +70,12 @@ export function Banner({
 
 export function TableShell({ head, children }: { head: ReactNode; children: ReactNode }) {
   return (
-    <div className="card overflow-x-auto">
+    // min-w-0 so overflow-x-auto can actually do its job. Every admin table
+    // sits in a grid, and a grid item will not shrink below its content's
+    // width by default -- so the 720px table widened the whole column and
+    // pushed the page 48px past the edge of a phone instead of scrolling
+    // inside its own card. Same cause as the category order list.
+    <div className="card min-w-0 overflow-x-auto">
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead className="border-b border-line bg-rose-50/60 text-[12px] uppercase tracking-wider text-ink-600">
           {head}
