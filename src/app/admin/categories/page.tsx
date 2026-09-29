@@ -99,7 +99,11 @@ export default async function AdminCategoriesPage({
           )}
         </TableShell>
 
-        <div>
+        {/* While editing, the form comes first on a phone. The table stacks
+            above it otherwise, so tapping Edit reloaded the page at the top
+            with the form 2239px below the fold — it read as doing nothing at
+            all. On a wide screen the two sit side by side and order is moot. */}
+        <div className={editing ? "order-first lg:order-none" : undefined}>
           <CategoryForm
             key={editing?.id ?? "new"}
             values={
