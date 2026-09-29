@@ -473,6 +473,11 @@ test("an offer appears while live and archives itself once its dates pass", asyn
 test("homepage curation reorders the public category grid", async ({ page }) => {
   // The order inputs were once wired to a stale hidden field, so edits silently
   // did nothing. This drives the real form and reads the public homepage back.
+  //
+  // Driven by the Move up / Move down buttons now. It used to type numbers into
+  // sixteen boxes, which is what the buttons replaced: promoting one category
+  // meant renumbering everything it displaced, and nothing stopped two of them
+  // claiming the same position.
   await page.goto("/");
   const before = await page.$$eval(
     "section[aria-labelledby=categories-heading] article h3 a",
@@ -481,14 +486,15 @@ test("homepage curation reorders the public category grid", async ({ page }) => 
 
   await signIn(page);
   await page.goto("/admin/homepage");
-  const names = await page.$$eval('input[name^="categoryOrder_"]', (els) =>
-    els.map((e) => (e as HTMLInputElement).name),
-  );
-  expect(names.length, "one order input per category").toBe(16);
+  const rows = page.locator("ol li");
+  expect(await rows.count(), "one row per category").toBe(16);
 
-  // Send the last category to the front and the first to the back.
-  await page.fill(`input[name="${names[names.length - 1]}"]`, "0");
-  await page.fill(`input[name="${names[0]}"]`, "99");
+  // Send the last category to the front, one step at a time.
+  const promoted = (await rows.last().locator("span.truncate").innerText()).trim();
+  const up = page.getByRole("button", { name: `Move ${promoted} up` });
+  for (let i = 0; i < 15; i++) await up.click();
+  await expect(rows.first().locator("span.truncate")).toHaveText(promoted);
+
   await page.click('button:has-text("Save homepage")');
   await page.waitForURL(/homepage\?saved=1/);
 
@@ -497,7 +503,37 @@ test("homepage curation reorders the public category grid", async ({ page }) => 
     "section[aria-labelledby=categories-heading] article h3 a",
     (as) => as.map((a) => a.textContent!.trim()),
   );
-  expect(after[0], "the promoted category should now lead the grid").not.toBe(before[0]);
+  expect(after[0], "the promoted category should now lead the grid").toBe(promoted);
+  expect(after[0], "the grid did not actually change").not.toBe(before[0]);
+});
+
+test("a pinned product survives a search that hides it", async ({ page }) => {
+  // Same shape of trap as the offer picker. saveHomepageAction clears every
+  // `featured` flag and re-pins from the checkboxes that arrive, so a pinned
+  // product left out of the DOM by the search box would be quietly unpinned on
+  // save while the screen still said it was pinned.
+  await signIn(page);
+  await page.goto("/admin/homepage");
+
+  const boxes = page.locator('input[name="featured"]');
+  await page.fill("#pin-filter", "lace pot");
+  await boxes.first().check();
+
+  await page.fill("#pin-filter", "zzzz-no-such-product");
+  await expect(
+    page.locator('input[name="featured"]:checked'),
+    "the pinned product fell out of the form when the search excluded it",
+  ).toHaveCount(1);
+
+  await page.click('button:has-text("Save homepage")');
+  await page.waitForURL(/homepage\?saved=1/);
+  await expect(page.getByText(/Currently pinning 1\./)).toBeVisible();
+
+  // And it reaches the public homepage.
+  await page.goto("/");
+  await expect(
+    page.locator("section[aria-labelledby=arrivals-heading] article h3 a").first(),
+  ).toHaveText("Lace Pot");
 });
 
 test("the contact form validates, is rate limited, and lands in the enquiry log", async ({
@@ -952,4 +988,28 @@ test("a picked product survives a filter that hides it, and still saves", async 
   const row = page.locator("tr", { hasText: "Filter survival check" });
   await expect(row, "the campaign did not save").toHaveCount(1);
   await expect(row, `"${picked}" was dropped while hidden by the filter`).toContainText("1");
+});
+
+test("no admin screen runs off the side of a phone", async ({ page }) => {
+  // The category order list shipped 37px wider than a 390px screen, which put
+  // its "move down" button off the edge with nothing to say it was there. The
+  // cause was a bare `display: grid` — its implicit column sizes to max-content
+  // and will not shrink, so a long category name widened the whole row instead
+  // of truncating. Nothing covered the admin for this, only the public site.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+
+  const routes = [
+    "/admin", "/admin/products", "/admin/products/new", "/admin/products/import",
+    "/admin/categories", "/admin/offers", "/admin/reviews", "/admin/homepage",
+    "/admin/gallery", "/admin/enquiries", "/admin/settings",
+  ];
+
+  for (const route of routes) {
+    await page.goto(route);
+    const over = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(over, `${route} is ${over}px wider than the screen`).toBeLessThanOrEqual(1);
+  }
 });
