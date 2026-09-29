@@ -1,22 +1,24 @@
 /**
  * Builds the browser-tab and home-screen icons from the shop's real logo.
  *
- * Until now these were a placeholder: a rose disc with "FfU" set in Georgia,
- * drawn before the shop supplied artwork. This replaces them with the traced
- * logo (scripts/logo-vectorise.py), so the tab shows the actual mark.
+ * These were a placeholder: a rose disc with "FfU" set in Georgia, drawn
+ * before the shop supplied artwork. Every icon is now the traced logo
+ * (scripts/logo-vectorise.py) -- the whole mark, ring and dotted arc and
+ * sprig and all -- at every size.
  *
- * Two versions, because one file cannot serve both ends of the size range:
+ * An earlier version of this script dropped to the FfU monogram alone for the
+ * 16px slot, because the ring and sprig do go soft down there. The shop asked
+ * for the real logo and nothing else, which is their call to make: at 16px it
+ * is a little mushy, and at 32px -- what a retina tab strip actually draws --
+ * it reads clearly.
  *
- *   - The full mark (ring, dotted arc, sprig, FfU) for 32px and up. Rendered
- *     side by side at 16/32/48/64, the sprig turns to a grey smear below 32px
- *     but reads clearly at and above it.
- *   - The FfU monogram alone, lifted from that same traced artwork -- the
- *     shop's own letterforms, not a substitute typeface -- for the 16px slot,
- *     where the ring and sprig are illegible either way.
+ * The mark fills 0.96 of the disc rather than the 0.78 it started at. Rendered
+ * side by side at 0.78/0.88/0.96/1.04, that is where "FfU" becomes legible at
+ * 32px without the sprig being cut off by the disc edge.
  *
- * Both sit on a rose-600 disc. The mark is black line art on cream, which
- * disappears entirely against a dark browser chrome; the disc gives the icon
- * its own background and a recognisable silhouette in a crowded tab strip.
+ * The disc itself is not decoration: the mark is black line art on cream,
+ * which disappears entirely against dark browser chrome. The disc gives the
+ * icon its own background and a recognisable silhouette in a crowded tab strip.
  *
  * Chromium does the rasterising (it is already a dev dependency via
  * Playwright) and the .ico container is assembled by hand, because the format
@@ -35,11 +37,10 @@ const APP = join(ROOT, "src/app");
 const ROSE = "#9b2c5a";      // --color-rose-600, the brand disc
 const BOX = 640;             // working viewBox; every icon scales from this
 
-/** The traced mark's own coordinate space, and where the FfU glyphs sit in it. */
+/** The traced mark's own coordinate space. */
 const MARK_VIEWBOX = { w: 584, h: 515 };
-const MONOGRAM = { x0: 160.5, y0: 201.2, x1: 366.3, y1: 304.9 };
-/** Indices of the F, f and U contours within the traced path. */
-const MONOGRAM_CONTOURS = [4, 3, 2];
+/** How much of the disc the mark fills. See the note at the top of the file. */
+const FIT = 0.96;
 
 function pathData() {
   const svg = readFileSync(MARK, "utf8");
@@ -51,14 +52,6 @@ function pathData() {
   return d[1].replace(/-?\d+\.\d+/g, (n) => String(Math.round(Number(n) * 10) / 10));
 }
 
-/** Splits the single traced path into its separate closed contours. */
-function contours(d) {
-  return d
-    .split("M")
-    .filter((s) => s.trim())
-    .map((s) => `M${s}`);
-}
-
 function disc(inner) {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BOX} ${BOX}">` +
@@ -67,28 +60,14 @@ function disc(inner) {
   );
 }
 
-/** The whole mark, fitted inside the disc with room to breathe. */
+/** The whole mark, fitted inside the disc. */
 function fullMarkSvg(d) {
-  const fit = 0.78;
-  const scale = (BOX * fit) / Math.max(MARK_VIEWBOX.w, MARK_VIEWBOX.h);
+  const scale = (BOX * FIT) / Math.max(MARK_VIEWBOX.w, MARK_VIEWBOX.h);
   const tx = (BOX - MARK_VIEWBOX.w * scale) / 2;
   const ty = (BOX - MARK_VIEWBOX.h * scale) / 2;
   return disc(
     `<g transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) scale(${scale.toFixed(4)})">` +
       `<path fill="#ffffff" fill-rule="nonzero" d="${d}"/></g>`,
-  );
-}
-
-/** Just the FfU glyphs, set large -- the 16px fallback. */
-function monogramSvg(d) {
-  const glyphs = MONOGRAM_CONTOURS.map((i) => contours(d)[i]).join("");
-  const { x0, y0, x1, y1 } = MONOGRAM;
-  const scale = (BOX * 0.66) / (x1 - x0);
-  const tx = BOX / 2 - ((x0 + x1) / 2) * scale;
-  const ty = BOX / 2 - ((y0 + y1) / 2) * scale;
-  return disc(
-    `<g transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) scale(${scale.toFixed(4)})">` +
-      `<path fill="#ffffff" fill-rule="nonzero" d="${glyphs}"/></g>`,
   );
 }
 
@@ -130,7 +109,6 @@ function ico(images) {
 
 const d = pathData();
 const full = fullMarkSvg(d);
-const mono = monogramSvg(d);
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -147,7 +125,7 @@ writeFileSync(join(APP, "apple-icon.png"), await raster(page, full, 180));
 writeFileSync(
   join(APP, "favicon.ico"),
   ico([
-    { size: 16, png: await raster(page, mono, 16) },
+    { size: 16, png: await raster(page, full, 16) },
     { size: 32, png: await raster(page, full, 32) },
     { size: 48, png: await raster(page, full, 48) },
   ]),

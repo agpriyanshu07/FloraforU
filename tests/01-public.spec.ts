@@ -1289,8 +1289,9 @@ test("the browser tab shows the shop's own logo, not the build-time placeholder"
   expect(icon).not.toContain("font-family");
   expect(icon, "icon.svg has no traced artwork in it").toMatch(/<path[^>]+ d="M/);
 
-  // The .ico carries three sizes; a single-size file means the 16px slot fell
-  // back to a downscaled full mark, which is the illegible smudge this avoids.
+  // The .ico carries 16, 32 and 48, all of them the full mark. An earlier
+  // version substituted the FfU monogram at 16px, where the ring and sprig do
+  // go soft; the shop asked for the real logo at every size instead.
   const ico = fs.readFileSync(path.join(process.cwd(), "src/app/favicon.ico"));
   expect(ico.readUInt16LE(4), "favicon.ico should hold 16, 32 and 48px").toBe(3);
 });
