@@ -2,6 +2,7 @@ import { InstagramColorIcon } from "./icons";
 import { withUtm } from "@/lib/whatsapp";
 import { db } from "@/lib/db";
 import { INSTAGRAM_FALLBACK } from "@/lib/photo-fallback";
+import { stripSelection } from "@/lib/instagram-strip";
 import PhotoLightbox, { type LightboxPhoto } from "./PhotoLightbox";
 
 /**
@@ -23,29 +24,13 @@ export default async function InstagramFeed({
   instagramUrl: string;
   handle: string;
 }) {
-  const reels = await db.galleryItem.findMany({
-    where: { visible: true, kind: "reel", NOT: { embedUrl: null } },
-    orderBy: { displayOrder: "asc" },
-    take: 6,
-  });
-
-  // Generated placeholder artwork is excluded. It is the only SVG here — a
-  // real photo is a webp, a jpg or a pasted URL — and six placeholder tiles
-  // under a "Follow us" heading look worse than the empty state below, which
-  // at least sends people to the live profile. This is the same reason the
-  // gallery page was retired.
-  const stored = reels.length
-    ? []
-    : await db.galleryItem.findMany({
-        where: {
-          visible: true,
-          kind: "photo",
-          imageUrl: { not: null },
-          NOT: { imageUrl: { endsWith: ".svg" } },
-        },
-        orderBy: { displayOrder: "asc" },
-        take: 10,
-      });
+  // One query, then the shared selector in src/lib/instagram-strip.ts decides
+  // what runs. The rules used to live here alone, which let Admin → Instagram
+  // label rows "Live" that this never drew.
+  const rows = await db.galleryItem.findMany({ orderBy: { displayOrder: "asc" } });
+  const selected = stripSelection(rows);
+  const reels = selected.filter((r) => r.kind === "reel");
+  const stored = selected.filter((r) => r.kind === "photo");
 
   // Photos the shop sent but could not upload, because Cloudinary is not
   // configured yet, are committed to the repo instead. They show only while

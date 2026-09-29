@@ -6,6 +6,7 @@ import DeleteButton from "@/components/admin/DeleteButton";
 import { deleteGalleryAction, saveGalleryAction } from "@/lib/admin-actions";
 import { db } from "@/lib/db";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
+import { stripSelection, stripStatus } from "@/lib/instagram-strip";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,9 @@ export default async function AdminGalleryPage({
   const sp = await searchParams;
   const items = await db.galleryItem.findMany({ orderBy: { displayOrder: "asc" } });
   const editing = sp.edit ? items.find((i) => i.id === sp.edit) : undefined;
+  // Decided by the same selector the homepage runs, so this list cannot claim
+  // something the strip does not draw.
+  const onHomepage = stripSelection(items).length;
 
   return (
     <>
@@ -24,6 +28,22 @@ export default async function AdminGalleryPage({
         title="Instagram strip"
         description="What shows in the Instagram section on the homepage. Paste a post or reel link and it embeds as a real Instagram post; add photos instead and those are used until a reel exists. The separate gallery page this once fed has been retired."
       />
+
+      <Banner tone="info">
+        {onHomepage > 0 ? (
+          <>
+            The homepage strip is showing <strong>{onHomepage}</strong> of these{" "}
+            {onHomepage === 1 ? "item" : "items"}. Anything not marked Live is
+            explained in the Shown column.
+          </>
+        ) : (
+          <>
+            Nothing here is on the homepage. The strip is falling back to the
+            shop photos committed to the site, which is why it still looks right —
+            add a reel link or a real photo and that takes over.
+          </>
+        )}
+      </Banner>
 
       {sp.saved && <Banner tone="success">Gallery item saved.</Banner>}
       {sp.deleted && <Banner tone="success">Gallery item deleted.</Banner>}
@@ -61,9 +81,22 @@ export default async function AdminGalleryPage({
                 <td className="px-4 py-3 text-ink-600">{i.kind === "reel" ? "Reel" : "Photo"}</td>
                 <td className="px-4 py-3 text-ink-600 capitalize">{i.tag}</td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${i.visible ? "bg-sage-100 text-sage-700" : "bg-line text-ink-600"}`}>
-                    {i.visible ? "Live" : "Hidden"}
-                  </span>
+                  {(() => {
+                    // "Live" used to mean nothing more than visible=true, which
+                    // was wrong for every seeded placeholder: the strip skips
+                    // those, so the admin insisted nine photos were on the
+                    // homepage while the homepage showed none of them.
+                    const status = stripStatus(i, items);
+                    return (
+                      <span
+                        className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+                          status.live ? "bg-sage-100 text-sage-700" : "bg-line text-ink-600"
+                        }`}
+                      >
+                        {status.label}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
@@ -80,6 +113,10 @@ export default async function AdminGalleryPage({
           )}
         </TableShell>
 
+        {/* Same reason as the categories page: tapping Edit put the form
+            1134px below the fold on a phone, so it looked like nothing had
+            happened. While editing, it leads. */}
+        <div className={editing ? "order-first lg:order-none" : undefined}>
         <SimpleForm
           key={editing?.id ?? "new"}
           id={editing?.id}
@@ -143,6 +180,7 @@ export default async function AdminGalleryPage({
             { kind: "checkbox", name: "visible", label: "Show on the site" },
           ]}
         />
+        </div>
       </div>
     </>
   );

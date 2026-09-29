@@ -1013,3 +1013,68 @@ test("no admin screen runs off the side of a phone", async ({ page }) => {
     expect(over, `${route} is ${over}px wider than the screen`).toBeLessThanOrEqual(1);
   }
 });
+
+test("the Instagram list never claims a row is live that the homepage skips", async ({
+  page,
+}) => {
+  // "Live" used to mean visible=true and nothing more. Nine seeded rows are
+  // placeholder artwork, which the strip has always skipped, so the admin
+  // insisted nine photos were on the homepage while the homepage drew none of
+  // them. Both now read src/lib/instagram-strip.ts.
+  await signIn(page);
+  await page.goto("/admin/gallery");
+
+  // Scoped to the Shown cell. Matching /^LIVE$/ against the whole row passes
+  // whatever the label says, because the row's text is the title, the type and
+  // the section as well — checked by reverting the page and watching this go
+  // green anyway.
+  const status = page.locator("tbody tr td:nth-child(4) span");
+  const rows = await page.locator("tbody tr").count();
+  expect(rows, "no gallery rows to judge").toBeGreaterThan(0);
+  expect(await status.count(), "no status cells found").toBe(rows);
+  const labels = await status.allInnerTexts();
+  expect(
+    labels.filter((l) => /^live$/i.test(l.trim())),
+    `placeholder artwork is being called live: ${labels.join(", ")}`,
+  ).toHaveLength(0);
+  await expect(page.getByText(/Nothing here is on the homepage/)).toBeVisible();
+
+  // Add a real photo, and it should flip to Live and reach the homepage.
+  await page.fill("#f-title", "Shop counter, real photo");
+  await page.fill("#imageUrl", "/img/instagram/rose-bunches.webp");
+  await page.click('button:has-text("Add item")');
+  await page.waitForURL(/gallery\?saved=1/);
+
+  const row = page.locator("tr", { hasText: "Shop counter, real photo" });
+  await expect(row.locator("td:nth-child(4) span")).toHaveText(/^Live$/i);
+  await expect(page.getByText(/showing/i).first()).toBeVisible();
+
+  await page.goto("/");
+  const strip = page.locator('section[aria-labelledby="instagram-heading"]');
+  await strip.scrollIntoViewIfNeeded();
+  // One real photo replaces the committed fallback set entirely.
+  await expect(strip.locator("ul img")).toHaveCount(1);
+});
+
+test("editing a category or a gallery item shows the form on a phone", async ({
+  page,
+}) => {
+  // The table stacks above the form on a narrow screen, so tapping Edit
+  // reloaded at the top with the form 2239px (categories) and 1134px
+  // (Instagram) below the fold. It read as doing nothing at all.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+
+  for (const route of ["/admin/categories", "/admin/gallery"]) {
+    await page.goto(route);
+    await page.getByRole("link", { name: "Edit" }).first().click();
+    await page.waitForURL(/edit=/);
+
+    const form = page.locator("form").last();
+    const box = (await form.boundingBox())!;
+    expect(
+      box.y,
+      `${route}: the edit form opens ${Math.round(box.y)}px down, off a phone screen`,
+    ).toBeLessThan(844);
+  }
+});
