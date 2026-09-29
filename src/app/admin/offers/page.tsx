@@ -37,6 +37,7 @@ export default async function AdminOffersPage({
         price: true,
         priceOnEnquiry: true,
         category: { select: { name: true } },
+        images: { take: 1, orderBy: { position: "asc" }, select: { url: true } },
       },
     }),
   ]);
@@ -48,6 +49,7 @@ export default async function AdminOffersPage({
     categoryName: p.category.name,
     price: p.price,
     priceOnEnquiry: p.priceOnEnquiry,
+    imageUrl: p.images[0]?.url ?? null,
   }));
 
   return (

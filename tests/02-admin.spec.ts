@@ -589,7 +589,14 @@ test("settings validate and propagate to every Enquire link", async ({ page }) =
   await signIn(page);
   await page.goto("/admin/settings");
 
-  await expect(page.getByText("Still using placeholder values")).toBeVisible();
+  // The warning is still there -- the email address and site URL are
+  // placeholders whatever else has happened.
+  //
+  // Deliberately not asserting anything about WhatsApp's state up here:
+  // reseed() does not clear the Setting table, so whether this starts as a
+  // placeholder depends on whether this test has run before against the same
+  // database. The assertion that matters is after the save, below.
+  await expect(page.getByText(/using the build-time placeholder/i)).toBeVisible();
 
   await page.fill("#whatsapp", "12");
   await page.click('button:has-text("Save settings")');
@@ -606,6 +613,22 @@ test("settings validate and propagate to every Enquire link", async ({ page }) =
   );
   await page.click('button:has-text("Save settings")');
   await expect(page.getByText("Settings saved")).toBeVisible();
+
+  // With a real number saved, the banner must stop claiming the Enquire
+  // buttons are broken. It used to append that sentence regardless of what was
+  // actually unset, so a shop whose only placeholder was the email address was
+  // told nothing could reach it -- which is what the owner reported.
+  // Scoped to the banner. The form's own section description legitimately
+  // reads "The WhatsApp number here powers every Enquire button on the site",
+  // so asserting against the whole page fails on correct copy.
+  const warning = page.locator('p[role="alert"]').filter({
+    hasText: /using the build-time placeholder/i,
+  });
+  await expect(warning).toBeVisible();
+  await expect(
+    warning,
+    "the banner still blames the WhatsApp number after a real one was saved",
+  ).not.toContainText(/Every Enquire button/i);
 
   await page.goto("/catalogue");
   const href = await page.getAttribute('a[href^="https://wa.me/"]', "href");

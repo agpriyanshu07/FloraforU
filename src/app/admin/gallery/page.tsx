@@ -6,7 +6,7 @@ import DeleteButton from "@/components/admin/DeleteButton";
 import { deleteGalleryAction, saveGalleryAction } from "@/lib/admin-actions";
 import { db } from "@/lib/db";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
-import { stripSelection, stripStatus } from "@/lib/instagram-strip";
+import { isPlaceholderArt, stripSelection, stripStatus } from "@/lib/instagram-strip";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,7 @@ export default async function AdminGalleryPage({
       {sp.saved && <Banner tone="success">Gallery item saved.</Banner>}
       {sp.deleted && <Banner tone="success">Gallery item deleted.</Banner>}
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <TableShell
           head={
             <tr>
@@ -67,8 +67,22 @@ export default async function AdminGalleryPage({
               <tr key={i.id} className={editing?.id === i.id ? "bg-rose-50" : undefined}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-rose-50">
-                      {i.imageUrl && <Image src={i.imageUrl} alt="" fill sizes="44px" className="object-cover" />}
+                    {/* Placeholder artwork is pale line art on cream, which at
+                        44px is an empty square — it read as "the image is
+                        broken" rather than "this is generated filler". Say
+                        which it is instead of showing a ghost. */}
+                    <span className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-rose-50">
+                      {isPlaceholderArt(i.imageUrl) ? (
+                        <span className="text-center text-[8px] font-bold uppercase leading-tight tracking-wide text-ink-600">
+                          No
+                          <br />
+                          photo
+                        </span>
+                      ) : i.imageUrl ? (
+                        <Image src={i.imageUrl} alt="" fill sizes="44px" className="object-cover" />
+                      ) : i.embedUrl ? (
+                        <span className="text-[9px] font-bold uppercase text-rose-700">Reel</span>
+                      ) : null}
                     </span>
                     <span>
                       <span className="block font-medium">{i.title}</span>

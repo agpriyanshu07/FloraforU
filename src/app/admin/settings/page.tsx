@@ -17,8 +17,24 @@ export default async function AdminSettingsPage() {
 
       {placeholders.length > 0 && (
         <Banner tone="error">
-          Still using placeholder values for: <strong>{placeholders.join(", ")}</strong>. Every
-          Enquire button on the site depends on the WhatsApp number — set it before launch.
+          Still using the build-time placeholder for{" "}
+          <strong>{placeholders.join(", ")}</strong>.
+          {/* The WhatsApp line used to print regardless of what was actually
+              unset, so a shop with a working number and only a placeholder
+              email was told its Enquire buttons were broken. Only say it when
+              it is true. */}
+          {placeholders.includes("WhatsApp number") && (
+            <>
+              {" "}Every Enquire button on the site opens a chat with that number,
+              so nothing can reach you until it is set.
+            </>
+          )}
+          {placeholders.includes("Site URL") && (
+            <>
+              {" "}The site URL goes into every canonical tag and the sitemap, so
+              search engines are being pointed at the wrong address.
+            </>
+          )}
         </Banner>
       )}
 
