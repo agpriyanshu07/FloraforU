@@ -31,8 +31,11 @@ test("the products list is usable on the phone the shop actually runs on", async
   const top = (await firstRow.boundingBox())!.y;
   expect(top, "the first product must be reachable without a scroll").toBeLessThan(700);
 
-  // The table is wider than the screen, so price and status live off to the
-  // right. They are repeated in the row itself.
+  // Price and status are the two things you check before deciding whether to
+  // open a product. They used to be repeated inside the first cell, because
+  // the table scrolled sideways and their own columns were off-screen; the
+  // card layout gives them labelled rows instead. Either way they have to be
+  // readable without a sideways drag.
   await expect(firstRow.getByText(/^₹|On enquiry/).first()).toBeVisible();
   await expect(firstRow.getByText(/^(Live|Draft)$/).first()).toBeVisible();
 
@@ -1100,4 +1103,59 @@ test("editing a category or a gallery item shows the form on a phone", async ({
       `${route}: the edit form opens ${Math.round(box.y)}px down, off a phone screen`,
     ).toBeLessThan(844);
   }
+});
+
+test("admin lists stack into cards on a phone instead of scrolling sideways", async ({
+  page,
+}) => {
+  // Every admin list is a <table> pinned at 720px. On a 390px phone that meant
+  // a sideways drag with the Actions column off the right edge and nothing on
+  // screen saying it was there — the Instagram list was reported that way.
+  // Below `sm` each row is a card and each value carries its own label.
+  //
+  // The markup stays a real table on purpose, so it keeps table semantics on a
+  // wide screen; only the presentation changes.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+
+  for (const route of [
+    "/admin", "/admin/products", "/admin/categories",
+    "/admin/offers", "/admin/reviews", "/admin/gallery", "/admin/enquiries",
+  ]) {
+    await page.goto(route);
+    const m = await page.evaluate(() => {
+      const wrap = document.querySelector(".admin-table-wrap");
+      const head = document.querySelector(".admin-table thead");
+      return {
+        sideways: wrap ? wrap.scrollWidth - wrap.clientWidth : 0,
+        page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        // sr-only leaves the header in the accessibility tree but out of the
+        // visual flow; a visible header means the card layout did not apply.
+        headVisible: head ? head.getBoundingClientRect().height > 2 : false,
+      };
+    });
+    expect(m.page, `${route} is ${m.page}px wider than the screen`).toBeLessThanOrEqual(1);
+    expect(m.sideways, `${route}: the list still scrolls sideways by ${m.sideways}px`).toBe(0);
+    expect(m.headVisible, `${route}: still rendering as a wide table`).toBe(false);
+  }
+
+  // And a value is readable with the label that explains it, rather than
+  // sitting under a column heading that scrolled away.
+  await page.goto("/admin/products");
+  const first = page.locator("tbody tr").first();
+  await expect(first.locator('td[data-label="Price"]')).toBeVisible();
+  await expect(first.locator('td[data-label="Status"]')).toBeVisible();
+  await expect(first.getByRole("link", { name: "Edit" })).toBeInViewport();
+
+  // And the card has to stay scannable. The structural checks above pass even
+  // when the padding reset silently fails -- which it did, because the rules
+  // started inside @layer components and a layered rule loses to the px-4/py-3
+  // utilities on each cell. That build renders at 277px a row against 182px
+  // when it works, and twenty-five of those is three extra screens of
+  // scrolling, so the height is what catches it.
+  const rowHeight = (await first.boundingBox())!.height;
+  expect(
+    rowHeight,
+    `a product card is ${Math.round(rowHeight)}px tall — the cell padding reset is not applying`,
+  ).toBeLessThan(230);
 });

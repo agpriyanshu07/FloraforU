@@ -196,10 +196,10 @@ export default async function AdminProductsPage({
 
               return (
               <tr key={p.id}>
-                <td className="px-4 py-3">
+                <td data-label="Select" className="px-4 py-3">
                   <input type="checkbox" name="ids" value={p.id} aria-label={`Select ${p.name}`} className="h-4 w-4 accent-[#9b2c5a]" />
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="" className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-rose-50">
                       {p.images[0] && (
@@ -213,27 +213,11 @@ export default async function AdminProductsPage({
                       <span className="block text-[12px] text-ink-600">
                         {p.code ? `Code ${p.code} · ` : ""}{p.spec || "No spec line"}
                       </span>
-                      {/* The table is wider than a phone, so price and status
-                          sit off-screen behind a sideways scroll. They are the
-                          two things you check before deciding whether to open a
-                          product, so they are repeated here where the thumb
-                          already is. */}
-                      <span className="mt-1 flex items-center gap-2 text-[12px] sm:hidden">
-                        <span className="font-medium">{priceLabel}</span>
-                        {sale !== null && (
-                          <span className="text-ink-600 line-through">
-                            {formatPrice(p.price, p.priceOnEnquiry)}
-                          </span>
-                        )}
-                        <span className={p.published ? "text-sage-700" : "text-marigold-700"}>
-                          {p.published ? "Live" : "Draft"}
-                        </span>
-                      </span>
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-ink-600">{p.category.name}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td data-label="Category" className="px-4 py-3 text-ink-600">{p.category.name}</td>
+                <td data-label="Price" className="px-4 py-3 whitespace-nowrap">
                   <span className="font-medium">{priceLabel}</span>
                   {sale !== null && (
                     <>
@@ -247,7 +231,7 @@ export default async function AdminProductsPage({
                     </>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Flags" className="px-4 py-3">
                   <span className="flex flex-wrap gap-1 text-[11px] font-bold uppercase tracking-wider">
                     {(p.newUntil ? p.newUntil > new Date() : p.isNew) && (
                       <span className="rounded-full bg-sage-100 px-2 py-0.5 text-sage-700">New</span>
@@ -259,7 +243,7 @@ export default async function AdminProductsPage({
                     )}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Status" className="px-4 py-3">
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
                       p.published ? "bg-sage-100 text-sage-700" : "bg-marigold-100 text-marigold-700"
@@ -268,14 +252,14 @@ export default async function AdminProductsPage({
                     {p.published ? "Live" : "Draft"}
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-ink-600">
+                <td data-label="Updated" className="px-4 py-3 whitespace-nowrap text-ink-600">
                   {p.updatedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                 </td>
                 {/* The product name is a link, but it is set in the same plain
                     ink as the rest of the row, so nothing says so. A button
                     that looks like a button is the difference between knowing
                     how to edit a product and guessing. */}
-                <td className="px-4 py-3 text-right">
+                <td data-label="Actions" className="px-4 py-3 text-right">
                   <Link href={`/admin/products/${p.id}`} className="btn-ghost btn-sm">
                     Edit
                   </Link>

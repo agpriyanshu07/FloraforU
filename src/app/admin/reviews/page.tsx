@@ -88,18 +88,18 @@ export default async function AdminReviewsPage({
           ) : (
             reviews.map((r) => (
               <tr key={r.id} className={editing?.id === r.id ? "bg-rose-50" : undefined}>
-                <td className="px-4 py-3">
+                <td data-label="" className="px-4 py-3">
                   <span className="block font-medium">{r.customerName}</span>
                   <span className="block text-[12px] text-ink-600">{r.eventType} · {r.source}</span>
                   {r.product && (
                     <span className="block text-[12px] text-rose-700">on {r.product.name}</span>
                   )}
                 </td>
-                <td className="max-w-sm px-4 py-3 text-[13px] text-ink-600">
+                <td data-label="Review" className="max-w-sm px-4 py-3 text-[13px] text-ink-600">
                   {r.quote.length > 120 ? `${r.quote.slice(0, 120)}…` : r.quote}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">{r.rating} / 5</td>
-                <td className="px-4 py-3">
+                <td data-label="Rating" className="px-4 py-3 whitespace-nowrap">{r.rating} / 5</td>
+                <td data-label="Status" className="px-4 py-3">
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
                       r.status === "pending"
@@ -130,7 +130,7 @@ export default async function AdminReviewsPage({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Actions" className="px-4 py-3">
                   <div className="flex flex-wrap justify-end gap-2">
                     {r.status !== "approved" && (
                       <form action={moderateReviewAction}>

@@ -147,14 +147,14 @@ export default async function AdminDashboard() {
           ) : (
             recent.map((p) => (
               <tr key={p.id}>
-                <td className="px-4 py-3 font-medium">
+                <td data-label="" className="px-4 py-3 font-medium">
                   <Link href={`/admin/products/${p.id}`} className="hover:text-rose-700">
                     {p.name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-ink-600">{p.category.name}</td>
-                <td className="px-4 py-3">{formatPrice(p.price, p.priceOnEnquiry)}</td>
-                <td className="px-4 py-3">
+                <td data-label="Category" className="px-4 py-3 text-ink-600">{p.category.name}</td>
+                <td data-label="Price" className="px-4 py-3">{formatPrice(p.price, p.priceOnEnquiry)}</td>
+                <td data-label="Status" className="px-4 py-3">
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
                       p.published ? "bg-sage-100 text-sage-700" : "bg-marigold-100 text-marigold-700"
@@ -163,7 +163,7 @@ export default async function AdminDashboard() {
                     {p.published ? "Live" : "Draft"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-ink-600">
+                <td data-label="Updated" className="px-4 py-3 text-ink-600">
                   {p.updatedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                 </td>
               </tr>

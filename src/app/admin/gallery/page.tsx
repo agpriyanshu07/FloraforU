@@ -65,7 +65,7 @@ export default async function AdminGalleryPage({
           ) : (
             items.map((i) => (
               <tr key={i.id} className={editing?.id === i.id ? "bg-rose-50" : undefined}>
-                <td className="px-4 py-3">
+                <td data-label="" className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     {/* Placeholder artwork is pale line art on cream, which at
                         44px is an empty square — it read as "the image is
@@ -92,9 +92,9 @@ export default async function AdminGalleryPage({
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-ink-600">{i.kind === "reel" ? "Reel" : "Photo"}</td>
-                <td className="px-4 py-3 text-ink-600 capitalize">{i.tag}</td>
-                <td className="px-4 py-3">
+                <td data-label="Type" className="px-4 py-3 text-ink-600">{i.kind === "reel" ? "Reel" : "Photo"}</td>
+                <td data-label="Section" className="px-4 py-3 text-ink-600 capitalize">{i.tag}</td>
+                <td data-label="Shown" className="px-4 py-3">
                   {(() => {
                     // "Live" used to mean nothing more than visible=true, which
                     // was wrong for every seeded placeholder: the strip skips
@@ -112,7 +112,7 @@ export default async function AdminGalleryPage({
                     );
                   })()}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Actions" className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <Link href={`/admin/gallery?edit=${i.id}`} className="btn-ghost btn-sm">Edit</Link>
                     <DeleteButton

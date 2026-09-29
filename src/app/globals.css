@@ -157,6 +157,23 @@
 
   .card { @apply rounded-2xl border border-line bg-surface; }
 
+  /* --------------------------------------------------------------- admin tables
+     Every admin list is a <table> pinned at 720px, which on a 390px phone
+     meant six of them scrolled sideways with the Actions column off the edge
+     and nothing on screen saying so. Below `sm` each row becomes a card and
+     each cell announces itself from its data-label.
+
+     Deliberately CSS rather than a second mobile component: the markup stays a
+     real table, so it keeps its semantics for screen readers on a wide screen,
+     and the test suite keeps selecting `tbody tr` and `td:nth-child(n)`. */
+  .admin-table-wrap { @apply min-w-0; }
+  @media (min-width: 640px) {
+    .admin-table-wrap { @apply rounded-2xl border border-line bg-surface overflow-x-auto; }
+  }
+
+
+
+
   .shell { @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6; }
 
   .skip-link {
@@ -255,4 +272,46 @@
   .ffu-mote {
     animation: drift 7s ease-in-out infinite;
   }
+}
+
+/* The admin card layout for phones. Deliberately NOT inside @layer components:
+   these rules have to beat the px-4/py-3 utility classes on each cell, and a
+   layered rule always loses to an unlayered one. Inside the layer the padding
+   reset did nothing and every value row stayed 44px tall. */
+@media (max-width: 639px) {
+  .admin-table thead { @apply sr-only; }
+  .admin-table,
+  .admin-table tbody { @apply block; }
+
+  .admin-table tbody { @apply divide-y-0 space-y-3; }
+
+  /* The values flow as a wrapped meta line rather than stacking one labelled
+     row per column. Stacked, a product card ran 436px and twenty-five of
+     them was a 10,000px scroll -- longer than the sideways table it
+     replaced, which defeats the point. */
+  .admin-table tr {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1.5
+           rounded-2xl border border-line bg-surface p-3;
+  }
+  .admin-table td { @apply inline-flex items-center gap-1.5 border-0 p-0; }
+  .admin-table td::before {
+    content: attr(data-label);
+    @apply shrink-0 text-[10px] font-bold uppercase tracking-wider text-ink-600;
+  }
+
+  /* The identity cell -- thumbnail and name -- takes the first line, sharing
+     it with the select box where there is one. The values wrap underneath
+     and the actions tuck onto the end of the last line rather than claiming
+     one of their own: giving each its own row ran a product card to 367px,
+     and twenty-five of those is a longer scroll than the table was wide. */
+  .admin-table td[data-label="Select"] { @apply order-first shrink-0; }
+  .admin-table td[data-label=""] { @apply min-w-0 flex-1 basis-3/4; }
+  .admin-table td[data-label="Actions"] { @apply ml-auto; }
+  .admin-table td[data-label=""]::before,
+  .admin-table td[data-label="Select"]::before,
+  .admin-table td[data-label="Actions"]::before { content: none; }
+
+  /* A colspan cell is an empty state, not a field. */
+  .admin-table td[colspan] { @apply block py-8 text-center; }
+  .admin-table td[colspan]::before { content: none; }
 }
