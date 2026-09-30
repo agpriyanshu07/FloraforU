@@ -1274,7 +1274,11 @@ test("an optional figure the shop clears actually leaves the site", async ({ pag
     await page.goto("/admin/settings");
     await page.fill("#followerCount", value);
     await page.getByRole("button", { name: /^Save/ }).first().click();
-    await page.waitForURL("**/admin/settings**");
+    // The form validates the whole settings record, not just the field being
+    // changed, so an unrelated bad value elsewhere rejects the save and
+    // nothing is written. Without this the test would go on to check the
+    // homepage and blame the rendering for a save that never happened.
+    await expect(page.getByRole("status")).toContainText("Settings saved");
   };
 
   await setFollowers("7,777+");
