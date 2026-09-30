@@ -103,15 +103,15 @@ export default async function AdminEnquiriesPage({
         ) : (
           enquiries.map((e) => (
             <tr key={e.id} className={e.handled ? "opacity-60" : undefined}>
-              <td className="px-4 py-3 whitespace-nowrap text-ink-600">
+              <td data-label="When" className="px-4 py-3 whitespace-nowrap text-ink-600">
                 {e.createdAt.toLocaleString("en-IN", {
                   day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
                 })}
               </td>
-              <td className="px-4 py-3 whitespace-nowrap">
+              <td data-label="Channel" className="px-4 py-3 whitespace-nowrap">
                 {CHANNEL_LABELS[e.channel] ?? e.channel}
               </td>
-              <td className="max-w-md px-4 py-3">
+              <td data-label="" className="max-w-md px-4 py-3">
                 {e.product ? (
                   <Link href={`/product/${e.product.slug}`} target="_blank" className="font-medium hover:text-rose-700">
                     {e.product.name} ↗
@@ -123,7 +123,7 @@ export default async function AdminEnquiriesPage({
                   <span className="mt-1 block text-[13px] text-ink-600">{e.message}</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-[13px]">
+              <td data-label="Contact" className="px-4 py-3 text-[13px]">
                 {e.name && <span className="block font-medium">{e.name}</span>}
                 {e.phone && (
                   <a href={`tel:${e.phone}`} className="block text-ink-600 hover:text-rose-700">{e.phone}</a>
@@ -133,7 +133,7 @@ export default async function AdminEnquiriesPage({
                 )}
                 {!e.name && !e.phone && !e.email && <span className="text-ink-600">—</span>}
               </td>
-              <td className="px-4 py-3">
+              <td data-label="Actions" className="px-4 py-3">
                 <div className="flex justify-end gap-2">
                   <form action={toggleEnquiryHandledAction}>
                     <input type="hidden" name="id" value={e.id} />

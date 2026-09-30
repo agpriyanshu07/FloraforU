@@ -85,20 +85,20 @@ export default async function AdminOffersPage({
             const s = statusOf(o);
             return (
               <tr key={o.id} className={editing?.id === o.id ? "bg-rose-50" : undefined}>
-                <td className="px-4 py-3">
+                <td data-label="" className="px-4 py-3">
                   <span className="block font-medium">{o.title}</span>
                   <span className="block max-w-md text-[12px] text-ink-600">{o.description}</span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-ink-600">
+                <td data-label="Dates" className="px-4 py-3 whitespace-nowrap text-ink-600">
                   {iso(o.startsAt)} → {iso(o.endsAt)}
                 </td>
-                <td className="px-4 py-3 text-ink-600">{o.products.length}</td>
-                <td className="px-4 py-3">
+                <td data-label="Products" className="px-4 py-3 text-ink-600">{o.products.length}</td>
+                <td data-label="Status" className="px-4 py-3">
                   <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${s.tone}`}>
                     {s.label}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Actions" className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <Link href="/offers" target="_blank" className="btn-ghost btn-sm">Preview ↗</Link>
                     <Link href={`/admin/offers?edit=${o.id}`} className="btn-ghost btn-sm">Edit</Link>

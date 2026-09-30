@@ -60,7 +60,7 @@ export default async function AdminCategoriesPage({
           ) : (
             categories.map((c) => (
               <tr key={c.id} className={editing?.id === c.id ? "bg-rose-50" : undefined}>
-                <td className="px-4 py-3">
+                <td data-label="" className="px-4 py-3">
                   <div className="flex items-start gap-3">
                     <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-rose-50">
                       {/* Resolved the same way the public cards resolve it, so this thumbnail
@@ -77,9 +77,9 @@ export default async function AdminCategoriesPage({
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-ink-600">{c._count.products}</td>
-                <td className="px-4 py-3 text-ink-600">{c.displayOrder}</td>
-                <td className="px-4 py-3">
+                <td data-label="Products" className="px-4 py-3 text-ink-600">{c._count.products}</td>
+                <td data-label="Order" className="px-4 py-3 text-ink-600">{c.displayOrder}</td>
+                <td data-label="Actions" className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <Link href={`/admin/categories?edit=${c.id}`} className="btn-ghost btn-sm">
                       Edit
