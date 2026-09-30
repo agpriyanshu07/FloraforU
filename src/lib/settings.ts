@@ -60,9 +60,15 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   seoDescription:
     "Browse FloralforU's full catalogue of artificial flowers, backdrops, lights, lamps, pots, SFX machines and event décor. Enquire on WhatsApp — no online payment, just a quick chat.",
   pdfFooter: "FloralforU · Dhanbad · Prices subject to change without notice.",
-  followerCount: "5,500+",
-  eventsCount: "400+",
-  yearsCount: "6+",
+  // Blank on purpose. These three were "5,500+", "400+" and "6+" -- numbers
+  // invented at build time, never checked against anything, and printed in
+  // the hero, the footer and the OG image as if the shop had counted them.
+  // A specific figure is believed, so shipping a guess is worse than showing
+  // nothing. They are OPTIONAL_SETTINGS, so the shop can type the real ones
+  // in Settings and clear them again later.
+  followerCount: "",
+  eventsCount: "",
+  yearsCount: "",
   siteUrl: "http://localhost:3000",
   instagramCommentsEnabled: "false",
 };
@@ -77,13 +83,30 @@ export const DEFAULT_SETTINGS: SiteSettings = {
  * shopper is waiting for. The cache lives for a single request, so an admin
  * saving settings still sees the new values on the next one.
  */
+/**
+ * Settings where a blank value is a decision, not an omission.
+ *
+ * Everywhere else, falling back to the default is protective: an empty
+ * WhatsApp number or site URL would break every Enquire button and every
+ * canonical tag, so a blank field must not take effect. These three only
+ * decide whether a statistic is displayed, and the shop has to be able to say
+ * "don't display one" -- otherwise clearing the box in Settings silently put
+ * the old invented figure back, which is exactly what it used to do.
+ */
+const OPTIONAL_SETTINGS = new Set<keyof SiteSettings>([
+  "followerCount",
+  "eventsCount",
+  "yearsCount",
+]);
+
 export const getSettings = cache(async function getSettings(): Promise<SiteSettings> {
   const rows = await db.setting.findMany();
   const overrides = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const merged = { ...DEFAULT_SETTINGS };
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof SiteSettings)[]) {
     const v = overrides[key];
-    if (typeof v === "string" && v.trim() !== "") merged[key] = v;
+    if (typeof v !== "string") continue;
+    if (v.trim() !== "" || OPTIONAL_SETTINGS.has(key)) merged[key] = v.trim();
   }
   return merged;
 });

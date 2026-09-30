@@ -77,10 +77,20 @@ export default async function ReviewsPage() {
           ))}
         </ul>
       ) : (
+        /* The body said "we're in the middle of moving our Instagram reviews
+           over to the website", which described a migration that was not
+           happening: it sat on the site for months with nothing moved, so a
+           line written as a temporary note quietly aged into a false one. The
+           old action label promised a "Reviews highlight on Instagram" too --
+           another claim the site cannot keep true on its own.
+
+           This says only what stays true whatever the shop does next, and
+           asks for the review instead of apologising for not having one. The
+           form is directly below it. */
         <EmptyState
           title="No reviews published yet"
-          body="We're in the middle of moving our Instagram reviews over to the website. In the meantime, our Reviews highlight on Instagram has them all."
-          actionLabel="See reviews on Instagram"
+          body="Most of our customers send these to us on Instagram or WhatsApp. If we've worked on your event, we'd love to hear how it went — write it below, or send it however suits you."
+          actionLabel="Visit our Instagram"
           actionHref={settings.instagram}
           icon={<HeartIcon className="h-8 w-8" />}
         />

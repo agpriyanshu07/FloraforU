@@ -25,20 +25,26 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
           />
           <p className="font-display text-2xl">{settings.businessName}</p>
           <p className="mt-2 text-sm text-ink-600">{settings.tagline}</p>
-          <dl className="mt-5 flex gap-6 text-sm">
-            <div>
-              <dt className="text-ink-600">Followers</dt>
-              <dd className="font-display text-xl text-rose-600">
-                {settings.followerCount}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-ink-600">Events served</dt>
-              <dd className="font-display text-xl text-rose-600">
-                {settings.eventsCount}
-              </dd>
-            </div>
-          </dl>
+          {/* Both are optional, so the whole block goes when neither is set
+              rather than leaving two headings over empty space. */}
+          {[
+            ["Followers", settings.followerCount],
+            ["Events served", settings.eventsCount],
+          ].some(([, v]) => v.trim() !== "") && (
+            <dl className="mt-5 flex gap-6 text-sm">
+              {[
+                ["Followers", settings.followerCount],
+                ["Events served", settings.eventsCount],
+              ]
+                .filter(([, value]) => value.trim() !== "")
+                .map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-ink-600">{label}</dt>
+                    <dd className="font-display text-xl text-rose-600">{value}</dd>
+                  </div>
+                ))}
+            </dl>
+          )}
         </div>
 
         <nav aria-label="Catalogue links">

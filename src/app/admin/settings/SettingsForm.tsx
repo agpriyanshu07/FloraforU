@@ -58,11 +58,24 @@ const GROUPS: { title: string; blurb: string; fields: Field[] }[] = [
   },
   {
     title: "Social proof",
-    blurb: "Real numbers only — these appear on the homepage and in the footer.",
+    blurb:
+      "All optional, and all shown to customers as fact — so leave one blank rather than estimating it. Blank means the figure is not displayed at all.",
     fields: [
-      { name: "followerCount", label: "Instagram followers" },
-      { name: "eventsCount", label: "Events served" },
-      { name: "yearsCount", label: "Years in business" },
+      {
+        name: "followerCount",
+        label: "Instagram followers",
+        hint: "Shown in the hero and the footer. Blank hides it.",
+      },
+      {
+        name: "eventsCount",
+        label: "Events served",
+        hint: "Shown in the hero and the footer. Blank hides it.",
+      },
+      {
+        name: "yearsCount",
+        label: "Years in business",
+        hint: "Not shown on the site at present. Blank hides it.",
+      },
     ],
   },
   {
