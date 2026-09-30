@@ -44,7 +44,14 @@ export default async function AdminCategoriesPage({
         </Banner>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      {/* The list gets the whole column and the form stacks under it, the way
+          Offers has always worked. Side by side, the form took ~300px and the
+          list was left with a track that could not fit its own columns: the
+          Actions cell ended up 63-124px behind the form, which is the same
+          "the buttons are off screen" complaint the card layout fixed on a
+          phone. No breakpoint solves it, because how wide the list needs to be
+          depends on the rows in it, not on the window. */}
+      <div className="flex flex-col gap-8">
         <TableShell
           head={
             <tr>
@@ -56,7 +63,7 @@ export default async function AdminCategoriesPage({
           }
         >
           {categories.length === 0 ? (
-            <EmptyRow colSpan={4}>No categories yet — add your first one on the right.</EmptyRow>
+            <EmptyRow colSpan={4}>No categories yet — add your first one below.</EmptyRow>
           ) : (
             categories.map((c) => (
               <tr key={c.id} className={editing?.id === c.id ? "bg-rose-50" : undefined}>
@@ -103,7 +110,7 @@ export default async function AdminCategoriesPage({
             above it otherwise, so tapping Edit reloaded the page at the top
             with the form 2239px below the fold — it read as doing nothing at
             all. On a wide screen the two sit side by side and order is moot. */}
-        <div className={editing ? "order-first lg:order-none" : undefined}>
+        <div className={editing ? "order-first" : undefined}>
           <CategoryForm
             key={editing?.id ?? "new"}
             values={

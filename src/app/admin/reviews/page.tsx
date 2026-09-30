@@ -68,7 +68,14 @@ export default async function AdminReviewsPage({
         ))}
       </nav>
 
-      <div className="grid gap-6 xl:grid-cols-[2.2fr_1fr]">
+      {/* The list gets the whole column and the form stacks under it, the way
+          Offers has always worked. Side by side, the form took ~300px and the
+          list was left with a track that could not fit its own columns: the
+          Actions cell ended up 63-124px behind the form, which is the same
+          "the buttons are off screen" complaint the card layout fixed on a
+          phone. No breakpoint solves it, because how wide the list needs to be
+          depends on the rows in it, not on the window. */}
+      <div className="flex flex-col gap-8">
         <TableShell
           head={
             <tr>
@@ -159,6 +166,10 @@ export default async function AdminReviewsPage({
           )}
         </TableShell>
 
+        {/* Same as Categories and Instagram: while editing, the form leads, so
+            tapping Edit visibly does something instead of reloading the page
+            at the top with the form far below the fold. */}
+        <div className={editing ? "order-first" : undefined}>
         <SimpleForm
           key={editing?.id ?? "new"}
           id={editing?.id}
@@ -204,6 +215,7 @@ export default async function AdminReviewsPage({
             { kind: "checkbox", name: "visible", label: "Show on the site", hint: "Untick to hide without deleting." },
           ]}
         />
+        </div>
       </div>
     </>
   );

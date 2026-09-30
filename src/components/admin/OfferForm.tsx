@@ -147,7 +147,7 @@ export default function OfferForm({
   const visible = [...picked, ...shown];
 
   return (
-    <form key={state.nonce ?? "initial"} action={formAction} className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <form key={state.nonce ?? "initial"} action={formAction} className="grid grid-cols-1 gap-6 @5xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {values.id && <input type="hidden" name="id" value={values.id} />}
       {/* One field rather than an input per product: the server needs the whole
           map at once, and this is what gets replayed when a submit is rejected. */}

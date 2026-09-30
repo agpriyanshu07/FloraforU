@@ -48,7 +48,14 @@ export default async function AdminGalleryPage({
       {sp.saved && <Banner tone="success">Gallery item saved.</Banner>}
       {sp.deleted && <Banner tone="success">Gallery item deleted.</Banner>}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      {/* The list gets the whole column and the form stacks under it, the way
+          Offers has always worked. Side by side, the form took ~300px and the
+          list was left with a track that could not fit its own columns: the
+          Actions cell ended up 63-124px behind the form, which is the same
+          "the buttons are off screen" complaint the card layout fixed on a
+          phone. No breakpoint solves it, because how wide the list needs to be
+          depends on the rows in it, not on the window. */}
+      <div className="flex flex-col gap-8">
         <TableShell
           head={
             <tr>
@@ -61,7 +68,7 @@ export default async function AdminGalleryPage({
           }
         >
           {items.length === 0 ? (
-            <EmptyRow colSpan={5}>No gallery items yet — add one on the right.</EmptyRow>
+            <EmptyRow colSpan={5}>No gallery items yet — add one below.</EmptyRow>
           ) : (
             items.map((i) => (
               <tr key={i.id} className={editing?.id === i.id ? "bg-rose-50" : undefined}>
@@ -84,8 +91,15 @@ export default async function AdminGalleryPage({
                         <span className="text-[9px] font-bold uppercase text-rose-700">Reel</span>
                       ) : null}
                     </span>
-                    <span>
-                      <span className="block font-medium">{i.title}</span>
+                    {/* The URL was already capped; the title was not, so one
+                        long caption widened the whole column and pushed the
+                        Actions buttons behind the form beside it. Both are
+                        capped now -- the full title is still in the tooltip
+                        and in the edit form. */}
+                    <span className="min-w-0">
+                      <span className="block max-w-xs truncate font-medium" title={i.title}>
+                        {i.title}
+                      </span>
                       <span className="block max-w-xs truncate text-[12px] text-ink-600">
                         {i.embedUrl || i.imageUrl}
                       </span>
@@ -130,7 +144,7 @@ export default async function AdminGalleryPage({
         {/* Same reason as the categories page: tapping Edit put the form
             1134px below the fold on a phone, so it looked like nothing had
             happened. While editing, it leads. */}
-        <div className={editing ? "order-first lg:order-none" : undefined}>
+        <div className={editing ? "order-first" : undefined}>
         <SimpleForm
           key={editing?.id ?? "new"}
           id={editing?.id}
