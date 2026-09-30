@@ -61,3 +61,50 @@ export const PUBLIC_ROUTES = [
   "/contact",
   "/wishlist",
 ] as const;
+
+/**
+ * Runs a snippet against the real database in a throwaway tsx process.
+ *
+ * The suite drives a separate server process, so the alternative is a second
+ * Prisma client inside the test runner holding its own connections open for
+ * the whole run. `reseed()` already shells out for the same reason; this is
+ * that, for a single row.
+ */
+function dbEval(body: string): string {
+  return execFileSync(
+    "npx",
+    [
+      "tsx",
+      "-e",
+      `import { PrismaClient } from "./src/generated/prisma";
+       const db = new PrismaClient();
+       (async () => { ${body} })()
+         .then(() => db.$disconnect())
+         .catch((e) => { console.error(e); process.exit(1); });`,
+    ],
+    { encoding: "utf8", env: { ...process.env } },
+  ).trim();
+}
+
+/** How many reviews are sitting in the moderation queue right now. */
+export function pendingReviewCount(): number {
+  return Number(
+    dbEval(`process.stdout.write(String(await db.review.count({ where: { status: "pending" } })));`),
+  );
+}
+
+/** Puts one review in the queue and returns its id, for the caller to remove. */
+export function addPendingReview(): string {
+  return dbEval(
+    `const r = await db.review.create({ data: {
+       customerName: "Nav badge probe",
+       quote: "Left pending so the badge has something to count.",
+       status: "pending", submittedByCustomer: true, visible: false,
+     } });
+     process.stdout.write(r.id);`,
+  );
+}
+
+export function deleteReview(id: string) {
+  dbEval(`await db.review.delete({ where: { id: ${JSON.stringify(id)} } });`);
+}

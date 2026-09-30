@@ -10,7 +10,7 @@ export default function DeleteButton({
   label = "Delete",
   confirmText,
   extraFields,
-  className = "btn-danger btn-sm",
+  className = "btn-danger-quiet btn-sm",
 }: {
   action: (formData: FormData) => void | Promise<void>;
   id: string;

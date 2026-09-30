@@ -1,6 +1,14 @@
 import path from "node:path";
 import { test, expect } from "@playwright/test";
-import { ADMIN_EMAIL, isolateReviewLimiter, reseed, signIn } from "./helpers";
+import {
+  ADMIN_EMAIL,
+  addPendingReview,
+  deleteReview,
+  isolateReviewLimiter,
+  pendingReviewCount,
+  reseed,
+  signIn,
+} from "./helpers";
 
 // These tests mutate shared database state and build on each other, so they run
 // in order rather than in parallel.
@@ -1158,4 +1166,98 @@ test("admin lists stack into cards on a phone instead of scrolling sideways", as
     rowHeight,
     `a product card is ${Math.round(rowHeight)}px tall — the cell padding reset is not applying`,
   ).toBeLessThan(230);
+});
+
+test("the admin nav stays on screen and carries what needs attention", async ({ page }) => {
+  // The nav used to be a wrapping row of nine pills above the content, so on
+  // Products (5144px) and the homepage editor (7168px) changing section meant
+  // scrolling back to the top first. The sidebar is sticky and full-height.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await signIn(page);
+  await page.goto("/admin/products");
+
+  const nav = page.getByRole("navigation", { name: "Admin sections" });
+  const products = nav.getByRole("link", { name: /^Products/ });
+  await expect(products).toHaveAttribute("aria-current", "page");
+
+  // The claim is specifically that it survives a long scroll, which is the
+  // one thing a non-sticky column also passes every other check for.
+  await page.evaluate(() => window.scrollTo(0, 3000));
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+  await expect(nav.getByRole("link", { name: /^Settings/ })).toBeInViewport();
+
+  // A section needing a decision says so in the nav, so a queue that is
+  // otherwise invisible -- a pending review shows nowhere on the public site,
+  // it just leaves the page short -- is visible without opening the page.
+  const before = pendingReviewCount();
+  const reviewId = addPendingReview();
+
+  try {
+    await page.goto("/admin/products");
+    const reviews = nav.getByRole("link", { name: /^Reviews/ });
+    // The accessible name has to say what the number means. A badge that
+    // announces a bare "1" leaves a screen-reader user to guess one of what.
+    await expect(reviews).toHaveAccessibleName(
+      new RegExp(`${before + 1} waiting for approval`),
+    );
+  } finally {
+    deleteReview(reviewId);
+  }
+});
+
+test("the dashboard leads with what needs doing, not with counts", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await signIn(page);
+  await page.goto("/admin");
+
+  // The order is the whole point of the rebuild: the jobs list used to sit
+  // under a quiet "Worth doing" heading below four stat tiles, so the first
+  // thing on screen was a number you cannot act on.
+  const jobs = page.locator('section[aria-labelledby="jobs-heading"]');
+  const numbers = page.locator('section[aria-labelledby="numbers-heading"]');
+  await expect(jobs).toBeVisible();
+  const jobsY = (await jobs.boundingBox())!.y;
+  const numbersY = (await numbers.boundingBox())!.y;
+  expect(jobsY, "the jobs list is below the stat tiles again").toBeLessThan(numbersY);
+
+  // The seed leaves contact details unset, so the blocking job is the first
+  // thing in the list and carries a link to the page that fixes it.
+  const first = jobs.locator("li").first();
+  await expect(first).toContainText(/placeholder/i);
+  await expect(first.getByRole("link", { name: "Open Settings" })).toHaveAttribute(
+    "href",
+    "/admin/settings",
+  );
+});
+
+test("no admin list hides its Actions column at any desktop width", async ({ page }) => {
+  // Adding the sidebar took 272px out of the window, and three pages split
+  // their list beside a form on a *viewport* breakpoint -- which stopped
+  // describing how much room the list actually had. At 1024px the Actions
+  // column ended up 163px behind the edge of its own wrapper on Products, and
+  // at 1440px 92px behind the form on Categories and Instagram. A row whose
+  // Edit and Delete buttons are off-screen is the exact complaint that started
+  // the card layout, arriving again from the other direction.
+  //
+  // The splits are container queries now, so they ask about the column rather
+  // than the window. This is the check that holds them to it.
+  await signIn(page);
+
+  for (const width of [1024, 1280, 1366, 1440, 1600, 1920]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const route of [
+      "/admin", "/admin/products", "/admin/categories",
+      "/admin/offers", "/admin/reviews", "/admin/gallery", "/admin/enquiries",
+    ]) {
+      await page.goto(route);
+      const clipped = await page.evaluate(() => {
+        const w = document.querySelector(".admin-table-wrap");
+        return w ? w.scrollWidth - w.clientWidth : 0;
+      });
+      expect(
+        clipped,
+        `${route} at ${width}px: ${clipped}px of the list is cut off, Actions first`,
+      ).toBe(0);
+    }
+  }
 });

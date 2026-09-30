@@ -29,14 +29,14 @@ export default function DeleteCategory({
         }}
       >
         <input type="hidden" name="id" value={id} />
-        <button type="submit" className="btn-danger btn-sm">Delete</button>
+        <button type="submit" className="btn-danger-quiet btn-sm">Delete</button>
       </form>
     );
   }
 
   return (
     <>
-      <button type="button" className="btn-danger btn-sm" onClick={() => setOpen(true)}>
+      <button type="button" className="btn-danger-quiet btn-sm" onClick={() => setOpen(true)}>
         Delete
       </button>
 
@@ -73,7 +73,7 @@ export default function DeleteCategory({
                 <button type="button" className="btn-ghost btn-sm" onClick={() => setOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-danger btn-sm">
+                <button type="submit" className="btn-danger-quiet btn-sm">
                   Move products &amp; delete
                 </button>
               </div>
