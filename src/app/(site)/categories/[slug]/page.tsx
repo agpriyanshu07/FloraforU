@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import CatalogueControls from "@/components/CatalogueControls";
 import ProductGrid from "@/components/ProductGrid";
+import SubcategoryFilter from "@/components/SubcategoryFilter";
 import Pagination from "@/components/Pagination";
 import EmptyState from "@/components/EmptyState";
 import { SearchIcon } from "@/components/icons";
@@ -46,14 +47,38 @@ export default async function CategoryPage({
   const category = await db.category.findUnique({ where: { slug } });
   if (!category) notFound();
 
-  const [settings, categories, result] = await Promise.all([
+  const [settings, categories, subcategories, result] = await Promise.all([
     getSettings(),
     db.category.findMany({
       orderBy: { displayOrder: "asc" },
       select: { slug: true, name: true },
     }),
+    // Counts are of PUBLISHED stock only, to match what the grid will show.
+    // Counting every row would put "Jar Hampers 78" on a chip that then opens
+    // a list of 74, and the first thing a shopper would conclude is that four
+    // products failed to load.
+    db.subcategory.findMany({
+      where: { category: { slug } },
+      orderBy: { displayOrder: "asc" },
+      select: {
+        slug: true,
+        name: true,
+        _count: { select: { products: { where: { published: true } } } },
+      },
+    }),
     queryCatalogue(sp, slug),
   ]);
+
+  const chips = subcategories
+    .map((s) => ({ slug: s.slug, name: s.name, count: s._count.products }))
+    .filter((s) => s.count > 0);
+
+  // The "All" chip has to be the category total, not `result.total`, which is
+  // the count AFTER the current subcategory filter -- so once you picked a
+  // chip, "All" would have claimed the number you were already looking at.
+  const publishedInCategory = await db.product.count({
+    where: { published: true, category: { slug } },
+  });
 
   return (
     <div className="shell py-10">
@@ -111,8 +136,19 @@ export default async function CategoryPage({
         />
       </Suspense>
 
+      <SubcategoryFilter
+        basePath={`/categories/${slug}`}
+        subcategories={chips}
+        active={sp.sub}
+        totalCount={publishedInCategory}
+        carry={sp as Record<string, string | undefined>}
+      />
+
       <p className="mb-4 text-sm text-ink-600" aria-live="polite">
-        {result.total} {result.total === 1 ? "product" : "products"} in this category
+        {result.total} {result.total === 1 ? "product" : "products"}
+        {sp.sub && chips.some((c) => c.slug === sp.sub)
+          ? ` in ${chips.find((c) => c.slug === sp.sub)!.name}`
+          : " in this category"}
       </p>
 
       {result.products.length > 0 ? (

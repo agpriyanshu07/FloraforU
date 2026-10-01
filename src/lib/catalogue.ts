@@ -9,6 +9,8 @@ export const PAGE_SIZE = 24;
 export type CatalogueParams = {
   q?: string;
   category?: string;
+  /** Subcategory slug, unique only within its category. */
+  sub?: string;
   sort?: string;
   new?: string;
   offer?: string;
@@ -39,6 +41,15 @@ export async function queryCatalogue(
   const where: Prisma.ProductWhereInput = { published: true };
 
   if (categorySlug) where.category = { slug: categorySlug };
+
+  // Scoped to the category, because a subcategory slug is only unique inside
+  // one: "hanging" exists under both Lights and Artificial Flowers, and
+  // matching on the slug alone would mix the two lists together. On /catalogue
+  // with no category chosen there is nothing to scope to, so the parameter is
+  // ignored rather than guessed at.
+  if (categorySlug && params.sub) {
+    where.subcategory = { slug: params.sub, category: { slug: categorySlug } };
+  }
 
   if (q) {
     // `mode: "insensitive"` is required, not cosmetic: PostgreSQL's `contains`

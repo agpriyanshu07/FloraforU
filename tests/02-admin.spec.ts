@@ -1104,7 +1104,12 @@ test("editing a category or a gallery item shows the form on a phone", async ({
     await page.getByRole("link", { name: "Edit" }).first().click();
     await page.waitForURL(/edit=/);
 
-    const form = page.locator("form").last();
+    // Targeted by its own Save button rather than by being the last form on
+    // the page. The Subcategories panel below the editor adds a form per row
+    // plus one to add with, so `.last()` started measuring "Add a
+    // subcategory" at 2076px and failing on a page where the edit form was
+    // sitting correctly at 346px.
+    const form = page.locator('form:has(button:text-is("Save changes"))').first();
     const box = (await form.boundingBox())!;
     expect(
       box.y,
@@ -1298,3 +1303,91 @@ test("an optional figure the shop clears actually leaves the site", async ({ pag
   await page.goto("/contact");
   await expect(page.locator("dt", { hasText: /^Followers$/ })).toHaveCount(0);
 });
+
+test("subcategories can be added, renamed and removed without losing products", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/categories");
+
+  // The subcategory panel only exists on a category being edited, because a
+  // subcategory means nothing away from its parent. Named for the same reason
+  // as below: the suite shares a database and runs in order.
+  await page
+    .locator("tr")
+    .filter({ hasText: "Artificial Flowers & Greenery" })
+    .getByRole("link", { name: "Edit" })
+    .click();
+  await page.waitForURL(/edit=/);
+  const panel = page.locator('section:has(h2:text("Subcategories"))');
+  await expect(panel).toBeVisible();
+  const before = await panel.locator("li").count();
+
+  await page.fill("#new-subcategory", "Test Grouping");
+  await panel.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByText("Subcategory “Test Grouping” saved.")).toBeVisible();
+  await expect(panel.locator("li")).toHaveCount(before + 1);
+
+  // A brand-new subcategory has nothing in it, and an empty chip on the public
+  // page would read as a broken link rather than as a section not yet filled.
+  const row = panel.locator("li").filter({ hasText: "Test Grouping" });
+  await expect(row).toContainText("No products yet");
+
+  await row.getByLabel(/^Rename Test Grouping$/).fill("Renamed Grouping");
+  await row.getByRole("button", { name: "Rename" }).click();
+  await expect(page.getByText("Subcategory “Renamed Grouping” saved.")).toBeVisible();
+
+  const renamed = panel.locator("li").filter({ hasText: "Renamed Grouping" });
+  page.once("dialog", (d) => d.accept());
+  await renamed.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText("Subcategory “Renamed Grouping” deleted.")).toBeVisible();
+  await expect(panel.locator("li")).toHaveCount(before);
+});
+
+test("deleting a subcategory leaves its products in the category", async ({ page }) => {
+  // The schema nulls subcategoryId rather than cascading, so nothing is lost.
+  // This is the assertion that would catch a cascade being introduced by
+  // accident — which would silently delete stock, the worst outcome this
+  // catalogue has.
+  await signIn(page);
+  await page.goto("/admin/categories");
+  // Named rather than "the first category": the suite shares one database and
+  // runs in order, so which category sorts first — and whether it has any
+  // subcategories left by the time this runs — is not something to rely on.
+  await page
+    .locator("tr")
+    .filter({ hasText: "Artificial Flowers & Greenery" })
+    .getByRole("link", { name: "Edit" })
+    .click();
+  await page.waitForURL(/edit=/);
+
+  const panel = page.locator('section:has(h2:text("Subcategories"))');
+  const populated = panel.locator("li").filter({ hasText: /\d+ products? ·/ }).first();
+  await expect(populated).toBeVisible();
+  const label = (await populated.locator("span.font-medium").first().textContent())!.trim();
+  const count = Number(
+    (await populated.textContent())!.match(/(\d+) products? ·/)![1],
+  );
+  expect(count).toBeGreaterThan(0);
+
+  const categoryHref = page.url();
+  const totalBefore = await productsInThisCategory(page, categoryHref);
+
+  page.once("dialog", (d) => d.accept());
+  await populated.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText(`Subcategory “${label}” deleted.`)).toBeVisible();
+  await expect(page.getByText(`Its ${count} product`)).toBeVisible();
+
+  expect(
+    await productsInThisCategory(page, categoryHref),
+    "deleting a subcategory took products with it",
+  ).toBe(totalBefore);
+});
+
+/** How many products the admin list shows for the category being edited. */
+async function productsInThisCategory(page: import("@playwright/test").Page, editUrl: string) {
+  const categoryId = new URL(editUrl).searchParams.get("edit")!;
+  await page.goto(`/admin/products?categoryId=${categoryId}`);
+  const text = (await page.locator("p").filter({ hasText: /product/ }).first().textContent())!;
+  const n = Number(text.match(/(\d+)/)![1]);
+  await page.goto(editUrl);
+  return n;
+}

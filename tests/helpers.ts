@@ -76,7 +76,12 @@ function dbEval(body: string): string {
     [
       "tsx",
       "-e",
-      `import { PrismaClient } from "./src/generated/prisma";
+      // dotenv explicitly: this is a fresh process, and `tsx -e` does not read
+      // .env the way `npm run seed` does. Without it the snippet dies with
+      // "Environment variable not found: DATABASE_URL" on any machine that
+      // keeps its connection string in a file rather than the shell.
+      `import "dotenv/config";
+       import { PrismaClient } from "./src/generated/prisma";
        const db = new PrismaClient();
        (async () => { ${body} })()
          .then(() => db.$disconnect())

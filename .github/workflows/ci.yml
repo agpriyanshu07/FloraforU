@@ -64,6 +64,14 @@ jobs:
       - name: Lint
         run: npx eslint src
 
+      # The subcategory rules exist twice — in the classifier the app runs and
+      # in the migration that filed the catalogue — so CI checks they still say
+      # the same thing. They are a regex apart in two dialects; the first draft
+      # of the migration differed by one character and silently classified
+      # nothing into three of the subcategories.
+      - name: Subcategory rules match the migration
+        run: npm run check:subcategories
+
       # `next typegen` first: LayoutProps and friends are generated types, and on
       # a clean checkout they do not exist until a build or typegen has run.
       - name: Type-check
