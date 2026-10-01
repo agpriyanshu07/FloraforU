@@ -695,3 +695,31 @@ WHERE s."slug" = 'mirror-stage' AND c."name" = 'Mirror Décor'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* 'stage|wall|pillar|table|hexagon';
+
+-- ====================================================================
+-- Sofa & Chair
+-- ====================================================================
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'divana', 'Divana', '', 0, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Sofa & Chair'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'chair', 'Chair', '', 1, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Sofa & Chair'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'divana' AND c."name" = 'Sofa & Chair'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'dewana|divana|diwan|sofa';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'chair' AND c."name" = 'Sofa & Chair'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'chair';

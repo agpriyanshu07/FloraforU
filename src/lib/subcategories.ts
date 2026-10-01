@@ -126,6 +126,13 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Mirror Ball n More", pattern: /ball/i },
     { name: "Mirror Stage", pattern: /stage|wall|pillar|table|hexagon/i },
   ],
+  "Sofa & Chair": [
+    // The shop's card reads "Divana"; every product spells it "Dewana"
+    // ("Blue Dewana (Sagwan Wood)"). Both are matched so the stock files
+    // itself, and the chip keeps the shop's spelling.
+    { name: "Divana", pattern: /dewana|divana|diwan|sofa/i },
+    { name: "Chair", pattern: /chair/i },
+  ],
 };
 
 /** Turns a subcategory name into its URL slug, matching the migration. */
