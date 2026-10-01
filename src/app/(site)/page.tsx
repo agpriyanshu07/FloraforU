@@ -101,18 +101,36 @@ export default async function HomePage() {
                 <ArrowRightIcon className="h-4 w-4" />
               </Link>
             </div>
-            <dl className="mt-9 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">
-              {[
+            {/* Only the product count is derived from the catalogue and so is
+                always true. The other two are typed in Settings, and an
+                unfilled one is dropped rather than printed as a blank space
+                under a heading -- the row sizes itself to what survives. */}
+            {(() => {
+              const stats = [
                 ["Products", `${categories.reduce((n, c) => n + c._count.products, 0)}+`],
                 ["Events served", settings.eventsCount],
                 ["Instagram", settings.followerCount],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-[13px] text-ink-600">{label}</dt>
-                  <dd className="font-display text-2xl text-rose-600">{value}</dd>
-                </div>
-              ))}
-            </dl>
+              ].filter(([, value]) => value.trim() !== "");
+              return (
+                <dl
+                  className={`mt-9 grid gap-4 border-t border-line pt-6 ${
+                    // The rule above the stats is as wide as the stats under
+                    // it. Left at max-w-md, a single surviving figure sat at
+                    // the far left of a rule four times its width and read as
+                    // something missing rather than something omitted.
+                    stats.length === 1 ? "max-w-[10rem]" : "max-w-md"
+                  }`}
+                  style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
+                >
+                  {stats.map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-[13px] text-ink-600">{label}</dt>
+                      <dd className="font-display text-2xl text-rose-600">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              );
+            })()}
           </div>
 
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line lg:aspect-[5/4]">

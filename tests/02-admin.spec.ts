@@ -1261,3 +1261,40 @@ test("no admin list hides its Actions column at any desktop width", async ({ pag
     }
   }
 });
+
+test("an optional figure the shop clears actually leaves the site", async ({ page }) => {
+  // "5,500+" followers and "400+" events served were invented at build time
+  // and printed in the hero and the footer as fact. Blanking the field did not
+  // remove them: an empty value counted as "unset", so getSettings handed the
+  // invented default straight back and the figure reappeared. The shop had no
+  // way to stop the site making a claim on its behalf.
+  await signIn(page);
+
+  const setFollowers = async (value: string) => {
+    await page.goto("/admin/settings");
+    await page.fill("#followerCount", value);
+    await page.getByRole("button", { name: /^Save/ }).first().click();
+    // The form validates the whole settings record, not just the field being
+    // changed, so an unrelated bad value elsewhere rejects the save and
+    // nothing is written. Without this the test would go on to check the
+    // homepage and blame the rendering for a save that never happened.
+    await expect(page.getByRole("status")).toContainText("Settings saved");
+  };
+
+  await setFollowers("7,777+");
+  await page.goto("/");
+  // Proves the round trip works at all, so the clear below is a real clear
+  // and not a page that never showed the figure in the first place.
+  await expect(page.locator("dl").filter({ hasText: "Instagram" }).first()).toContainText("7,777+");
+
+  await setFollowers("");
+  await page.goto("/");
+  await expect(page.getByText("7,777+")).toHaveCount(0);
+  // The heading has to go with the number. Hiding the value alone would leave
+  // "Instagram" standing over an empty space, which reads as a broken page
+  // rather than a figure the shop chose not to publish.
+  await expect(page.locator("dt", { hasText: /^Instagram$/ })).toHaveCount(0);
+
+  await page.goto("/contact");
+  await expect(page.locator("dt", { hasText: /^Followers$/ })).toHaveCount(0);
+});
