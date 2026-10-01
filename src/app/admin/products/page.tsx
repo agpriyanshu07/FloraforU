@@ -28,6 +28,7 @@ export default async function AdminProductsPage({
   const categoryId = sp.categoryId ?? "";
   const status = sp.status ?? "";
   const photo = sp.photo ?? "";
+  const filed = sp.filed ?? "";
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
 
   const where: Prisma.ProductWhereInput = {};
@@ -46,9 +47,18 @@ export default async function AdminProductsPage({
     where.images = { some: { url: { startsWith: PLACEHOLDER_PREFIX } } };
   }
   if (photo === "none") where.images = { none: {} };
+  // The point of this filter is the job the shop has right now: 41 pots and
+  // 17 lights that no rule could file from their names, which have to be
+  // found before they can be ticked and filed in bulk.
+  if (filed === "no") where.subcategoryId = null;
+  if (filed === "yes") where.subcategoryId = { not: null };
 
-  const [categories, products, total] = await Promise.all([
+  const [categories, subcategories, products, total] = await Promise.all([
     db.category.findMany({ orderBy: { displayOrder: "asc" }, select: { id: true, name: true } }),
+    db.subcategory.findMany({
+      orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }],
+      select: { id: true, name: true, category: { select: { name: true } } },
+    }),
     db.product.findMany({
       where,
       orderBy: { updatedAt: "desc" },
@@ -93,13 +103,42 @@ export default async function AdminProductsPage({
           Imported {sp.imported} product{sp.imported === "1" ? "" : "s"} successfully.
         </Banner>
       )}
-      {sp.bulk && (
+      {sp.bulk && sp.bulk !== "subcategorise" && (
         <Banner tone="success">
           Applied “{sp.bulk}” to {sp.count} product{sp.count === "1" ? "" : "s"}.
         </Banner>
       )}
+      {/* Filing under a subcategory reports what actually moved rather than
+          what was ticked, because it only ever files products already in that
+          subcategory's category. Ticking 25 mixed rows and filing them into
+          "Plastic Flower Pot" legitimately moves none of them, and a plain
+          "Applied to 0 products" reads as a bug rather than as the safeguard
+          doing its job. */}
+      {sp.bulk === "subcategorise" && (
+        Number(sp.count) === 0 ? (
+          <Banner tone="error">
+            Nothing was filed. None of the {sp.of} selected product
+            {sp.of === "1" ? "" : "s"} are in that subcategory&rsquo;s category —
+            filter by category first, then tick and file.
+          </Banner>
+        ) : (
+          <Banner tone="success">
+            Filed {sp.count} product{sp.count === "1" ? "" : "s"} under that
+            subcategory.
+            {Number(sp.of) > Number(sp.count) && (
+              <>
+                {" "}The other {Number(sp.of) - Number(sp.count)} of the {sp.of}{" "}
+                selected are in a different category and were left alone.
+              </>
+            )}
+          </Banner>
+        )
+      )}
       {sp.error === "nothing-selected" && (
         <Banner tone="error">Tick at least one product before applying a bulk action.</Banner>
+      )}
+      {sp.error === "no-target-subcategory" && (
+        <Banner tone="error">Choose a subcategory to file the selected products under.</Banner>
       )}
       {sp.error === "no-target-category" && (
         <Banner tone="error">Choose the category to move the selected products into.</Banner>
@@ -118,12 +157,12 @@ export default async function AdminProductsPage({
             <input id="q" name="q" defaultValue={q} className="field" placeholder="Name, code or spec" />
           </div>
           <button type="submit" className="btn-primary">Filter</button>
-          {(q || categoryId || status || photo) && (
+          {(q || categoryId || status || photo || filed) && (
             <Link href="/admin/products" className="btn-ghost">Reset</Link>
           )}
         </div>
 
-        <FilterPanel activeCount={[categoryId, status, photo].filter(Boolean).length}>
+        <FilterPanel activeCount={[categoryId, status, photo, filed].filter(Boolean).length}>
           <div className="mt-3 grid gap-3 sm:grid-cols-[auto_auto] sm:justify-start">
             <div>
               <label htmlFor="categoryId" className="field-label">Category</label>
@@ -150,11 +189,22 @@ export default async function AdminProductsPage({
                 <option value="none">No photo at all</option>
               </select>
             </div>
+            <div>
+              <label htmlFor="filed" className="field-label">Subcategory</label>
+              <select id="filed" name="filed" defaultValue={filed} className="field sm:w-52">
+                <option value="">All</option>
+                <option value="no">Not filed under one</option>
+                <option value="yes">Filed</option>
+              </select>
+            </div>
           </div>
         </FilterPanel>
       </form>
 
-      <BulkBar categories={categories} />
+      <BulkBar
+        categories={categories}
+        subcategories={subcategories.map((s) => ({ id: s.id, name: s.name, categoryName: s.category.name }))}
+      />
 
       <form id="products-form">
         {/* The bulk action reads these back so the list stays filtered after
@@ -165,6 +215,7 @@ export default async function AdminProductsPage({
         <input type="hidden" name="filter_categoryId" value={categoryId} />
         <input type="hidden" name="filter_status" value={status} />
         <input type="hidden" name="filter_photo" value={photo} />
+        <input type="hidden" name="filter_filed" value={filed} />
         <TableShell
           head={
             <tr>
@@ -181,7 +232,7 @@ export default async function AdminProductsPage({
         >
           {products.length === 0 ? (
             <EmptyRow colSpan={8}>
-              {q || categoryId || status || photo ? (
+              {q || categoryId || status || photo || filed ? (
                 <>No products match those filters. <Link href="/admin/products" className="text-rose-600">Clear them</Link>.</>
               ) : (
                 <>No products yet. <Link href="/admin/products/new" className="text-rose-600">Add one</Link> or <Link href="/admin/products/import" className="text-rose-600">bulk import a spreadsheet</Link>.</>
@@ -278,7 +329,7 @@ export default async function AdminProductsPage({
         page={page}
         pageCount={pageCount}
         basePath="/admin/products"
-        params={{ q, categoryId, status, photo }}
+        params={{ q, categoryId, status, photo, filed }}
         label="Product pages"
       />
     </>

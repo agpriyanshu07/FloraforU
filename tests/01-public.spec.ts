@@ -1308,18 +1308,17 @@ test("a category's subcategory chips narrow the list without losing anything", a
   const all = chips.getByRole("link", { name: /^All/ });
   await expect(all).toHaveAttribute("aria-current", "true");
 
-  const stands = chips.getByRole("link", { name: /^Light Stands/ });
+  const stands = chips.getByRole("link", { name: /^Light Stand & Hanging/ });
   const href = await stands.getAttribute("href");
-  expect(href, "a chip must be a real, shareable URL").toContain("sub=light-stands");
+  expect(href, "a chip must be a real, shareable URL").toContain("sub=light-stand-and-hanging");
 
   const before = await page.locator('a[href^="/product/"]').count();
   await stands.click();
-  await page.waitForURL("**/categories/lights-lighting-decor?sub=light-stands");
+  await page.waitForURL("**/categories/lights-lighting-decor?sub=light-stand-and-hanging");
 
-  await expect(chips.getByRole("link", { name: /^Light Stands/ })).toHaveAttribute(
-    "aria-current",
-    "true",
-  );
+  await expect(
+    chips.getByRole("link", { name: /^Light Stand & Hanging/ }),
+  ).toHaveAttribute("aria-current", "true");
   const after = await page.locator('a[href^="/product/"]').count();
   expect(after, "the chip did not narrow the grid").toBeLessThan(before);
   expect(after, "the chip emptied the grid").toBeGreaterThan(0);
@@ -1341,11 +1340,11 @@ test("a subcategory chip keeps the search it was applied to", async ({ page }) =
   await page.goto("/categories/lights-lighting-decor?q=stand&sort=price-asc");
   const chip = page
     .getByRole("navigation", { name: "Filter by type" })
-    .getByRole("link", { name: /^Light Stands/ });
+    .getByRole("link", { name: /^Light Stand & Hanging/ });
   const href = await chip.getAttribute("href");
   expect(href).toContain("q=stand");
   expect(href).toContain("sort=price-asc");
-  expect(href).toContain("sub=light-stands");
+  expect(href).toContain("sub=light-stand-and-hanging");
 });
 
 test("a category with no subcategories shows no filter row at all", async ({ page }) => {

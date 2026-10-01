@@ -22,6 +22,11 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { SUBCATEGORY_RULES, subcategorySlug } from "../src/lib/subcategories";
 
+// The migration is generated from the same rules by
+// scripts/generate-classify-migration.ts, so this check is a guard against
+// someone editing one and not regenerating the other — not a substitute for
+// regenerating.
+
 const MIGRATIONS = join(process.cwd(), "prisma", "migrations");
 
 function findClassifier(): string {
@@ -53,7 +58,9 @@ function main() {
         problems.push(`${category} / ${rule.name}: no "${slug}" in the migration.`);
         continue;
       }
-      if (rule.pattern === null) continue;
+      // A catch-all has no pattern, and a hand-filed subcategory has no
+      // UPDATE at all — there is nothing to compare for either.
+      if (!rule.pattern) continue;
 
       const expected = asPostgres(rule.pattern).replace(/'/g, "''");
       if (!sql.includes(`'${expected}'`)) {

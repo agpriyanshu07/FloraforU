@@ -1391,3 +1391,69 @@ async function productsInThisCategory(page: import("@playwright/test").Page, edi
   await page.goto(editUrl);
   return n;
 }
+
+test("products can be filed into a subcategory in bulk, and only the right ones", async ({ page }) => {
+  // 41 pots and 17 lights carry nothing in their names that says which
+  // subcategory they belong to, so the shop has to place them. One at a time
+  // that is 58 round trips through the edit form.
+  await signIn(page);
+  await page.goto("/admin/products");
+
+  const categoryId = (await page
+    .locator("#categoryId option")
+    .filter({ hasText: "Pots & Vases" })
+    .first()
+    .getAttribute("value"))!;
+
+  await page.goto(`/admin/products?categoryId=${categoryId}&filed=no`);
+  const unfiled = page.locator("p").filter({ hasText: /products? matching/ }).first();
+  const before = Number((await unfiled.textContent())!.match(/(\d+)/)![1]);
+  expect(before, "no unfiled pots to work with").toBeGreaterThan(0);
+
+  await page.locator('thead input[type="checkbox"]').first().check();
+  await page.selectOption("#bulkAction", "subcategorise");
+
+  // Deliberately a subcategory belonging to a DIFFERENT category. Nothing
+  // should move: filing a pot under "Flower Bunch" would put it somewhere the
+  // public site never shows, and the product would simply vanish from view.
+  const wrong = page.locator('#bulkSubcategoryId optgroup[label="Artificial Flowers & Greenery"] option').first();
+  await page.selectOption("#bulkSubcategoryId", (await wrong.getAttribute("value"))!);
+  await page.locator(".card button[type=submit]").last().click();
+  await expect(page.getByText(/Nothing was filed/)).toBeVisible();
+
+  await expect(unfiled).toContainText(`${before} products`);
+
+  // Now the right one.
+  await page.locator('thead input[type="checkbox"]').first().check();
+  await page.selectOption("#bulkAction", "subcategorise");
+  const right = page.locator('#bulkSubcategoryId optgroup[label="Pots & Vases"] option').first();
+  await page.selectOption("#bulkSubcategoryId", (await right.getAttribute("value"))!);
+  await page.locator(".card button[type=submit]").last().click();
+
+  await expect(page.getByText(/^Filed \d+ products? under that subcategory\./)).toBeVisible();
+  const after = Number((await unfiled.textContent())!.match(/(\d+)/)![1]);
+  expect(after, "the bulk filing did not reduce the unfiled list").toBeLessThan(before);
+});
+
+test("moving a product to another category clears its old subcategory", async ({ page }) => {
+  // Otherwise the product keeps a subcategory belonging to the category it
+  // just left, and no page on the public site would ever list it: the chips
+  // are scoped to the category, so it falls through every one of them.
+  await signIn(page);
+  await page.goto("/admin/products?filed=yes");
+  await expect(page.locator("tbody tr").first()).toBeVisible();
+
+  await page.locator('tbody input[name="ids"]').first().check();
+  await page.selectOption("#bulkAction", "recategorise");
+  const target = page.locator("#bulkCategoryId option").filter({ hasText: "Cooler & Fan" }).first();
+  await page.selectOption("#bulkCategoryId", (await target.getAttribute("value"))!);
+  await page.locator(".card button[type=submit]").last().click();
+  await expect(page.getByText(/Applied “recategorise”/)).toBeVisible();
+
+  const moved = await page.goto("/admin/products?filed=no");
+  expect(moved!.status()).toBe(200);
+  await expect(
+    page.locator("tbody tr").filter({ hasText: "Cooler & Fan" }).first(),
+    "the moved product kept a subcategory from its old category",
+  ).toBeVisible();
+});

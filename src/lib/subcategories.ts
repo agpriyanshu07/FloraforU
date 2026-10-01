@@ -22,32 +22,53 @@
  * Order is the whole design. The first rule that matches wins, so the specific
  * patterns come before the general ones: "2 Jar Green Flower Box" is a Jar
  * Hamper, not a Gift Box, because Jar Hampers is listed first. A rule with a
- * null pattern is the category's catch-all and must be last.
+ * rule marked `catchAll` is the category's last resort and must be last. A
+ * rule with a null pattern is never matched automatically at all.
  *
  * A category absent from this table has no subcategories, and that is a
  * decision rather than an omission: Cooler & Fan has four products and
  * Festive & Puja one, and splitting those helps nobody.
  */
-export type SubcategoryRule = { name: string; pattern: RegExp | null };
+export type SubcategoryRule = {
+  name: string;
+  /**
+   * What files a product here automatically.
+   *
+   *   RegExp   — matched against the product name.
+   *   null     — the subcategory exists but nothing is ever filed into it
+   *              automatically. Used where the distinction is real but is not
+   *              in the product name: the shop knows a pot is ceramic, the
+   *              word "ceramic" appears nowhere in "Aura Pot 10 Inch". These
+   *              are filed by hand in the admin.
+   *   catchAll — everything in the category still unfiled. At most one per
+   *              category, and it must be last.
+   *
+   * The distinction between `null` and `catchAll` matters: before they were
+   * separated, a null pattern meant catch-all, and giving Pots & Vases five
+   * by-material subcategories would have filed all 41 pots into whichever was
+   * listed first.
+   */
+  pattern?: RegExp | null;
+  catchAll?: true;
+};
 
 export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
   "Lights & Lighting Décor": [
-    { name: "Chandeliers & Jhumar", pattern: /chandelier/i },
-    { name: "Light Panels", pattern: /\bpanel\b/i },
-    { name: "Light Stands", pattern: /light stand|candle stand|x stand|stand \(set/i },
-    { name: "Hanging Lights", pattern: /hanging/i },
-    { name: "LED & Par Lights", pattern: /\bled\b|par light/i },
-    { name: "Bulbs & Holders", pattern: /\bbulb\b/i },
-    { name: "Decorative Lights", pattern: null },
+    { name: "Jhumar", pattern: /chandelier|jhumar/i },
+    { name: "LED, Palco & Strip Light", pattern: /\bled\b|palco|strip|par light/i },
+    { name: "Light Stand & Hanging", pattern: /light stand|candle stand|x stand|stand \(set|hanging/i },
+    { name: "Imported Light Stand", pattern: null },
+    { name: "Imported Hanging Light", pattern: null },
   ],
   "Artificial Flowers & Greenery": [
-    { name: "Flower Bunches", pattern: /bunch/i },
-    { name: "Hanging & Creepers", pattern: /hanging|latta|wisteria/i },
+    { name: "Flower Bunch", pattern: /bunch/i },
+    { name: "Ready Panel", pattern: /panel|ready/i },
+    { name: "Hanging", pattern: /hanging|latta|wisteria/i },
+    { name: "Golden Sticks", pattern: /(golden|silver).*stick|stick.*(golden|silver)/i },
     { name: "Sticks", pattern: /stick/i },
-    { name: "Leaves & Patta", pattern: /patta|pata|leave|leaf|money plant|satter/i },
-    { name: "Fillers & Pampas", pattern: /filler|pompas|gypsy|pops|poleen/i },
-    { name: "Golden & Silver", pattern: /golden|silver/i },
-    { name: "Loose Flowers", pattern: null },
+    { name: "Leaf", pattern: /patta|pata|leave|leaf|money plant|satter/i },
+    { name: "Filler", pattern: /filler|pompas|gypsy|pops|poleen/i },
+    { name: "Loose Flowers", catchAll: true },
   ],
   "Gift Boxes, Trays, Bags & Baskets": [
     { name: "Jar Hampers", pattern: /^\d+\s*(\+\s*\d+)?\s*jar|^\d+ khana|premium \d+ jar/i },
@@ -57,16 +78,17 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Trays & Platters", pattern: /tray|platter/i },
     { name: "Baskets & Tokri", pattern: /basket|tokri|balti|cane/i },
     { name: "Gift Boxes", pattern: /\bbox\b/i },
-    { name: "Other Gifting", pattern: null },
+    { name: "Other Gifting", catchAll: true },
   ],
   "Backdrops, Wall Panels & Cloths": [
-    { name: "Table & Chair Covers", pattern: /table cover|chair cover|counter table/i },
-    { name: "Ceiling Décor", pattern: /ceiling/i },
-    { name: "Galaxy & Butta", pattern: /galaxy|galexy|butta/i },
-    { name: "Wall Backdrops", pattern: /wall/i },
-    { name: "Panels", pattern: /panel/i },
-    { name: "Cloth & Fabric Rolls", pattern: /lycra|cloth|chindi|print|foil|net|mate|grass/i },
-    { name: "Other Backdrop Décor", pattern: null },
+    { name: "Wall", pattern: /wall/i },
+    { name: "Ceiling", pattern: /ceiling/i },
+    { name: "Passage", pattern: /passage/i },
+    { name: "Table - Chair Cover", pattern: /table cover|chair cover|counter table/i },
+    { name: "Selfie Cloths", pattern: /selfie/i },
+    { name: "Printed Cloth", pattern: /print/i },
+    { name: "Hanging Cloths & Backdrops", pattern: /hanging|jhaler|chindi|daman|panel|butta/i },
+    { name: "Plain Cloth", pattern: /lycra|velvet|roto|micro|galaxy|galexy|net|cloth|foil|mate|grass/i },
   ],
   "Rajasthani & Haldi-Mehndi-Mayra Décor": [
     { name: "Chakri", pattern: /chakri/i },
@@ -75,27 +97,27 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Umbrellas", pattern: /umbrella/i },
     { name: "Jhumar & Hangings", pattern: /jhumar|ring with bell|dream catcher|pankh/i },
     { name: "Kites", pattern: /kite/i },
-    { name: "Other Rajasthani", pattern: null },
+    { name: "Other Rajasthani", catchAll: true },
   ],
   "Packing & Bouquet Accessories": [
     { name: "Ribbons, Bows & Lace", pattern: /ribbon|bow|lace/i },
     { name: "Tapes & Glue", pattern: /tape|glue/i },
     { name: "Cellophane & Nets", pattern: /cellophane|net/i },
     { name: "Papers & Sheets", pattern: /paper|sheet|tissue/i },
-    { name: "Sprays & Moti", pattern: null },
+    { name: "Sprays & Moti", catchAll: true },
   ],
   "Pots & Vases": [
-    { name: "Railings & Fences", pattern: /railing|fence/i },
-    { name: "Pillar & Layer Pots", pattern: /pillar|layer/i },
-    { name: "Bottle Pots", pattern: /bottle|botal/i },
-    { name: "Printed & Patterned", pattern: /printed|marble|lace|patta|moti|jali|net/i },
-    { name: "Designer Pots", pattern: null },
+    { name: "Plastic Flower Pot", pattern: null },
+    { name: "China Pot", pattern: null },
+    { name: "Ceramic Pot", pattern: null },
+    { name: "Metal Pot", pattern: null },
+    { name: "Urli", pattern: /urli/i },
   ],
   "SFX & Special Effects": [
-    { name: "Pyro & Sparkular", pattern: /pyro|sparkular/i },
-    { name: "CO2 & Confetti", pattern: /co2|confetti/i },
-    { name: "Smoke, Ice & Bubbles", pattern: /dry ice|bubble|foam machine|fan wheel/i },
-    { name: "Balloon & Photo Booth", pattern: /balloon|selfie booth/i },
+    { name: "Machine", pattern: /machine|wheel|booth/i },
+    { name: "Pyro", pattern: /pyro|sparkular/i },
+    { name: "Paper & Jari Confetti", pattern: /confetti/i },
+    { name: "Liquid & Powder", pattern: /co2|gun/i },
   ],};
 
 /** Turns a subcategory name into its URL slug, matching the migration. */
@@ -122,7 +144,8 @@ export function classifyProduct(
   const rules = SUBCATEGORY_RULES[categoryName];
   if (!rules) return null;
   for (const rule of rules) {
-    if (rule.pattern === null || rule.pattern.test(productName)) return rule.name;
+    if (rule.catchAll) return rule.name;
+    if (rule.pattern && rule.pattern.test(productName)) return rule.name;
   }
   return null;
 }

@@ -245,13 +245,14 @@ export async function bulkProductAction(formData: FormData) {
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   const action = String(formData.get("bulkAction") ?? "");
   const targetCategory = String(formData.get("bulkCategoryId") ?? "");
+  const targetSubcategory = String(formData.get("bulkSubcategoryId") ?? "");
 
   // Whatever the list was filtered to has to survive the round trip. A bulk
   // delete only ever clears one page of 25, so anything larger takes several
   // passes; dropping the filter in between would leave the next "select all"
   // pointing at the whole catalogue instead of the rows being cleared out.
   const filters = new URLSearchParams();
-  for (const key of ["q", "categoryId", "status", "photo"]) {
+  for (const key of ["q", "categoryId", "status", "photo", "filed"]) {
     const value = String(formData.get(`filter_${key}`) ?? "");
     if (value) filters.set(key, value);
   }
@@ -274,9 +275,38 @@ export async function bulkProductAction(formData: FormData) {
       break;
     case "recategorise":
       if (!targetCategory) redirect(back({ error: "no-target-category" }));
+      // Moving a product to another category invalidates any subcategory it
+      // had, which belonged to the old one. Clearing it here is what stops a
+      // product ending up filed under a subcategory of a category it is no
+      // longer in — a state nothing on the public site would ever show.
       await db.product.updateMany({
         where: { id: { in: ids } },
-        data: { categoryId: targetCategory },
+        data: { categoryId: targetCategory, subcategoryId: null },
+      });
+      break;
+    case "subcategorise": {
+      if (!targetSubcategory) redirect(back({ error: "no-target-subcategory" }));
+      const sub = await db.subcategory.findUnique({
+        where: { id: targetSubcategory },
+        select: { categoryId: true },
+      });
+      if (!sub) redirect(back({ error: "no-target-subcategory" }));
+      // Scoped to the subcategory's own category, so a selection spanning two
+      // categories files only the rows that belong there rather than silently
+      // dragging the rest somewhere invisible. The count below reports what
+      // actually moved, not what was ticked.
+      const moved = await db.product.updateMany({
+        where: { id: { in: ids }, categoryId: sub.categoryId },
+        data: { subcategoryId: targetSubcategory },
+      });
+      refreshPublicPages();
+      revalidatePath("/admin/products");
+      redirect(back({ bulk: action, count: String(moved.count), of: String(ids.length) }));
+    }
+    case "unfile":
+      await db.product.updateMany({
+        where: { id: { in: ids } },
+        data: { subcategoryId: null },
       });
       break;
     case "delete":
