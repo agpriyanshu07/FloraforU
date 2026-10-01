@@ -178,99 +178,148 @@ WHERE s."slug" = 'loose-flowers' AND c."name" = 'Artificial Flowers & Greenery'
 -- ====================================================================
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'jar-hampers', 'Jar Hampers', '', 0, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'dry-fruit-box-2-jar', 'Dry Fruit Box 2 Jar', '', 0, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'tin-jars', 'Tin Jars', '', 1, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'dry-fruit-box-3-jar', 'Dry Fruit Box 3 Jar', '', 1, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'potli-bags', 'Potli Bags', '', 2, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'dry-fruit-box-4-jar', 'Dry Fruit Box 4 Jar', '', 2, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'bags-and-purses', 'Bags & Purses', '', 3, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'dry-fruit-box-5-6-8-jar', 'Dry Fruit Box 5, 6, 8 Jar', '', 3, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'trays-and-platters', 'Trays & Platters', '', 4, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'dry-fruit-hamper-box', 'Dry Fruit Hamper Box', '', 4, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'baskets-and-tokri', 'Baskets & Tokri', '', 5, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'potly-grass-and-jar', 'Potly, Grass & Jar', '', 5, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'gift-boxes', 'Gift Boxes', '', 6, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'bags', 'Bags', '', 6, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'other-gifting', 'Other Gifting', '', 7, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'fancy-basket', 'Fancy Basket', '', 7, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'trays', 'Trays', '', 8, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'pine', 'Pine', '', 9, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'cane', 'Cane', '', 10, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'fancy-box', 'Fancy Box', '', 11, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Gift Boxes, Trays, Bags & Baskets'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'jar-hampers' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'dry-fruit-box-2-jar' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* '^\d+\s*(\+\s*\d+)?\s*jar|^\d+ khana|premium \d+ jar';
+  AND p."name" ~* '^2\s*jar';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'tin-jars' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'dry-fruit-box-3-jar' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'tin jar';
+  AND p."name" ~* '^3\s*(\+\s*2\s*)?jar';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'potli-bags' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'dry-fruit-box-4-jar' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'potli';
+  AND p."name" ~* '^4\s*jar|^4 khana';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'bags-and-purses' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'dry-fruit-box-5-6-8-jar' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* '\ybag\y|purse|attachi';
+  AND p."name" ~* '^[568]\s*jar';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'trays-and-platters' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'dry-fruit-hamper-box' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'hamper|dry fruit|premium \d+ jar|meva';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'potly-grass-and-jar' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'potli|potly|tin jar|\yjar\y|grass';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'bags' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* '\ybag\y|purse|attachi|balti';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'fancy-basket' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'basket|tokri';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'trays' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* 'tray|platter';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'baskets-and-tokri' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'pine' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'basket|tokri|balti|cane';
+  AND p."name" ~* 'pine';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'gift-boxes' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+WHERE s."slug" = 'cane' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'cane';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'fancy-box' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* '\ybox\y';
-
-UPDATE "Product" p SET "subcategoryId" = s."id"
-FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'other-gifting' AND c."name" = 'Gift Boxes, Trays, Bags & Baskets'
-  AND p."categoryId" = c."id"
-  AND p."subcategoryId" IS NULL;
 
 -- ====================================================================
 -- Backdrops, Wall Panels & Cloths
@@ -377,39 +426,51 @@ WHERE s."slug" = 'plain-cloth' AND c."name" = 'Backdrops, Wall Panels & Cloths'
 -- ====================================================================
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'chakri', 'Chakri', '', 0, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'kite', 'Kite', '', 0, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'lardi-and-garlands', 'Lardi & Garlands', '', 1, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'chakri', 'Chakri', '', 1, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'tassels-and-pom-poms', 'Tassels & Pom Poms', '', 2, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'lardi', 'Lardi', '', 2, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'umbrellas', 'Umbrellas', '', 3, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'umbrella', 'Umbrella', '', 3, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'jhumar-and-hangings', 'Jhumar & Hangings', '', 4, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'haldi-tub-urli', 'Haldi Tub (Urli)', '', 4, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'kites', 'Kites', '', 5, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'haldi-mehndi-items', 'Haldi / Mehndi Items', '', 5, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'other-rajasthani', 'Other Rajasthani', '', 6, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'rajasthani-hangings', 'Rajasthani Hangings', '', 6, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'props', 'Props', '', 7, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'kite' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'kite';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
@@ -420,42 +481,42 @@ WHERE s."slug" = 'chakri' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'lardi-and-garlands' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+WHERE s."slug" = 'lardi' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* 'lardi';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'tassels-and-pom-poms' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
-  AND p."categoryId" = c."id"
-  AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'tassal|tussal|pom ?pom|churdi';
-
-UPDATE "Product" p SET "subcategoryId" = s."id"
-FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'umbrellas' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+WHERE s."slug" = 'umbrella' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* 'umbrella';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'jhumar-and-hangings' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+WHERE s."slug" = 'haldi-tub-urli' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'jhumar|ring with bell|dream catcher|pankh';
+  AND p."name" ~* 'urli|haldi tub|haldi top';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'kites' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+WHERE s."slug" = 'haldi-mehndi-items' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'kite';
+  AND p."name" ~* 'haldi|mehendi|mehndi';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'other-rajasthani' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+WHERE s."slug" = 'rajasthani-hangings' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'jhumar|hanging|ring with bell|dream catcher|pankh|tassal|tussal|pom ?pom|churdi|lotus|rajni';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'props' AND c."name" = 'Rajasthani & Haldi-Mehndi-Mayra Décor'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL;
 
@@ -464,63 +525,40 @@ WHERE s."slug" = 'other-rajasthani' AND c."name" = 'Rajasthani & Haldi-Mehndi-Ma
 -- ====================================================================
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'ribbons-bows-and-lace', 'Ribbons, Bows & Lace', '', 0, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'ribbon', 'Ribbon', '', 0, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Packing & Bouquet Accessories'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'tapes-and-glue', 'Tapes & Glue', '', 1, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'packing-net-mesh', 'Packing Net Mesh', '', 1, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Packing & Bouquet Accessories'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'cellophane-and-nets', 'Cellophane & Nets', '', 2, c."id", NOW(), NOW()
-FROM "Category" c WHERE c."name" = 'Packing & Bouquet Accessories'
-ON CONFLICT ("categoryId", "slug") DO NOTHING;
-
-INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'papers-and-sheets', 'Papers & Sheets', '', 3, c."id", NOW(), NOW()
-FROM "Category" c WHERE c."name" = 'Packing & Bouquet Accessories'
-ON CONFLICT ("categoryId", "slug") DO NOTHING;
-
-INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), 'sprays-and-moti', 'Sprays & Moti', '', 4, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), 'cellophane-tissue-n-packing-paper', 'Cellophane Tissue n Packing Paper', '', 2, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = 'Packing & Bouquet Accessories'
 ON CONFLICT ("categoryId", "slug") DO NOTHING;
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'ribbons-bows-and-lace' AND c."name" = 'Packing & Bouquet Accessories'
+WHERE s."slug" = 'ribbon' AND c."name" = 'Packing & Bouquet Accessories'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* 'ribbon|bow|lace';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'tapes-and-glue' AND c."name" = 'Packing & Bouquet Accessories'
+WHERE s."slug" = 'packing-net-mesh' AND c."name" = 'Packing & Bouquet Accessories'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'tape|glue';
+  AND p."name" ~* '\ynet\y|mesh';
 
 UPDATE "Product" p SET "subcategoryId" = s."id"
 FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'cellophane-and-nets' AND c."name" = 'Packing & Bouquet Accessories'
+WHERE s."slug" = 'cellophane-tissue-n-packing-paper' AND c."name" = 'Packing & Bouquet Accessories'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'cellophane|net';
-
-UPDATE "Product" p SET "subcategoryId" = s."id"
-FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'papers-and-sheets' AND c."name" = 'Packing & Bouquet Accessories'
-  AND p."categoryId" = c."id"
-  AND p."subcategoryId" IS NULL
-  AND p."name" ~* 'paper|sheet|tissue';
-
-UPDATE "Product" p SET "subcategoryId" = s."id"
-FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
-WHERE s."slug" = 'sprays-and-moti' AND c."name" = 'Packing & Bouquet Accessories'
-  AND p."categoryId" = c."id"
-  AND p."subcategoryId" IS NULL;
+  AND p."name" ~* 'cellophane|tissue|paper|sheet';
 
 -- ====================================================================
 -- Pots & Vases
@@ -617,3 +655,43 @@ WHERE s."slug" = 'liquid-and-powder' AND c."name" = 'SFX & Special Effects'
   AND p."categoryId" = c."id"
   AND p."subcategoryId" IS NULL
   AND p."name" ~* 'co2|gun';
+
+-- ====================================================================
+-- Mirror Décor
+-- ====================================================================
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'entry-gate', 'Entry Gate', '', 0, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Mirror Décor'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'mirror-ball-n-more', 'Mirror Ball n More', '', 1, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Mirror Décor'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
+SELECT md5(random()::text || clock_timestamp()::text), 'mirror-stage', 'Mirror Stage', '', 2, c."id", NOW(), NOW()
+FROM "Category" c WHERE c."name" = 'Mirror Décor'
+ON CONFLICT ("categoryId", "slug") DO NOTHING;
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'entry-gate' AND c."name" = 'Mirror Décor'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'gate|entry';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'mirror-ball-n-more' AND c."name" = 'Mirror Décor'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'ball';
+
+UPDATE "Product" p SET "subcategoryId" = s."id"
+FROM "Subcategory" s JOIN "Category" c ON c."id" = s."categoryId"
+WHERE s."slug" = 'mirror-stage' AND c."name" = 'Mirror Décor'
+  AND p."categoryId" = c."id"
+  AND p."subcategoryId" IS NULL
+  AND p."name" ~* 'stage|wall|pillar|table|hexagon';

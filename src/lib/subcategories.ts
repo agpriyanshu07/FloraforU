@@ -71,14 +71,18 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Loose Flowers", catchAll: true },
   ],
   "Gift Boxes, Trays, Bags & Baskets": [
-    { name: "Jar Hampers", pattern: /^\d+\s*(\+\s*\d+)?\s*jar|^\d+ khana|premium \d+ jar/i },
-    { name: "Tin Jars", pattern: /tin jar/i },
-    { name: "Potli Bags", pattern: /potli/i },
-    { name: "Bags & Purses", pattern: /\bbag\b|purse|attachi/i },
-    { name: "Trays & Platters", pattern: /tray|platter/i },
-    { name: "Baskets & Tokri", pattern: /basket|tokri|balti|cane/i },
-    { name: "Gift Boxes", pattern: /\bbox\b/i },
-    { name: "Other Gifting", catchAll: true },
+    { name: "Dry Fruit Box 2 Jar", pattern: /^2\s*jar/i },
+    { name: "Dry Fruit Box 3 Jar", pattern: /^3\s*(\+\s*2\s*)?jar/i },
+    { name: "Dry Fruit Box 4 Jar", pattern: /^4\s*jar|^4 khana/i },
+    { name: "Dry Fruit Box 5, 6, 8 Jar", pattern: /^[568]\s*jar/i },
+    { name: "Dry Fruit Hamper Box", pattern: /hamper|dry fruit|premium \d+ jar|meva/i },
+    { name: "Potly, Grass & Jar", pattern: /potli|potly|tin jar|\bjar\b|grass/i },
+    { name: "Bags", pattern: /\bbag\b|purse|attachi|balti/i },
+    { name: "Fancy Basket", pattern: /basket|tokri/i },
+    { name: "Trays", pattern: /tray|platter/i },
+    { name: "Pine", pattern: /pine/i },
+    { name: "Cane", pattern: /cane/i },
+    { name: "Fancy Box", pattern: /\bbox\b/i },
   ],
   "Backdrops, Wall Panels & Cloths": [
     { name: "Wall", pattern: /wall/i },
@@ -91,20 +95,19 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Plain Cloth", pattern: /lycra|velvet|roto|micro|galaxy|galexy|net|cloth|foil|mate|grass/i },
   ],
   "Rajasthani & Haldi-Mehndi-Mayra Décor": [
+    { name: "Kite", pattern: /kite/i },
     { name: "Chakri", pattern: /chakri/i },
-    { name: "Lardi & Garlands", pattern: /lardi/i },
-    { name: "Tassels & Pom Poms", pattern: /tassal|tussal|pom ?pom|churdi/i },
-    { name: "Umbrellas", pattern: /umbrella/i },
-    { name: "Jhumar & Hangings", pattern: /jhumar|ring with bell|dream catcher|pankh/i },
-    { name: "Kites", pattern: /kite/i },
-    { name: "Other Rajasthani", catchAll: true },
+    { name: "Lardi", pattern: /lardi/i },
+    { name: "Umbrella", pattern: /umbrella/i },
+    { name: "Haldi Tub (Urli)", pattern: /urli|haldi tub|haldi top/i },
+    { name: "Haldi / Mehndi Items", pattern: /haldi|mehendi|mehndi/i },
+    { name: "Rajasthani Hangings", pattern: /jhumar|hanging|ring with bell|dream catcher|pankh|tassal|tussal|pom ?pom|churdi|lotus|rajni/i },
+    { name: "Props", catchAll: true },
   ],
   "Packing & Bouquet Accessories": [
-    { name: "Ribbons, Bows & Lace", pattern: /ribbon|bow|lace/i },
-    { name: "Tapes & Glue", pattern: /tape|glue/i },
-    { name: "Cellophane & Nets", pattern: /cellophane|net/i },
-    { name: "Papers & Sheets", pattern: /paper|sheet|tissue/i },
-    { name: "Sprays & Moti", catchAll: true },
+    { name: "Ribbon", pattern: /ribbon|bow|lace/i },
+    { name: "Packing Net Mesh", pattern: /\bnet\b|mesh/i },
+    { name: "Cellophane Tissue n Packing Paper", pattern: /cellophane|tissue|paper|sheet/i },
   ],
   "Pots & Vases": [
     { name: "Plastic Flower Pot", pattern: null },
@@ -118,7 +121,12 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Pyro", pattern: /pyro|sparkular/i },
     { name: "Paper & Jari Confetti", pattern: /confetti/i },
     { name: "Liquid & Powder", pattern: /co2|gun/i },
-  ],};
+  ],  "Mirror Décor": [
+    { name: "Entry Gate", pattern: /gate|entry/i },
+    { name: "Mirror Ball n More", pattern: /ball/i },
+    { name: "Mirror Stage", pattern: /stage|wall|pillar|table|hexagon/i },
+  ],
+};
 
 /** Turns a subcategory name into its URL slug, matching the migration. */
 export function subcategorySlug(name: string): string {
