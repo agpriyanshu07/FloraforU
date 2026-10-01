@@ -8,11 +8,13 @@ import ImageUploader from "./ImageUploader";
 import { StickyActions } from "./ui";
 
 type Category = { id: string; name: string };
+type Subcategory = { id: string; name: string; categoryId: string };
 
 export type ProductFormValues = {
   id?: string;
   name?: string;
   categoryId?: string;
+  subcategoryId?: string | null;
   spec?: string;
   description?: string;
   code?: string | null;
@@ -36,10 +38,12 @@ function Save({ isEdit }: { isEdit: boolean }) {
 
 export default function ProductForm({
   categories,
+  subcategories,
   values = {},
   uploadsEnabled = false,
 }: {
   categories: Category[];
+  subcategories: Subcategory[];
   values?: ProductFormValues;
   /** Whether Cloudinary is configured; decided on the server. */
   uploadsEnabled?: boolean;
@@ -62,6 +66,13 @@ export default function ProductForm({
   // defaultValue never reaches them. Controlled state survives the reset.
   const [poa, setPoa] = useState(sent ? sent.priceOnEnquiry === "on" : Boolean(values.priceOnEnquiry));
   const [categoryId, setCategoryId] = useState(sent ? (sent.categoryId ?? "") : (values.categoryId ?? ""));
+  const [subcategoryId, setSubcategoryId] = useState(
+    sent ? (sent.subcategoryId ?? "") : (values.subcategoryId ?? ""),
+  );
+  // Only the chosen category's own subcategories, so the list cannot offer
+  // "Jar Hampers" to a light fitting. Changing category clears the selection
+  // rather than carrying a now-invalid id into the save.
+  const subcategoryOptions = subcategories.filter((s) => s.categoryId === categoryId);
   const [availability, setAvailability] = useState(
     sent ? (sent.availability ?? "in_stock") : (values.availability ?? "in_stock"),
   );
@@ -98,7 +109,10 @@ export default function ProductForm({
               name="categoryId"
               required
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setSubcategoryId("");
+              }}
               className="field"
               {...describedBy("categoryId")}
             >
@@ -108,6 +122,34 @@ export default function ProductForm({
               ))}
             </select>
             {err("categoryId") && <span id="categoryId-error" className="field-error">{err("categoryId")}</span>}
+          </div>
+
+          <div>
+            <label htmlFor="subcategoryId" className="field-label">
+              Subcategory <span className="font-normal text-ink-600">(optional)</span>
+            </label>
+            <select
+              id="subcategoryId"
+              name="subcategoryId"
+              value={subcategoryId}
+              onChange={(e) => setSubcategoryId(e.target.value)}
+              className="field"
+              disabled={subcategoryOptions.length === 0}
+            >
+              <option value="">
+                {subcategoryOptions.length === 0
+                  ? "This category has none"
+                  : "Not filed under one"}
+              </option>
+              {subcategoryOptions.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <span className="field-hint">
+              {subcategoryOptions.length === 0
+                ? "Add subcategories to this category first, on the Categories page."
+                : "Narrows the filter chips on the category page. Leaving it blank is fine — the product still lists under its category."}
+            </span>
           </div>
 
           <div>

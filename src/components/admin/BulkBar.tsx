@@ -35,8 +35,10 @@ function countSelected() {
 }
 export default function BulkBar({
   categories,
+  subcategories,
 }: {
   categories: { id: string; name: string }[];
+  subcategories: { id: string; name: string; categoryName: string }[];
 }) {
   const [action, setAction] = useState("");
   const selected = useSyncExternalStore(subscribeToSelection, countSelected, () => UNKNOWN);
@@ -44,7 +46,8 @@ export default function BulkBar({
   if (selected === 0) {
     return (
       <p className="mb-4 text-[13px] text-ink-600">
-        Tick rows below to publish, move or delete several products at once.
+        Tick rows below to publish, move, file under a subcategory, or delete
+        several products at once.
       </p>
     );
   }
@@ -67,6 +70,8 @@ export default function BulkBar({
           <option value="publish">Publish</option>
           <option value="unpublish">Unpublish</option>
           <option value="recategorise">Move to category…</option>
+          <option value="subcategorise">File under subcategory…</option>
+          <option value="unfile">Remove from its subcategory</option>
           <option value="delete">Delete permanently</option>
         </select>
       </div>
@@ -90,6 +95,45 @@ export default function BulkBar({
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {action === "subcategorise" && (
+        <div>
+          <label htmlFor="bulkSubcategoryId" className="field-label">
+            File under
+          </label>
+          <select
+            id="bulkSubcategoryId"
+            name="bulkSubcategoryId"
+            form="products-form"
+            required
+            className="field sm:w-72"
+          >
+            <option value="">Choose a subcategory…</option>
+            {/* Grouped by category, and the category is named, because a
+                subcategory on its own is ambiguous: "Hanging" exists under
+                both Lights and Artificial Flowers. Picking the wrong one is
+                not an error the server can catch — it would just file the
+                products somewhere the shop did not mean. */}
+            {categories.map((c) => {
+              const options = subcategories.filter((s) => s.categoryName === c.name);
+              if (options.length === 0) return null;
+              return (
+                <optgroup key={c.id} label={c.name}>
+                  {options.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+          <span className="field-hint">
+            Only products already in that category are filed; anything else in
+            the selection is left alone.
+          </span>
         </div>
       )}
 

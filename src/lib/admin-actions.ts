@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { refreshPublicPages } from "@/lib/revalidate";
+import { subcategorySlug } from "@/lib/subcategories";
 import { OFFER_THEME_NAMES } from "@/lib/offers";
 import { db } from "./db";
 import { requireSession } from "./auth";
@@ -85,6 +86,7 @@ async function uniqueSlug(
 const productSchema = z.object({
   name: z.string().trim().min(2, "Give the product a name (2+ characters)."),
   categoryId: z.string().min(1, "Pick a category."),
+  subcategoryId: z.string().default(""),
   spec: z.string().trim().max(300, "Keep the spec line under 300 characters.").default(""),
   description: z.string().trim().max(4000).default(""),
   code: z.string().trim().max(40).default(""),
@@ -115,6 +117,7 @@ function readProductForm(formData: FormData) {
     .safeParse({
       name: String(formData.get("name") ?? ""),
       categoryId: String(formData.get("categoryId") ?? ""),
+      subcategoryId: String(formData.get("subcategoryId") ?? ""),
       spec: String(formData.get("spec") ?? ""),
       description: String(formData.get("description") ?? ""),
       code: String(formData.get("code") ?? ""),
@@ -188,6 +191,17 @@ export async function saveProductAction(
     isNew: d.isNew,
     newUntil,
     categoryId: d.categoryId,
+    // Verified against the chosen category rather than trusted from the form.
+    // The select is filtered client-side, but a stale tab -- category changed
+    // in one window, saved from another -- would otherwise file a product
+    // under a subcategory belonging to a different category, and nothing on
+    // the public site would ever show it again.
+    subcategoryId: d.subcategoryId
+      ? ((await db.subcategory.findFirst({
+          where: { id: d.subcategoryId, categoryId: d.categoryId },
+          select: { id: true },
+        }))?.id ?? null)
+      : null,
   };
 
   // Renaming a product has always moved it to a new URL. Remember where it
@@ -231,13 +245,14 @@ export async function bulkProductAction(formData: FormData) {
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   const action = String(formData.get("bulkAction") ?? "");
   const targetCategory = String(formData.get("bulkCategoryId") ?? "");
+  const targetSubcategory = String(formData.get("bulkSubcategoryId") ?? "");
 
   // Whatever the list was filtered to has to survive the round trip. A bulk
   // delete only ever clears one page of 25, so anything larger takes several
   // passes; dropping the filter in between would leave the next "select all"
   // pointing at the whole catalogue instead of the rows being cleared out.
   const filters = new URLSearchParams();
-  for (const key of ["q", "categoryId", "status", "photo"]) {
+  for (const key of ["q", "categoryId", "status", "photo", "filed"]) {
     const value = String(formData.get(`filter_${key}`) ?? "");
     if (value) filters.set(key, value);
   }
@@ -260,9 +275,38 @@ export async function bulkProductAction(formData: FormData) {
       break;
     case "recategorise":
       if (!targetCategory) redirect(back({ error: "no-target-category" }));
+      // Moving a product to another category invalidates any subcategory it
+      // had, which belonged to the old one. Clearing it here is what stops a
+      // product ending up filed under a subcategory of a category it is no
+      // longer in — a state nothing on the public site would ever show.
       await db.product.updateMany({
         where: { id: { in: ids } },
-        data: { categoryId: targetCategory },
+        data: { categoryId: targetCategory, subcategoryId: null },
+      });
+      break;
+    case "subcategorise": {
+      if (!targetSubcategory) redirect(back({ error: "no-target-subcategory" }));
+      const sub = await db.subcategory.findUnique({
+        where: { id: targetSubcategory },
+        select: { categoryId: true },
+      });
+      if (!sub) redirect(back({ error: "no-target-subcategory" }));
+      // Scoped to the subcategory's own category, so a selection spanning two
+      // categories files only the rows that belong there rather than silently
+      // dragging the rest somewhere invisible. The count below reports what
+      // actually moved, not what was ticked.
+      const moved = await db.product.updateMany({
+        where: { id: { in: ids }, categoryId: sub.categoryId },
+        data: { subcategoryId: targetSubcategory },
+      });
+      refreshPublicPages();
+      revalidatePath("/admin/products");
+      redirect(back({ bulk: action, count: String(moved.count), of: String(ids.length) }));
+    }
+    case "unfile":
+      await db.product.updateMany({
+        where: { id: { in: ids } },
+        data: { subcategoryId: null },
       });
       break;
     case "delete":
@@ -822,4 +866,129 @@ export async function saveSettingsAction(
   refreshPublicPages();
   revalidatePath("/admin/settings");
   return { success: "Settings saved. The public site has been updated." };
+}
+
+/* -------------------------------------------------------------------------
+   Subcategories
+   -------------------------------------------------------------------------
+   Deliberately thinner than categories: a subcategory has no page of its own
+   and no SEO copy. It is a filter chip, so it needs a name, an order, and
+   nothing else. Everything here is scoped to one category, because a
+   subcategory slug is only unique inside one.
+   ------------------------------------------------------------------------- */
+
+const subcategorySchema = z.object({
+  categoryId: z.string().min(1),
+  name: z.string().trim().min(2, "Give the subcategory a name (2+ characters)."),
+});
+
+export async function saveSubcategoryAction(formData: FormData) {
+  await guard();
+
+  const id = String(formData.get("id") ?? "");
+  const parsed = subcategorySchema.safeParse({
+    categoryId: String(formData.get("categoryId") ?? ""),
+    name: String(formData.get("name") ?? ""),
+  });
+  if (!parsed.success) {
+    redirect(`/admin/categories?edit=${String(formData.get("categoryId") ?? "")}&suberror=name`);
+  }
+
+  const { categoryId, name } = parsed.data;
+  const base = subcategorySlug(name);
+
+  // The slug is unique per category, so a clash is only possible against a
+  // sibling. Suffixing keeps the save working instead of throwing a database
+  // error at someone who simply reused a word.
+  let slug = base;
+  for (let n = 2; n < 50; n++) {
+    const clash = await db.subcategory.findFirst({
+      where: { categoryId, slug, ...(id ? { NOT: { id } } : {}) },
+      select: { id: true },
+    });
+    if (!clash) break;
+    slug = `${base}-${n}`;
+  }
+
+  if (id) {
+    await db.subcategory.update({ where: { id }, data: { name, slug } });
+  } else {
+    const last = await db.subcategory.findFirst({
+      where: { categoryId },
+      orderBy: { displayOrder: "desc" },
+      select: { displayOrder: true },
+    });
+    await db.subcategory.create({
+      data: { categoryId, name, slug, displayOrder: (last?.displayOrder ?? -1) + 1 },
+    });
+  }
+
+  refreshPublicPages();
+  revalidatePath("/admin/categories");
+  redirect(`/admin/categories?edit=${categoryId}&subsaved=${encodeURIComponent(name)}`);
+}
+
+export async function deleteSubcategoryAction(formData: FormData) {
+  await guard();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const sub = await db.subcategory.findUnique({
+    where: { id },
+    select: { categoryId: true, name: true, _count: { select: { products: true } } },
+  });
+  if (!sub) return;
+
+  // No confirmation gate on product count, unlike deleting a category. Nothing
+  // is lost here: the schema nulls subcategoryId rather than cascading, so the
+  // products stay in their category and simply stop being filtered. The count
+  // is reported back so the message can say how many moved.
+  await db.subcategory.delete({ where: { id } });
+
+  refreshPublicPages();
+  revalidatePath("/admin/categories");
+  redirect(
+    `/admin/categories?edit=${sub.categoryId}&subdeleted=${encodeURIComponent(sub.name)}&freed=${sub._count.products}`,
+  );
+}
+
+export async function moveSubcategoryAction(formData: FormData) {
+  await guard();
+
+  const id = String(formData.get("id") ?? "");
+  const direction = String(formData.get("direction") ?? "");
+  if (!id || (direction !== "up" && direction !== "down")) return;
+
+  const sub = await db.subcategory.findUnique({
+    where: { id },
+    select: { id: true, categoryId: true, displayOrder: true },
+  });
+  if (!sub) return;
+
+  const siblings = await db.subcategory.findMany({
+    where: { categoryId: sub.categoryId },
+    orderBy: { displayOrder: "asc" },
+    select: { id: true },
+  });
+  const at = siblings.findIndex((s) => s.id === id);
+  const to = direction === "up" ? at - 1 : at + 1;
+  if (at < 0 || to < 0 || to >= siblings.length) return;
+
+  // Rewritten as a dense 0..n-1 sequence rather than swapping two values.
+  // Rows created at different times can share a displayOrder, and swapping
+  // two equal numbers is a no-op that looks like a broken button.
+  const reordered = [...siblings];
+  const [moved] = reordered.splice(at, 1);
+  reordered.splice(to, 0, moved);
+
+  await db.$transaction(
+    reordered.map((s, i) =>
+      db.subcategory.update({ where: { id: s.id }, data: { displayOrder: i } }),
+    ),
+  );
+
+  refreshPublicPages();
+  revalidatePath("/admin/categories");
+  redirect(`/admin/categories?edit=${sub.categoryId}`);
 }

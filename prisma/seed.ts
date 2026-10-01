@@ -3,6 +3,11 @@ import { execFileSync } from "node:child_process";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma";
 import { CATEGORIES, PRODUCTS } from "./catalogue-data";
+import {
+  SUBCATEGORY_RULES,
+  classifyProduct,
+  subcategorySlug,
+} from "../src/lib/subcategories";
 
 const db = new PrismaClient();
 
@@ -64,6 +69,29 @@ async function main() {
     categoryIds.set(c.slug, row.id);
   }
 
+  // --- Subcategories --------------------------------------------------------
+  // Built from the same rules the app classifies with, so a seeded database
+  // has the same shape as the shop's: the filter chips exist, and the suite
+  // can exercise them. Deleting the categories above cascades these away, so
+  // they have to be rebuilt here rather than left to the migration that
+  // created them.
+  const subcategoryIds = new Map<string, string>(); // `${categorySlug}::${name}`
+  for (const c of CATEGORIES) {
+    const rules = SUBCATEGORY_RULES[c.name];
+    if (!rules) continue;
+    for (const [order, rule] of rules.entries()) {
+      const row = await db.subcategory.create({
+        data: {
+          categoryId: categoryIds.get(c.slug)!,
+          name: rule.name,
+          slug: subcategorySlug(rule.name),
+          displayOrder: order,
+        },
+      });
+      subcategoryIds.set(`${c.slug}::${rule.name}`, row.id);
+    }
+  }
+
   // --- Products -------------------------------------------------------------
   // Spread createdAt over the last 120 days so "Newest first" sorting and the
   // "New Arrivals" homepage block have something real to work with.
@@ -97,6 +125,10 @@ async function main() {
         priceOnEnquiry: Boolean(p.poa),
         availability: p.availability ?? "in_stock",
         published: true,
+        subcategoryId:
+          subcategoryIds.get(
+            `${p.category}::${classifyProduct(categoryMeta.name, p.name) ?? ""}`,
+          ) ?? null,
         isNew: Boolean(p.isNew),
         newUntil: p.isNew ? new Date(now + 21 * day) : null,
         categoryId,

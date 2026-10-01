@@ -16,12 +16,16 @@ export default async function EditProductPage({
 }) {
   const { id } = await params;
 
-  const [product, categories] = await Promise.all([
+  const [product, categories, subcategories] = await Promise.all([
     db.product.findUnique({
       where: { id },
       include: { images: { orderBy: { position: "asc" } } },
     }),
     db.category.findMany({ orderBy: { displayOrder: "asc" }, select: { id: true, name: true } }),
+    db.subcategory.findMany({
+      orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }],
+      select: { id: true, name: true, categoryId: true },
+    }),
   ]);
 
   if (!product) notFound();
@@ -47,11 +51,13 @@ export default async function EditProductPage({
       />
       <ProductForm
         categories={categories}
+        subcategories={subcategories}
         uploadsEnabled={isCloudinaryConfigured()}
         values={{
           id: product.id,
           name: product.name,
           categoryId: product.categoryId,
+          subcategoryId: product.subcategoryId,
           spec: product.spec,
           description: product.description,
           code: product.code,

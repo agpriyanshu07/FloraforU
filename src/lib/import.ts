@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx-republish";
 import { db } from "./db";
 import { slugify } from "./format";
+import { classifyProduct } from "./subcategories";
 
 export type ImportRow = Record<string, string>;
 
@@ -27,6 +28,7 @@ export const IMPORT_COLUMNS = [
   { key: "availability", label: "availability", required: false, note: "in_stock | limited | made_to_order" },
   { key: "image", label: "image", required: false, note: "Image URL or path. Several photos of the same item: separate them with | (the first is the main one)" },
   { key: "published", label: "published", required: false, note: "yes/no — defaults to yes" },
+  { key: "subcategory", label: "subcategory", required: false, note: "Subcategory name or slug within that category. Leave blank and it is filed automatically from the product name" },
 ] as const;
 
 export const SAMPLE_CSV_HEADER = IMPORT_COLUMNS.map((c) => c.label).join(",");
@@ -75,9 +77,23 @@ export async function importProducts(
     select: { id: true, name: true, slug: true },
   });
   const categoryByKey = new Map<string, string>();
+  const categoryNameById = new Map<string, string>();
   for (const c of categories) {
     categoryByKey.set(normaliseKey(c.name), c.id);
     categoryByKey.set(normaliseKey(c.slug), c.id);
+    categoryNameById.set(c.id, c.name);
+  }
+
+  // Keyed by category, because a subcategory name is only unique inside one.
+  const subcategories = await db.subcategory.findMany({
+    select: { id: true, name: true, slug: true, categoryId: true },
+  });
+  const subByCategory = new Map<string, Map<string, string>>();
+  for (const s of subcategories) {
+    const forCategory = subByCategory.get(s.categoryId) ?? new Map<string, string>();
+    forCategory.set(normaliseKey(s.name), s.id);
+    forCategory.set(normaliseKey(s.slug), s.id);
+    subByCategory.set(s.categoryId, forCategory);
   }
 
   const result: ImportResult = {
@@ -211,6 +227,13 @@ export async function importProducts(
       availability: availability!,
       published,
       categoryId: categoryId!,
+      subcategoryId: resolveSubcategory(
+        categoryId!,
+        categoryNameById.get(categoryId!) ?? "",
+        name,
+        row.subcategory,
+        subByCategory,
+      ),
     };
 
     const photoRows = (productId: string) =>
@@ -255,6 +278,37 @@ export async function importProducts(
   }
 
   return result;
+}
+
+/**
+ * Which subcategory an imported row belongs to.
+ *
+ * An explicit `subcategory` column wins and is matched by name or slug inside
+ * the row's own category. Anything it does not recognise is ignored rather
+ * than rejected: an import of 590 rows must not fail wholesale over a typo in
+ * an optional grouping field, and the product still lands in its category.
+ *
+ * With the column absent or blank, the product is filed by the same rules that
+ * classified the catalogue in the first place — so a shop adding stock gets it
+ * sorted without having to know the scheme. That only ever fills a slot the
+ * shop has actually created: a rule naming a subcategory that no longer exists
+ * resolves to null, never to a new row.
+ */
+function resolveSubcategory(
+  categoryId: string,
+  categoryName: string,
+  productName: string,
+  explicit: string | undefined,
+  subByCategory: Map<string, Map<string, string>>,
+): string | null {
+  const forCategory = subByCategory.get(categoryId);
+  if (!forCategory) return null;
+
+  const given = (explicit ?? "").trim();
+  if (given) return forCategory.get(normaliseKey(given)) ?? null;
+
+  const suggested = classifyProduct(categoryName, productName);
+  return suggested ? (forCategory.get(normaliseKey(suggested)) ?? null) : null;
 }
 
 async function freeSlug(name: string, ignoreId?: string): Promise<string> {

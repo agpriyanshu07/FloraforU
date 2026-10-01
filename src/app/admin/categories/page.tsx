@@ -3,6 +3,7 @@ import Image from "next/image";
 import { PageHeader, TableShell, EmptyRow, Banner } from "@/components/admin/ui";
 import CategoryForm from "@/components/admin/CategoryForm";
 import DeleteCategory from "@/components/admin/DeleteCategory";
+import SubcategoryManager from "@/components/admin/SubcategoryManager";
 import { db } from "@/lib/db";
 import { resolveCategoryImage } from "@/lib/category-image";
 
@@ -21,6 +22,25 @@ export default async function AdminCategoriesPage({
   });
 
   const editing = sp.edit ? categories.find((c) => c.id === sp.edit) : undefined;
+
+  // Only loaded for the category being edited. Fetching every category's
+  // subcategories to render one list would be fifteen extra counts per page
+  // view for a panel that is not on screen.
+  const subcategories = editing
+    ? await db.subcategory.findMany({
+        where: { categoryId: editing.id },
+        orderBy: { displayOrder: "asc" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          _count: { select: { products: true } },
+        },
+      })
+    : [];
+  const unfiledCount = editing
+    ? await db.product.count({ where: { categoryId: editing.id, subcategoryId: null } })
+    : 0;
   const blocked = sp.blocked ? categories.find((c) => c.id === sp.blocked) : undefined;
 
   return (
@@ -31,6 +51,18 @@ export default async function AdminCategoriesPage({
       />
 
       {sp.saved && <Banner tone="success">Saved “{sp.saved}”.</Banner>}
+      {sp.subsaved && <Banner tone="success">Subcategory “{sp.subsaved}” saved.</Banner>}
+      {sp.subdeleted && (
+        <Banner tone="success">
+          Subcategory “{sp.subdeleted}” deleted.
+          {Number(sp.freed) > 0 && (
+            <>
+              {" "}Its {sp.freed} product{sp.freed === "1" ? "" : "s"} stayed in the
+              category and {sp.freed === "1" ? "is" : "are"} now unfiled.
+            </>
+          )}
+        </Banner>
+      )}
       {sp.deleted && (
         <Banner tone="success">
           Category deleted{sp.moved && sp.moved !== "0" ? `, and ${sp.moved} product(s) moved to the category you picked.` : "."}
@@ -125,6 +157,24 @@ export default async function AdminCategoriesPage({
                 : { displayOrder: categories.length }
             }
           />
+
+          {editing && (
+            <div className="mt-6">
+              <SubcategoryManager
+                categoryId={editing.id}
+                categoryName={editing.name}
+                categorySlug={editing.slug}
+                subcategories={subcategories.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  slug: s.slug,
+                  productCount: s._count.products,
+                }))}
+                unfiledCount={unfiledCount}
+                error={sp.suberror === "name" ? "Give the subcategory a name (2+ characters)." : undefined}
+              />
+            </div>
+          )}
         </div>
       </div>
     </>

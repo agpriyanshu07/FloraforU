@@ -1295,3 +1295,62 @@ test("the browser tab shows the shop's own logo, not the build-time placeholder"
   const ico = fs.readFileSync(path.join(process.cwd(), "src/app/favicon.ico"));
   expect(ico.readUInt16LE(4), "favicon.ico should hold 16, 32 and 48px").toBe(3);
 });
+
+test("a category's subcategory chips narrow the list without losing anything", async ({ page }) => {
+  // The chips are links, not script, so a narrowed list can be shared in a
+  // WhatsApp message and opened by someone who never saw the page it came
+  // from — which is how this shop actually sends people to stock.
+  await page.goto("/categories/lights-lighting-decor");
+
+  const chips = page.getByRole("navigation", { name: "Filter by type" });
+  await expect(chips).toBeVisible();
+
+  const all = chips.getByRole("link", { name: /^All/ });
+  await expect(all).toHaveAttribute("aria-current", "true");
+
+  const stands = chips.getByRole("link", { name: /^Light Stand & Hanging/ });
+  const href = await stands.getAttribute("href");
+  expect(href, "a chip must be a real, shareable URL").toContain("sub=light-stand-and-hanging");
+
+  const before = await page.locator('a[href^="/product/"]').count();
+  await stands.click();
+  await page.waitForURL("**/categories/lights-lighting-decor?sub=light-stand-and-hanging");
+
+  await expect(
+    chips.getByRole("link", { name: /^Light Stand & Hanging/ }),
+  ).toHaveAttribute("aria-current", "true");
+  const after = await page.locator('a[href^="/product/"]').count();
+  expect(after, "the chip did not narrow the grid").toBeLessThan(before);
+  expect(after, "the chip emptied the grid").toBeGreaterThan(0);
+
+  // Every product still carries this category — a subcategory narrows, it does
+  // not move stock out from under its parent.
+  await expect(page.getByText("Lights & Lighting Décor").first()).toBeVisible();
+
+  // And back to everything, which is the only way out of a filter for someone
+  // who arrived on the filtered URL and has no history to go back to.
+  await chips.getByRole("link", { name: /^All/ }).click();
+  await page.waitForURL("**/categories/lights-lighting-decor");
+  expect(await page.locator('a[href^="/product/"]').count()).toBe(before);
+});
+
+test("a subcategory chip keeps the search it was applied to", async ({ page }) => {
+  // Dropping the other parameters would silently widen a search the moment
+  // someone narrowed it by type, which is the opposite of what they asked for.
+  await page.goto("/categories/lights-lighting-decor?q=stand&sort=price-asc");
+  const chip = page
+    .getByRole("navigation", { name: "Filter by type" })
+    .getByRole("link", { name: /^Light Stand & Hanging/ });
+  const href = await chip.getAttribute("href");
+  expect(href).toContain("q=stand");
+  expect(href).toContain("sort=price-asc");
+  expect(href).toContain("sub=light-stand-and-hanging");
+});
+
+test("a category with no subcategories shows no filter row at all", async ({ page }) => {
+  // Cooler & Fan has four products. An "All 4" chip on its own is noise, and a
+  // row of one is worse than none.
+  await page.goto("/categories/cooler-fan");
+  await expect(page.getByRole("navigation", { name: "Filter by type" })).toHaveCount(0);
+  expect(await page.locator('a[href^="/product/"]').count()).toBeGreaterThan(0);
+});
