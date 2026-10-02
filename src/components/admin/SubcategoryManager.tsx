@@ -155,11 +155,14 @@ export default function SubcategoryManager({
           {/* Not a warning. An unfiled product is fully visible under its
               category and only misses the chips, so this is information, not
               something broken. */}
+          {/* Straight to the photo grid rather than the products list. These
+              are the ones no rule could place, which in practice means the
+              only way to tell them apart is to look at them. */}
           <Link
-            href={`/admin/products?categoryId=${categoryId}`}
+            href={`/admin/products/filing?categoryId=${categoryId}`}
             className="text-rose-600 underline hover:text-rose-700"
           >
-            Review them
+            File them by photo
           </Link>
           .
         </p>

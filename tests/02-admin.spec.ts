@@ -9,6 +9,7 @@ import {
   reseed,
   signIn,
 } from "./helpers";
+import { classifyProduct } from "../src/lib/subcategories";
 
 // These tests mutate shared database state and build on each other, so they run
 // in order rather than in parallel.
@@ -1456,4 +1457,162 @@ test("moving a product to another category clears its old subcategory", async ({
     page.locator("tbody tr").filter({ hasText: "Cooler & Fan" }).first(),
     "the moved product kept a subcategory from its old category",
   ).toBeVisible();
+});
+
+/**
+ * A category's id, read off the products filter rather than hard-coded: ids
+ * are cuids and change with every reseed.
+ */
+async function categoryId(page: import("@playwright/test").Page, name: string): Promise<string> {
+  await page.goto("/admin/products");
+  return (await page
+    .locator("#categoryId option")
+    .filter({ hasText: name })
+    .first()
+    .getAttribute("value"))!;
+}
+
+// ---------------------------------------------------------- filing by photo
+
+/**
+ * Unfiles one product in a category and returns its name.
+ *
+ * The filing screen only lists what is unfiled, and by the time these tests
+ * run the bulk-filing test above has already emptied that list — so a test
+ * that just expects to find something there passes or fails on its position in
+ * the file. This makes its own work to do, through the page's own "show all"
+ * view, which is the same round trip the shop makes to correct a mistake.
+ */
+async function unfileOne(page: import("@playwright/test").Page, id: string): Promise<string> {
+  await page.goto(`/admin/products/filing?categoryId=${id}&show=all`);
+  const target = await page.evaluate(() => {
+    const select = [...document.querySelectorAll<HTMLSelectElement>("form li select")].find(
+      (s) => s.value !== "",
+    );
+    if (!select) return null;
+    return { name: select.name, label: select.closest("li")!.querySelector("label")!.textContent };
+  });
+  if (!target) throw new Error("no filed product to unfile");
+
+  await page.selectOption(`[name="${target.name}"]`, "");
+  await page.getByRole("button", { name: "Save this screen" }).click();
+  await expect(page.getByText(/Filed\s+1\s+product\./)).toBeVisible();
+  return target.label!.trim();
+}
+
+test("the lights whose names never said so still classify correctly", async ({ page }) => {
+  // Asserted against the classifier rather than against seeded rows, because
+  // the seed is a small fixture catalogue and these are real products from the
+  // shop's own 590. The rule is the thing worth protecting: four of these --
+  // Big Star 904, Cover Bird 914, Candle Light 916, Golden Jali 931 -- are the
+  // same pendant-set product line as Hanging Light 903 and Rod Hanging Light
+  // 936, which filed themselves only because the word "hanging" happens to
+  // appear in their names. Matching the shop's 9xx catalogue code is what
+  // keeps the line together, and a later tidy-up would read that as noise.
+  const expected: Record<string, string> = {
+    "Hanging Light 903": "Light Stand & Hanging",
+    "Rod Hanging Light 936": "Light Stand & Hanging",
+    "Big Star 904": "Light Stand & Hanging",
+    "Cover Bird 914": "Light Stand & Hanging",
+    "Candle Light 916": "Light Stand & Hanging",
+    "Golden Jali 931": "Light Stand & Hanging",
+    "Shell Light": "Light Stand & Hanging",
+    "Light Bird": "Light Stand & Hanging",
+    "Titli Bird": "Light Stand & Hanging",
+    "Light Tree": "Light Stand & Hanging",
+    "Sun Light 13 Candle": "Light Stand & Hanging",
+    "Sun Light 32 Candle": "Light Stand & Hanging",
+    "Cloth Light": "LED, Palco & Strip Light",
+    "Crock Light": "LED, Palco & Strip Light",
+    "Bulb — Warm White": "Bulbs & Holders",
+    "Colour Bulb": "Bulbs & Holders",
+    "Bulb Holder": "Bulbs & Holders",
+    "Candle Light Panel": "Light Panels",
+    "Ring Light Panel": "Light Panels",
+  };
+
+  for (const [name, subcategory] of Object.entries(expected)) {
+    expect(classifyProduct("Lights & Lighting Décor", name), name).toBe(subcategory);
+  }
+
+  // The chips are only rendered for subcategories with stock, so this checks
+  // the two added beyond the shop's own five reach the public page at all.
+  await page.goto("/categories/lights-lighting-decor");
+  await expect(
+    page.locator('nav[aria-label="Filter by type"] a').filter({ hasText: "Bulbs & Holders" }),
+  ).toBeVisible();
+});
+
+test("a product is filed from its photo and the chip appears on the site", async ({ page }) => {
+  await signIn(page);
+  const pots = await categoryId(page, "Pots & Vases");
+  const name = await unfileOne(page, pots);
+
+  await page.goto(`/admin/products/filing?categoryId=${pots}`);
+  const tiles = page.locator("form li");
+  const before = await tiles.count();
+
+  const first = tiles.filter({ hasText: name }).first();
+  const select = first.locator("select");
+  // nth(1), because nth(0) is "Not filed".
+  const option = select.locator("option").nth(1);
+  const target = (await option.textContent())!.trim();
+  await select.selectOption((await option.getAttribute("value"))!);
+
+  await page.getByRole("button", { name: "Save this screen" }).click();
+  await expect(page.getByText(/Filed\s+1\s+product\./)).toBeVisible();
+
+  // Gone from the unfiled screen, and the count went down by exactly one --
+  // not by "some", which a save that fired twice would also satisfy.
+  await expect(tiles).toHaveCount(before - 1);
+
+  // And still there, with its answer remembered, when the filed ones are
+  // shown. This is the half that makes a mistake fixable.
+  await page.getByRole("link", { name: "Show all, including filed" }).click();
+  const filed = page.locator("form li").filter({ hasText: name }).first();
+  await expect(filed.locator("select")).toHaveValue((await option.getAttribute("value"))!);
+
+  await page.goto("/categories/pots-vases");
+  await expect(
+    page.locator('nav[aria-label="Filter by type"] a').filter({ hasText: target }),
+    "the subcategory has stock now but no chip appeared",
+  ).toBeVisible();
+});
+
+test("a subcategory from another category is refused, not filed", async ({ page }) => {
+  // The dropdowns only ever offer this category's own subcategories, but a
+  // product filed under a Lights subcategory while sitting in Pots & Vases
+  // would fall through every chip on both pages -- listed nowhere a customer
+  // could filter to. The server checks rather than trusting the form.
+  await signIn(page);
+
+  // Taken off the Lights filing screen rather than the products list, where
+  // the bulk dropdown only exists once a row is ticked. "show=all" so this
+  // does not depend on a light happening to be unfiled.
+  await page.goto(
+    `/admin/products/filing?categoryId=${await categoryId(page, "Lights & Lighting Décor")}&show=all`,
+  );
+  const foreignId = (await page
+    .locator("form li select option")
+    .nth(1)
+    .getAttribute("value"))!;
+
+  const pots = await categoryId(page, "Pots & Vases");
+  await unfileOne(page, pots);
+  await page.goto(`/admin/products/filing?categoryId=${pots}`);
+  const tiles = page.locator("form li");
+  const before = await tiles.count();
+  expect(before).toBeGreaterThan(0);
+
+  await page.evaluate((id) => {
+    const select = document.querySelector("form li select") as HTMLSelectElement;
+    const option = document.createElement("option");
+    option.value = id;
+    select.append(option);
+    select.value = id;
+  }, foreignId);
+
+  await page.getByRole("button", { name: "Save this screen" }).click();
+  await expect(page.getByText(/Nothing changed/)).toBeVisible();
+  await expect(tiles, "a foreign subcategory was accepted").toHaveCount(before);
 });
