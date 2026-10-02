@@ -10,6 +10,7 @@ import {
   signIn,
 } from "./helpers";
 import { classifyProduct } from "../src/lib/subcategories";
+import { DEFAULT_SETTINGS, placeholderSettings } from "../src/lib/settings";
 
 // These tests mutate shared database state and build on each other, so they run
 // in order rather than in parallel.
@@ -1471,6 +1472,30 @@ async function categoryId(page: import("@playwright/test").Page, name: string): 
     .first()
     .getAttribute("value"))!;
 }
+
+test("a fully filled Settings page raises no placeholder warning", () => {
+  // hello@floralforu.in IS the shop's email. It was also the build-time
+  // default, and the check compared the saved value against that default — so
+  // the dashboard and the Settings badge warned about the correct answer,
+  // permanently, with no edit that could ever clear it. A setting is only
+  // worth warning about when the value is identifiably fake.
+  const filled = {
+    ...DEFAULT_SETTINGS,
+    whatsapp: "919876543210",
+    phone: "+91 98765 43210",
+    siteUrl: "https://floralforu.com",
+  };
+  expect(placeholderSettings(filled), "warned about a correctly filled setting").toEqual([]);
+
+  // The three that genuinely cannot be left as they are still warn: an unset
+  // WhatsApp number points every Enquire button at wa.me/910000000000, and an
+  // unset site URL puts localhost in every canonical tag and the sitemap.
+  expect(placeholderSettings({ ...filled, whatsapp: DEFAULT_SETTINGS.whatsapp })).toEqual([
+    "WhatsApp number",
+  ]);
+  expect(placeholderSettings({ ...filled, phone: "+91 00000 00000" })).toEqual(["Phone number"]);
+  expect(placeholderSettings({ ...filled, siteUrl: "http://localhost:3000" })).toEqual(["Site URL"]);
+});
 
 // ---------------------------------------------------------- filing by photo
 
