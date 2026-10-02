@@ -12,6 +12,23 @@
 const CLOUDINARY_UPLOAD = "/image/upload/";
 
 /**
+ * Product photographs are re-encoded at 90, not the optimizer's default 75.
+ *
+ * These are already-lossy webp files, so optimizing them is a second lossy
+ * pass over the first, and most of this catalogue is glossy stock — lacquered
+ * pots, satin cloth, metallic lights — which is the worst case for a low webp
+ * quality. At 75 the smooth gradients band visibly and the painted edges
+ * smear; at 2x on a card it is obvious side by side with the source. The
+ * lightbox already passed quality={90} for exactly this reason, but the card
+ * and the product page — the two views a customer actually judges the item on
+ * — were left on the default.
+ *
+ * It roughly doubles the bytes of a variant, which lands it near the source
+ * file size. That is the right trade for the pictures the shop sells from.
+ */
+const PRODUCT_QUALITY = 90;
+
+/**
  * `f_auto` picks WebP or AVIF per browser, `q_auto` picks a quality that holds
  * up visually, and `c_limit` never enlarges an image past its original.
  */
@@ -49,10 +66,11 @@ export function isCloudinaryUrl(url: string): boolean {
 export function imageProps(url: string, width: number): {
   src: string;
   unoptimized?: true;
+  quality?: number;
 } {
   if (isCloudinaryUrl(url)) {
     return { src: cloudinaryTransform(url, width), unoptimized: true };
   }
   const isRemote = /^https?:\/\//i.test(url);
-  return isRemote ? { src: url, unoptimized: true } : { src: url };
+  return isRemote ? { src: url, unoptimized: true } : { src: url, quality: PRODUCT_QUALITY };
 }
