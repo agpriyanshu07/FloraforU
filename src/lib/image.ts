@@ -12,21 +12,33 @@
 const CLOUDINARY_UPLOAD = "/image/upload/";
 
 /**
- * Product photographs are re-encoded at 90, not the optimizer's default 75.
+ * Product photographs are served as they are, straight off the CDN.
  *
- * These are already-lossy webp files, so optimizing them is a second lossy
- * pass over the first, and most of this catalogue is glossy stock — lacquered
- * pots, satin cloth, metallic lights — which is the worst case for a low webp
- * quality. At 75 the smooth gradients band visibly and the painted edges
- * smear; at 2x on a card it is obvious side by side with the source. The
- * lightbox already passed quality={90} for exactly this reason, but the card
- * and the product page — the two views a customer actually judges the item on
- * — were left on the default.
+ * They do NOT go through the image optimizer, and that is deliberate.
  *
- * It roughly doubles the bytes of a variant, which lands it near the source
- * file size. That is the right trade for the pictures the shop sells from.
+ * The catalogue holds 920 photographs. Image transformations are metered by
+ * the host, and 920 sources times several widths each, re-validated on a
+ * timer, is more than a small plan's allowance. When it runs out the optimizer
+ * stops serving and every product photo on the site turns into a broken-image
+ * icon — which is exactly what happened: the logo kept rendering because it is
+ * a static file, while all 920 photographs vanished at once.
+ *
+ * Raising the quality from 75 to 90 is what tipped it over. Quality is part of
+ * the cache key, so changing it invalidated every stored variant and forced
+ * the whole catalogue to be re-transformed in one go.
+ *
+ * Serving the original file costs more bytes — a median of 53KB against about
+ * 15KB for a small optimized variant — but it is the only form of delivery
+ * that cannot fail on a meter, and it is also the HIGHEST quality available:
+ * the customer gets the photographer's file, with no second lossy pass over it
+ * at all. For a shop that sells on how its stock looks, a page that is heavier
+ * but always shows the product beats a lighter one that intermittently shows
+ * nothing.
+ *
+ * Photos uploaded to Cloudinary are already handled below and are unaffected;
+ * Cloudinary resizes on its own CDN. As the shop replaces these files with
+ * uploads over time, the weight comes back down on its own.
  */
-const PRODUCT_QUALITY = 90;
 
 /**
  * `f_auto` picks WebP or AVIF per browser, `q_auto` picks a quality that holds
@@ -72,5 +84,9 @@ export function imageProps(url: string, width: number): {
     return { src: cloudinaryTransform(url, width), unoptimized: true };
   }
   const isRemote = /^https?:\/\//i.test(url);
-  return isRemote ? { src: url, unoptimized: true } : { src: url, quality: PRODUCT_QUALITY };
+  if (isRemote) return { src: url, unoptimized: true };
+  // Local file: hand the browser the committed .webp itself. These are already
+  // web-ready — median 540px wide and 53KB — so there is little for an
+  // optimizer to win here, and a great deal for it to lose.
+  return { src: url, unoptimized: true };
 }
