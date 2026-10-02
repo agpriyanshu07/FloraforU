@@ -48,7 +48,12 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   pincode: "826001",
   phone: "+91 00000 00000", // PLACEHOLDER — awaiting client
   whatsapp: "910000000000", // PLACEHOLDER — awaiting client
-  email: "hello@floralforu.in", // PLACEHOLDER — awaiting client
+  // The shop's real address, not a placeholder. It was written here as one
+  // and sat under a "still set to a placeholder" warning that could never be
+  // cleared: the check below compared the saved value against this default,
+  // and the default happened to be correct. The .in here against a .com site
+  // is deliberate on the shop's part.
+  email: "hello@floralforu.in",
   hours: "Mon – Sat, 10:00 AM – 8:00 PM · Sunday closed",
   gstin: "", // left blank until the client confirms they want it public
   instagram: "https://www.instagram.com/floralforu_/",
@@ -135,10 +140,14 @@ export async function saveSettings(values: Partial<SiteSettings>) {
  * fixes it, and the dashboard they land on.
  */
 export function placeholderSettings(settings: SiteSettings): string[] {
+  // Each of these tests a value that is WRONG, not one that is merely still
+  // the default. Email used to be in this list, compared against the default
+  // — but that default is the shop's actual address, so the warning fired on
+  // the correct answer and no amount of editing could clear it. A setting is
+  // only worth warning about when it is identifiably fake.
   return [
     settings.whatsapp === DEFAULT_SETTINGS.whatsapp && "WhatsApp number",
     settings.phone.includes("00000") && "Phone number",
-    settings.email === DEFAULT_SETTINGS.email && "Email address",
     settings.siteUrl.includes("localhost") && "Site URL",
   ].filter(Boolean) as string[];
 }
