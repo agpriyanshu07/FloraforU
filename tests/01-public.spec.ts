@@ -520,6 +520,49 @@ test("the catalogue prints the shop's own words, accents and all", () => {
   expect(sanitise("商品")).toBe("");
 });
 
+test("no page asks the image optimizer for a width it never displays", async ({ page }) => {
+  // The catalogue holds 920 photographs and every one was going through the
+  // optimizer on the stock width ladder, which tops out at 3840 — upscales of
+  // sources whose median width is 577px. The plain `src`, which is what any
+  // consumer that does not read a srcset fetches, was pinned at w=3840 for all
+  // of them.
+  //
+  // Image transformations are metered by the host. A finite monthly allowance
+  // spent on widths nothing renders runs out, and when it does /_next/image
+  // stops serving and the photographs disappear from the live site until the
+  // meter resets. That is what "sometimes the photos don't render" was, and
+  // nothing about the product data was ever involved in it.
+  //
+  // The widest slot on the site is the 1160px offer banner.
+  const MAX = 1200;
+
+  for (const route of ["/", "/catalogue", "/categories", "/categories/pots-vases", "/product/lace-pot"]) {
+    await page.goto(route);
+    const { widths, fallbacks } = await page.evaluate(() => {
+      const imgs = [...document.querySelectorAll<HTMLImageElement>('img[src*="_next/image"], img[srcset*="_next/image"]')];
+      const widthOf = (url: string) => Number(new URL(url, location.origin).searchParams.get("w"));
+      return {
+        widths: imgs.flatMap((i) =>
+          (i.getAttribute("srcset") ?? "")
+            .split(",")
+            .map((part) => part.trim().split(" ")[0])
+            .filter((u) => u.includes("_next/image"))
+            .map(widthOf),
+        ),
+        fallbacks: imgs
+          .map((i) => i.getAttribute("src") ?? "")
+          .filter((u) => u.includes("_next/image"))
+          .map(widthOf),
+      };
+    });
+
+    const tooWide = [...new Set(widths.filter((w) => w > MAX))];
+    expect(tooWide, `${route} offers widths nothing on the page renders`).toEqual([]);
+    const bigFallback = [...new Set(fallbacks.filter((w) => w > MAX))];
+    expect(bigFallback, `${route} has a fallback src above ${MAX}px`).toEqual([]);
+  }
+});
+
 // -------------------------------------------------------------- sale visibility --
 
 test("the offer ribbon follows the visitor across the site, not just the homepage", async ({
