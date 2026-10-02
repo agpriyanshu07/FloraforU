@@ -3,9 +3,14 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { formatPrice } from "@/lib/format";
+import { PHOTO_EDGE, THUMB_EDGE, photoJpegs } from "@/lib/pdf-photos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Decoding and re-encoding 920 photographs takes about twelve seconds on a
+// cold instance, and the platform default is ten. Warm instances serve from
+// the cache in src/lib/pdf-photos.ts and finish in well under a second.
+export const maxDuration = 60;
 
 // Design tokens, mirrored from src/app/globals.css.
 const ROSE = rgb(0.608, 0.173, 0.353);
@@ -40,6 +45,11 @@ export async function GET(request: Request) {
         products: {
           where: { published: true },
           orderBy: { name: "asc" },
+          include: {
+            // Primary first, then the shop's own order. A product page shows
+            // the first large and up to two more as a strip beneath it.
+            images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 3 },
+          },
         },
       },
     }),
@@ -114,9 +124,164 @@ export async function GET(request: Request) {
     { x: M + 16, y: 168, size: 10, font: regular, color: INK },
   );
 
-  // ------------------------------------------------------------- listings ---
+  // ---------------------------------------------------------- photographs ---
+  // Every photo the catalogue is about to draw, converted up front so the page
+  // loop below is pure layout. Nothing here can fail the request: an image
+  // that cannot be read comes back null and its page draws a panel instead.
+  const requests: { url: string; edge: number }[] = [];
+  for (const category of categories) {
+    for (const product of category.products) {
+      product.images.forEach((image, i) => {
+        requests.push({ url: image.url, edge: i === 0 ? PHOTO_EDGE : THUMB_EDGE });
+      });
+    }
+  }
+  const photos = await photoJpegs(requests);
+
+  // pdf-lib writes one copy of an embedded image however many pages draw it,
+  // but only if it is handed the same embedded object — so embed once per URL.
+  const embedded = new Map<string, Awaited<ReturnType<typeof doc.embedJpg>> | null>();
+  const embed = async (url: string, edge: number) => {
+    const key = `${edge}:${url}`;
+    if (embedded.has(key)) return embedded.get(key)!;
+    const bytes = photos.get(key);
+    if (!bytes) {
+      embedded.set(key, null);
+      return null;
+    }
+    try {
+      const image = await doc.embedJpg(bytes);
+      embedded.set(key, image);
+      return image;
+    } catch {
+      embedded.set(key, null);
+      return null;
+    }
+  };
+
+  // --------------------------------------------------------- product pages ---
+  // One product to a page, the way the shop's own supplier catalogue is laid
+  // out: the photograph is the thing being sold, and a customer picking décor
+  // is choosing by eye. The compact table this replaced is still here, as the
+  // price list at the back, so nothing the old PDF did well was lost.
+  // The band a product page may draw in: under the category rule, above the
+  // footer. Photo and caption are measured together and centred in it, rather
+  // than the photo sitting in a fixed box — otherwise a product with no spec
+  // line and no extra photos leaves a third of the page empty under it, and
+  // one with all three is cramped.
+  const CONTENT_TOP = A4.h - M - 26;
+  const CONTENT_BOTTOM = 84;
+  const CONTENT_H = CONTENT_TOP - CONTENT_BOTTOM;
+  const COL_W = A4.w - M * 2;
+  const GAP = 28;
+  const THUMB = 62;
+  const THUMB_GAP = 10;
+
+  const centred = (text: string, font: PDFFont, size: number) =>
+    (A4.w - font.widthOfTextAtSize(text, size)) / 2;
+
+  for (const category of categories) {
+    for (const product of category.products) {
+      const page = doc.addPage([A4.w, A4.h]);
+
+      // Which category this is, on every page. A 590-page PDF scrolled on a
+      // phone otherwise gives no clue where you are.
+      page.drawText(sanitise(category.name).toUpperCase(), {
+        x: M, y: A4.h - M, size: 8, font: bold, color: MUTED,
+      });
+      page.drawLine({
+        start: { x: M, y: A4.h - M - 10 }, end: { x: A4.w - M, y: A4.h - M - 10 },
+        thickness: 0.7, color: LINE,
+      });
+
+      const nameLines = wrapText(product.name, bold, 19, COL_W).slice(0, 2);
+      const specLines = wrapText(product.spec, regular, 9.5, COL_W);
+      const extras = product.images.slice(1);
+      const captionH =
+        nameLines.length * 23 + 22 + specLines.length * 12 + (extras.length ? 22 + THUMB : 0);
+
+      const main = product.images[0] ? await embed(product.images[0].url, PHOTO_EDGE) : null;
+      const maxPhotoH = CONTENT_H - captionH - GAP;
+      const photoW = main ? Math.min(COL_W, main.width * (maxPhotoH / main.height)) : COL_W;
+      const photoH = main ? Math.min(maxPhotoH, main.height * (COL_W / main.width)) : Math.min(maxPhotoH, 340);
+
+      const top = CONTENT_TOP - (CONTENT_H - (photoH + GAP + captionH)) / 2;
+
+      if (main) {
+        page.drawImage(main, { x: (A4.w - photoW) / 2, y: top - photoH, width: photoW, height: photoH });
+      } else {
+        page.drawRectangle({
+          x: M, y: top - photoH, width: COL_W, height: photoH,
+          color: CREAM, borderColor: LINE, borderWidth: 0.7,
+        });
+        const note = "Photo coming soon";
+        page.drawText(note, {
+          x: centred(note, regular, 11), y: top - photoH / 2, size: 11, font: regular, color: MUTED,
+        });
+      }
+
+      // ----------------------------------------------------------- caption ---
+      let cy = top - photoH - GAP;
+      for (const line of nameLines) {
+        page.drawText(line, { x: centred(line, bold, 19), y: cy - 15, size: 19, font: bold, color: INK });
+        cy -= 23;
+      }
+
+      const price = formatPrice(product.price, product.priceOnEnquiry).replace("₹", "Rs ");
+      const meta = product.code ? `Code ${sanitise(product.code)}  ·  ${price}` : price;
+      page.drawText(meta, {
+        x: centred(meta, bold, 12), y: cy - 15, size: 12, font: bold,
+        color: product.priceOnEnquiry ? MUTED : ROSE,
+      });
+      cy -= 22;
+
+      for (const line of specLines) {
+        page.drawText(line, { x: centred(line, regular, 9.5), y: cy - 9, size: 9.5, font: regular, color: MUTED });
+        cy -= 12;
+      }
+
+      // ------------------------------------------------------ extra photos ---
+      // The shop photographs a pack shot and a close-up, or the colour range,
+      // and the product cards on the site already page through them. Throwing
+      // them away here would lose the most useful part of some listings.
+      if (extras.length > 0) {
+        const stripY = cy - 22 - THUMB;
+        const strip = extras.length * THUMB + (extras.length - 1) * THUMB_GAP;
+        let x = (A4.w - strip) / 2;
+        for (const image of extras) {
+          const thumb = await embed(image.url, THUMB_EDGE);
+          page.drawRectangle({
+            x, y: stripY, width: THUMB, height: THUMB,
+            color: CREAM, borderColor: LINE, borderWidth: 0.5,
+          });
+          if (thumb) {
+            const scale = Math.min(THUMB / thumb.width, THUMB / thumb.height);
+            const w = thumb.width * scale;
+            const h = thumb.height * scale;
+            page.drawImage(thumb, {
+              x: x + (THUMB - w) / 2, y: stripY + (THUMB - h) / 2, width: w, height: h,
+            });
+          }
+          x += THUMB + THUMB_GAP;
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------- price list ---
+
+  // The dense table the catalogue used to be. Keeping it means a customer who
+  // already knows what they want can find a code and a rate without scrolling
+  // through hundreds of photographs to reach it.
   let page = doc.addPage([A4.w, A4.h]);
   let y = A4.h - M;
+
+  page.drawText("Price list", { x: M, y, size: 22, font: bold, color: ROSE });
+  y -= 18;
+  page.drawText("Every product above, with its code and rate.", {
+    x: M, y, size: 9.5, font: regular, color: MUTED,
+  });
+  y -= 28;
 
   const newPage = () => {
     page = doc.addPage([A4.w, A4.h]);

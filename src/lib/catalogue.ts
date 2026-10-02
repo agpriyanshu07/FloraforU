@@ -21,10 +21,17 @@ export type CatalogueParams = {
 // A-Z and Z-A were dropped: nobody shops décor alphabetically, and any link
 // still carrying `sort=name-asc` falls through to the default below rather than
 // erroring, so old bookmarks and shared URLs keep working.
+// Every sort ends on id, which makes it a TOTAL order. Without that last key
+// the order of tied rows is whatever Postgres finds convenient, and it is not
+// obliged to pick the same one twice: two seeded products share a createdAt to
+// the millisecond, and real stock imported in one batch shares a price. That
+// is not just untidy — this query is paginated, so an unstable order means a
+// product can appear on page 1 and again on page 2 while another is never
+// shown at all.
 const ORDER_BY: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
-  newest: [{ createdAt: "desc" }],
-  "price-asc": [{ price: "asc" }, { name: "asc" }],
-  "price-desc": [{ price: "desc" }, { name: "asc" }],
+  newest: [{ createdAt: "desc" }, { id: "asc" }],
+  "price-asc": [{ price: "asc" }, { name: "asc" }, { id: "asc" }],
+  "price-desc": [{ price: "desc" }, { name: "asc" }, { id: "asc" }],
 };
 
 /** Shared query used by /catalogue and /categories/[slug]. */

@@ -3,6 +3,16 @@ import { PUBLIC_ROUTES, loadLazyImages, reseed } from "./helpers";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { PDFDocument } from "pdf-lib";
+import { photoJpeg } from "../src/lib/pdf-photos";
+
+/** Any real product photo on disk, for the converter test below. */
+function realPhotoFile(): string {
+  const dir = path.join(process.cwd(), "public", "img", "products");
+  const file = fs.readdirSync(dir).find((f) => f.endsWith(".webp"));
+  if (!file) throw new Error("no product photos in public/img/products");
+  return file;
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -295,6 +305,49 @@ test("an out-of-range page clamps to the last page instead of looking empty", as
   await expect(page.getByText(/page \d+ of \d+/)).toBeVisible();
 });
 
+test("paging through the catalogue never repeats or loses a product", async ({ page }) => {
+  // The catalogue sorts "Newest first" by createdAt, and two seeded products
+  // share one to the millisecond. With no further sort key Postgres may return
+  // tied rows in either order, and it is not obliged to choose the same order
+  // twice — so with LIMIT/OFFSET paging on top, one product shows up on both
+  // page 1 and page 2 while another is never shown at all. Every sort now ends
+  // on id, which makes the order total.
+  //
+  // Walks the whole catalogue rather than the first few pages: the fault only
+  // shows when a tie happens to straddle a page boundary, so the more
+  // boundaries this crosses the more reliably it catches a regression. It
+  // checks an invariant that must hold regardless — every product, exactly
+  // once, across all pages.
+  const hrefsOn = () =>
+    page
+      .getByRole("main")
+      .locator('a[href^="/product/"]')
+      .evaluateAll((links) => [...new Set(links.map((a) => a.getAttribute("href")!))]);
+
+  await page.goto("/catalogue");
+  const total = Number((await resultCount(page)).match(/\d+/)![0]);
+  expect(total, "no products in the catalogue to page through").toBeGreaterThan(0);
+
+  const first = await hrefsOn();
+  const pageSize = first.length;
+  const pageCount = Math.ceil(total / pageSize);
+
+  const all = [...first];
+  for (let n = 2; n <= pageCount; n++) {
+    await page.goto(`/catalogue?page=${n}`);
+    all.push(...(await hrefsOn()));
+  }
+
+  const duplicated = [...new Set(all.filter((href, i) => all.indexOf(href) !== i))];
+  expect(duplicated, "a product appeared on more than one page").toEqual([]);
+  expect(new Set(all).size, "paging did not reach every product").toBe(total);
+
+  // And the order is the same on a second request, not merely internally
+  // consistent within one.
+  await page.goto("/catalogue?page=1");
+  expect(await hrefsOn(), "page 1 came back in a different order").toEqual(first);
+});
+
 // ------------------------------------------------------------------- exports --
 
 test("the catalogue PDF is generated from live data", async ({ request }) => {
@@ -305,6 +358,63 @@ test("the catalogue PDF is generated from live data", async ({ request }) => {
   const body = await response.body();
   expect(body.subarray(0, 5).toString()).toBe("%PDF-");
   expect(body.byteLength, "PDF should hold the whole catalogue").toBeGreaterThan(10_000);
+});
+
+test("the catalogue PDF is a photo catalogue, one product to a page", async ({ page }) => {
+  // The PDF used to be a dense text table. The shop's own supplier catalogue
+  // is a page per product with the photograph on it, and that is what their
+  // customers are used to being sent, so this one is too. The two things that
+  // can silently regress are the photographs disappearing (pdf-lib embeds
+  // JPEG and PNG only, and every product photo here is .webp, so a broken
+  // conversion step yields a valid PDF with nothing in it) and the layout
+  // quietly collapsing back to many products per page.
+  await page.goto("/categories/lamps-diyas");
+  const products = new Set(
+    await page.locator('a[href^="/product/"]').evaluateAll((links) =>
+      links.map((a) => a.getAttribute("href")),
+    ),
+  ).size;
+  expect(products, "no products to build a catalogue from").toBeGreaterThan(0);
+
+  const response = await page.request.get("/api/catalogue-pdf?category=lamps-diyas");
+  expect(response.status()).toBe(200);
+  const body = await response.body();
+
+  // A JPEG inside a PDF is an image stream filtered with /DCTDecode. Counting
+  // them is the cheapest honest way to ask "are there photographs in here".
+  const streams = body.toString("latin1").match(/\/DCTDecode/g) ?? [];
+  expect(streams.length, "the PDF has no embedded photographs").toBeGreaterThan(0);
+
+  // Read back with the same library that wrote it rather than parsing bytes:
+  // pdf-lib stores the page tree in compressed object streams, so the page
+  // count is not greppable.
+  const doc = await PDFDocument.load(body);
+  expect(
+    doc.getPageCount(),
+    "fewer pages than products — the one-product-per-page layout is gone",
+  ).toBeGreaterThanOrEqual(products + 1);
+});
+
+test("a photo that cannot be read is skipped, not fatal", async () => {
+  // A product whose photo is missing still belongs in the catalogue; its page
+  // draws a "Photo coming soon" panel. These are the three answers the
+  // converter has to get right for that to hold.
+  const real = await photoJpeg("/img/products/" + realPhotoFile());
+  expect(real, "a real product photo failed to convert").not.toBeNull();
+  // JPEG's magic number. Proves it converted rather than passing .webp through
+  // for pdf-lib to reject at embed time.
+  expect(real!.subarray(0, 3).toString("hex")).toBe("ffd8ff");
+
+  expect(await photoJpeg("/img/products/definitely-not-here.webp")).toBeNull();
+
+  // Image URLs are admin-entered text, so this is a path the shop could type.
+  // Deliberately points at a REAL image that lives outside /public: aimed at
+  // /etc/passwd the test would pass either way, since sharp rejects a file
+  // that is not an image and the guard never gets the credit.
+  expect(
+    await photoJpeg("/../data/categories/pots-vases.webp"),
+    "a file outside /public was read",
+  ).toBeNull();
 });
 
 // -------------------------------------------------------------- sale visibility --
