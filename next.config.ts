@@ -17,6 +17,31 @@ const nextConfig: NextConfig = {
   },
 
   images: {
+    // The image optimizer is OFF for this site.
+    //
+    // Transformations are metered by the host. This catalogue holds 920
+    // product photographs, and 920 sources times several widths each, each
+    // re-validated on a timer, is far past a small plan's allowance. When it
+    // ran out the optimizer stopped serving and every photograph on the live
+    // site became a broken-image icon at once -- the logo kept rendering only
+    // because it is a static file that never touches the optimizer.
+    //
+    // Every image here is already web-ready: the photographs are .webp with a
+    // median width of 540px and a median size of 53KB, and the category covers
+    // are 31 files totalling 3.4MB. There was never much for an optimizer to
+    // win on them, and a great deal for it to lose.
+    //
+    // The cost is honest: a category page carries roughly 1.8MB of photographs
+    // on a phone instead of a few hundred KB, softened by lazy loading. A
+    // heavier page that always shows the stock beats a lighter one that
+    // intermittently shows nothing. Photos uploaded to Cloudinary are resized
+    // on Cloudinary's own CDN and are unaffected either way.
+    //
+    // The settings below are kept, not dead weight: they are what this should
+    // return to if the shop ever moves to a plan where transformations are not
+    // the binding constraint.
+    unoptimized: true,
+
     // The Instagram reel frames are only 335px wide, so the optimizer's
     // default quality of 75 re-encodes an already-lossy file and the loss
     // shows at that size. 90 is allowed alongside it for those.
