@@ -5,6 +5,8 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { PDFDocument } from "pdf-lib";
 import { photoJpeg } from "../src/lib/pdf-photos";
+import { brandFonts, brandLogoPng, BRAND } from "../src/lib/pdf-brand";
+import { sanitise } from "../src/lib/pdf-text";
 
 /** Any real product photo on disk, for the converter test below. */
 function realPhotoFile(): string {
@@ -415,6 +417,103 @@ test("a photo that cannot be read is skipped, not fatal", async () => {
     await photoJpeg("/../data/categories/pots-vases.webp"),
     "a file outside /public was read",
   ).toBeNull();
+});
+
+test("downloading a subcategory gives that subcategory only", async ({ page }) => {
+  // The whole point of the per-category download is that the shop answers one
+  // enquiry with one file. A filtered page whose download quietly ignores the
+  // filter is worse than no download: nobody reports it, they just stop using
+  // it and go back to sending photos one at a time.
+  await page.goto("/categories/lights-lighting-decor");
+  const chip = page.locator('nav[aria-label="Filter by type"] a').nth(1);
+  const chipText = (await chip.innerText()).replace(/\s+/g, " ").trim();
+  const chipCount = Number(chipText.match(/(\d+)\s*$/)![1]);
+  const sub = new URL((await chip.getAttribute("href"))!, "http://x").searchParams.get("sub")!;
+
+  const whole = await PDFDocument.load(
+    await (await page.request.get("/api/catalogue-pdf?category=lights-lighting-decor")).body(),
+  );
+  const res = await page.request.get(`/api/catalogue-pdf?category=lights-lighting-decor&sub=${sub}`);
+  expect(res.status()).toBe(200);
+  const only = await PDFDocument.load(await res.body());
+
+  // One page per product, plus a cover and at least one price-list page. The
+  // upper bound is what catches a download that ignored ?sub= and returned the
+  // category: that PDF has a page per product in the whole category.
+  expect(only.getPageCount()).toBeGreaterThanOrEqual(chipCount + 2);
+  expect(
+    only.getPageCount(),
+    "the subcategory download returned more than that subcategory",
+  ).toBeLessThan(whole.getPageCount());
+
+  // And it is named for what it holds: a shop sending three of these in one
+  // WhatsApp thread cannot have them all called the same thing.
+  expect(res.headers()["content-disposition"]).toContain(`-${sub}-`);
+});
+
+test("the download button follows the subcategory filter on screen", async ({ page }) => {
+  await page.goto("/categories/lights-lighting-decor");
+  // Scoped to main: the footer carries a whole-catalogue link of its own.
+  const link = page.getByRole("main").getByRole("link", { name: /Download this category/i });
+  expect(await link.getAttribute("href")).toBe(
+    "/api/catalogue-pdf?category=lights-lighting-decor",
+  );
+
+  const chip = page.locator('nav[aria-label="Filter by type"] a').nth(1);
+  const sub = new URL((await chip.getAttribute("href"))!, "http://x").searchParams.get("sub")!;
+  await chip.click();
+
+  const filtered = page.getByRole("main").getByRole("link", { name: /^Download /i });
+  expect(await filtered.getAttribute("href")).toBe(
+    `/api/catalogue-pdf?category=lights-lighting-decor&sub=${sub}`,
+  );
+});
+
+test("a bad subcategory download is a bad link, not a catalogue of nothing", async ({ request }) => {
+  // A subcategory slug is only unique inside its category — "Hanging" exists
+  // under both Lights and Artificial Flowers — so one on its own names nothing.
+  expect((await request.get("/api/catalogue-pdf?sub=jhumar")).status()).toBe(400);
+  // Real category, subcategory that is not in it.
+  expect(
+    (await request.get("/api/catalogue-pdf?category=lights-lighting-decor&sub=not-a-real-one"))
+      .status(),
+  ).toBe(404);
+});
+
+test("the catalogue PDF carries the shop's own fonts and logo", async () => {
+  // These are read off disk at request time. If they are ever missing from the
+  // deployed bundle the route still returns a valid PDF — it just quietly
+  // loses the branding — so the check is that the inputs are really there.
+  const faces = await brandFonts();
+  for (const [name, bytes] of Object.entries(faces)) {
+    expect(bytes.length, `${name} is empty`).toBeGreaterThan(1000);
+    // TrueType's magic number. Catches a woff2 or an HTML error page sitting
+    // where a font should be, which pdf-lib would only reject at embed time.
+    expect(bytes.subarray(0, 4).toString("hex"), `${name} is not a TTF`).toBe("00010000");
+  }
+
+  const logo = await brandLogoPng(BRAND.rose600, 220);
+  expect(logo, "the logo did not rasterise").not.toBeNull();
+  expect(logo!.subarray(1, 4).toString(), "the logo is not a PNG").toBe("PNG");
+});
+
+test("the catalogue prints the shop's own words, accents and all", () => {
+  // This was a real defect. The standard PDF fonts are WinAnsi-encoded, so
+  // every string was stripped to ASCII first and all 53 pages of this category
+  // were headed "LIGHTS & LIGHTING DCOR".
+  expect(sanitise("Lights & Lighting Décor")).toBe("Lights & Lighting Décor");
+
+  // Punctuation above U+017F has to be mapped rather than dropped, or the
+  // shop's opening hours print as "Mon  Sat, 10:00 AM  8:00 PM".
+  expect(sanitise("Mon – Sat, 10:00 AM – 8:00 PM")).toBe("Mon - Sat, 10:00 AM - 8:00 PM");
+  expect(sanitise("5 ft × 8 ft")).toBe("5 ft x 8 ft");
+  expect(sanitise("we’ll confirm")).toBe("we'll confirm");
+
+  // The rupee sign sits outside the embedded subsets, and pdf-lib throws at
+  // draw time rather than embed time — so a stray one would be a 500 on a
+  // download rather than a wrong character.
+  expect(sanitise("₹1,200")).toBe("Rs 1,200");
+  expect(sanitise("商品")).toBe("");
 });
 
 // -------------------------------------------------------------- sale visibility --
@@ -928,7 +1027,8 @@ test("a shopper can take away one category instead of the whole catalogue", asyn
   // Most enquiries are about one kind of thing. Sending 97 products to answer
   // "what backdrops do you have" is a lot to scroll on a phone.
   await page.goto("/categories/lamps-diyas");
-  const link = page.getByRole("link", { name: /Download this category/i });
+  // Scoped to main: the footer carries a whole-catalogue link of its own.
+  const link = page.getByRole("main").getByRole("link", { name: /Download this category/i });
   await expect(link).toBeVisible();
   expect(await link.getAttribute("href")).toBe("/api/catalogue-pdf?category=lamps-diyas");
 

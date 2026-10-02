@@ -73,6 +73,11 @@ export default async function CategoryPage({
     .map((s) => ({ slug: s.slug, name: s.name, count: s._count.products }))
     .filter((s) => s.count > 0);
 
+  // Only a chip that is really on screen counts as the active filter: an
+  // unknown ?sub= already shows the whole category, and the download has to
+  // agree with what the page is showing rather than 404 on its own link.
+  const activeChip = sp.sub ? chips.find((c) => c.slug === sp.sub) : undefined;
+
   // The "All" chip has to be the category total, not `result.total`, which is
   // the count AFTER the current subcategory filter -- so once you picked a
   // chip, "All" would have claimed the number you were already looking at.
@@ -118,13 +123,23 @@ export default async function CategoryPage({
         {/* Most enquiries are about one kind of thing — a backdrop, a set of
             lamps. Sending the whole 97-product catalogue to answer that is a
             lot for the customer to scroll on a phone, so each category can be
-            sent on its own. */}
+            sent on its own.
+
+            The button follows the filter chips too. Someone who has narrowed
+            to Dry Fruit Box (4 Jar) and then downloads expects those, not all
+            183 gift boxes — a download that silently ignores the filter on
+            screen is the kind of thing nobody reports, they just stop using
+            it. The label says which, so it is obvious before the tap. */}
         <a
-          href={`/api/catalogue-pdf?category=${category.slug}`}
+          href={
+            activeChip
+              ? `/api/catalogue-pdf?category=${category.slug}&sub=${activeChip.slug}`
+              : `/api/catalogue-pdf?category=${category.slug}`
+          }
           className="btn-ghost shrink-0"
         >
           <DownloadIcon className="h-4 w-4 shrink-0" />
-          Download this category
+          {activeChip ? `Download ${activeChip.name}` : "Download this category"}
         </a>
       </header>
 
