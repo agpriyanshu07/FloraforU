@@ -86,6 +86,9 @@ export default async function AdminProductsPage({
         description={`${total} product${total === 1 ? "" : "s"} matching the current filters.`}
         action={
           <div className="flex flex-wrap gap-2">
+            <Link href="/admin/products/filing" className="btn-ghost">
+              File by photo
+            </Link>
             <Link href="/admin/products/import" className="btn-ghost">
               Bulk import (CSV / Excel)
             </Link>

@@ -29,10 +29,28 @@ import { SUBCATEGORY_RULES, subcategorySlug } from "../src/lib/subcategories";
 
 const MIGRATIONS = join(process.cwd(), "prisma", "migrations");
 
-function findClassifier(): string {
-  const dir = readdirSync(MIGRATIONS).find((d) => d.includes("classify_catalogue"));
-  if (!dir) throw new Error("No classify_catalogue migration found.");
-  return readFileSync(join(MIGRATIONS, dir, "migration.sql"), "utf8");
+/**
+ * Every migration's SQL, concatenated.
+ *
+ * Deliberately not just the first classify_catalogue migration. Once that one
+ * had shipped it became frozen, so a later rule change has to arrive as a
+ * delta migration of its own -- and a check that only read the original would
+ * have reported every delta as drift, which trains people to ignore it.
+ * Reading all of them asks the question that actually matters: is each rule in
+ * the classifier backed by SQL that ran somewhere?
+ */
+function appliedSql(): string {
+  return readdirSync(MIGRATIONS)
+    .filter((d) => !d.endsWith(".toml"))
+    .sort()
+    .map((d) => {
+      try {
+        return readFileSync(join(MIGRATIONS, d, "migration.sql"), "utf8");
+      } catch {
+        return "";
+      }
+    })
+    .join("\n");
 }
 
 /** The JS pattern as Postgres would have to spell it. */
@@ -41,7 +59,7 @@ function asPostgres(pattern: RegExp): string {
 }
 
 function main() {
-  const sql = findClassifier();
+  const sql = appliedSql();
   const problems: string[] = [];
 
   for (const [category, rules] of Object.entries(SUBCATEGORY_RULES)) {

@@ -55,10 +55,30 @@ export type SubcategoryRule = {
 export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
   "Lights & Lighting Décor": [
     { name: "Jhumar", pattern: /chandelier|jhumar/i },
-    { name: "LED, Palco & Strip Light", pattern: /\bled\b|palco|strip|par light/i },
-    { name: "Light Stand & Hanging", pattern: /light stand|candle stand|x stand|stand \(set|hanging/i },
+    { name: "LED, Palco & Strip Light", pattern: /\bled\b|palco|strip|par light|cloth light|crock light/i },
+    // `\b9\d{2}\b` is the shop's own catalogue-code series for one product
+    // line: sets of ten pendant lights on cords, photographed on black with a
+    // "MDF 9xx SET OF 10" caption. Hanging Light 903, Humming Hanging Bird
+    // 915 and Rod Hanging Light 936 filed themselves here because the word
+    // "hanging" happens to be in their names; Big Star 904, Cover Bird 914,
+    // Candle Light 916 and Golden Jali 931 are the same product line and did
+    // not. Matching the code files the line together instead of splitting it
+    // on an accident of naming.
+    {
+      name: "Light Stand & Hanging",
+      pattern:
+        /light stand|candle stand|x stand|stand \(set|hanging|light tree|shell light|light bird|titli bird|sun light \d|\b9\d{2}\b/i,
+    },
     { name: "Imported Light Stand", pattern: null },
     { name: "Imported Hanging Light", pattern: null },
+    // Not on the shop's own card. Their five names cover stands, hanging
+    // lights and strips, and the catalogue also carries loose bulbs, a bulb
+    // holder and two backlit panels -- five products with nowhere to go, which
+    // would have stayed unfiled for good. Named plainly so they are obvious to
+    // rename or delete in the admin; deleting a subcategory leaves its stock in
+    // the category, so nothing is at risk either way.
+    { name: "Bulbs & Holders", pattern: /\bbulbs?\b/i },
+    { name: "Light Panels", pattern: /\bpanel\b/i },
   ],
   "Artificial Flowers & Greenery": [
     { name: "Flower Bunch", pattern: /bunch/i },

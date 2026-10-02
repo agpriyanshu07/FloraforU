@@ -323,6 +323,91 @@ export async function bulkProductAction(formData: FormData) {
   redirect(back({ bulk: action, count: String(ids.length) }));
 }
 
+/**
+ * Files a screenful of products under subcategories in one submit.
+ *
+ * This exists because the bulk action on the products list cannot answer the
+ * question Pots & Vases asks. That one ticks rows and sends them all to the
+ * same subcategory, which works when the rows share something a filter can
+ * find. Forty-one pots sorted into plastic, ceramic, metal and china share
+ * nothing a filter can find -- the material is in the photo and nowhere else,
+ * not in the name, the spec or the description -- so filing them that way
+ * means four passes of scanning a text list and ticking from memory.
+ *
+ * Here every product is a photo with its own dropdown, and one Save writes the
+ * lot. The classifier deliberately leaves those four subcategories empty for
+ * the same reason (see src/lib/subcategories.ts): the shop knows a pot is
+ * ceramic, and no rule over a product name ever will.
+ */
+export async function fileProductsAction(formData: FormData) {
+  await guard();
+
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const show = String(formData.get("show") ?? "");
+  const back = (extra: Record<string, string>) => {
+    const qs = new URLSearchParams({ categoryId, ...(show ? { show } : {}), ...extra });
+    return `/admin/products/filing?${qs.toString()}`;
+  };
+
+  if (!categoryId) redirect("/admin/products/filing");
+
+  // A posted subcategory id is only honoured if it belongs to this category.
+  // The dropdowns only ever offer this category's own, but a product filed
+  // under another category's subcategory would appear under chips on a page it
+  // is not even listed on, and that is not a state worth trusting a form for.
+  const subcategories = await db.subcategory.findMany({
+    where: { categoryId },
+    select: { id: true },
+  });
+  const valid = new Set(subcategories.map((s) => s.id));
+
+  const submitted = new Map<string, string | null>();
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("sub_")) continue;
+    const target = String(value);
+    if (target && !valid.has(target)) continue;
+    submitted.set(key.slice(4), target || null);
+  }
+
+  if (submitted.size === 0) redirect(back({ filed: "0" }));
+
+  // Scoped to the category, so a stale tab cannot file a product that has
+  // since been moved somewhere else.
+  const current = await db.product.findMany({
+    where: { id: { in: [...submitted.keys()] }, categoryId },
+    select: { id: true, subcategoryId: true },
+  });
+
+  // Grouped by target so this is a handful of updateMany calls rather than one
+  // per product: a category with 41 unfiled products would otherwise be 41
+  // round trips for a single Save.
+  const changes = new Map<string | null, string[]>();
+  for (const product of current) {
+    const target = submitted.get(product.id) ?? null;
+    if (target === product.subcategoryId) continue;
+    const group = changes.get(target) ?? [];
+    group.push(product.id);
+    changes.set(target, group);
+  }
+
+  let filed = 0;
+  for (const [subcategoryId, ids] of changes) {
+    const { count } = await db.product.updateMany({
+      where: { id: { in: ids } },
+      data: { subcategoryId },
+    });
+    filed += count;
+  }
+
+  if (filed > 0) {
+    refreshPublicPages();
+    revalidatePath("/admin/products/filing");
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/categories");
+  }
+  redirect(back({ filed: String(filed) }));
+}
+
 // ============================================================ CATEGORIES ===
 
 const categorySchema = z.object({
