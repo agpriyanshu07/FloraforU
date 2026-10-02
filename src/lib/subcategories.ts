@@ -50,12 +50,37 @@ export type SubcategoryRule = {
    */
   pattern?: RegExp | null;
   catchAll?: true;
+  /**
+   * Where this chip sits on the category page, when that differs from where
+   * the rule sits in this list.
+   *
+   * These are two different orderings and conflating them is destructive. The
+   * list order is MATCH PRECEDENCE -- first rule that matches wins -- so it
+   * has to run specific before general: "Trays" before "Dry Fruit Hamper Box",
+   * or a Dry Fruit Tray is filed as a hamper. The shop's own site orders its
+   * chips by what sells, which is a different sequence entirely, and simply
+   * sorting this list into that order would put the Loose Flowers catch-all
+   * first and swallow all 85 products in the category.
+   *
+   * So: list order decides what matches, `position` decides what is shown.
+   * Omitted means "same as its place in the list".
+   */
+  position?: number;
 };
 
 export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
+  // Chip order from the shop's own Lights page: Light Stand & Hanging, Jhumar,
+  // Imported Light Stand, Imported Hanging Light, LED/Palco/Strip.
   "Lights & Lighting Décor": [
-    { name: "Jhumar", pattern: /chandelier|jhumar/i },
-    { name: "LED, Palco & Strip Light", pattern: /\bled\b|palco|strip|par light|cloth light|crock light/i },
+    { name: "Jhumar", pattern: /chandelier|jhumar/i, position: 1 },
+    // Before the stand rule: "Light Stand Panel" is a panel, and "light stand"
+    // would otherwise claim it.
+    { name: "Light Panels", pattern: /\bpanel\b/i, position: 6 },
+    {
+      name: "LED, Palco & Strip Light",
+      pattern: /\bled\b|palco|strip|par light|cloth light|crock light/i,
+      position: 4,
+    },
     // `\b9\d{2}\b` is the shop's own catalogue-code series for one product
     // line: sets of ten pendant lights on cords, photographed on black with a
     // "MDF 9xx SET OF 10" caption. Hanging Light 903, Humming Hanging Bird
@@ -68,51 +93,53 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
       name: "Light Stand & Hanging",
       pattern:
         /light stand|candle stand|x stand|stand \(set|hanging|light tree|shell light|light bird|titli bird|sun light \d|\b9\d{2}\b/i,
+      position: 0,
     },
-    { name: "Imported Light Stand", pattern: null },
-    { name: "Imported Hanging Light", pattern: null },
+    { name: "Imported Light Stand", pattern: null, position: 2 },
+    { name: "Imported Hanging Light", pattern: null, position: 3 },
     // Not on the shop's own card. Their five names cover stands, hanging
     // lights and strips, and the catalogue also carries loose bulbs, a bulb
     // holder and two backlit panels -- five products with nowhere to go, which
     // would have stayed unfiled for good. Named plainly so they are obvious to
     // rename or delete in the admin; deleting a subcategory leaves its stock in
     // the category, so nothing is at risk either way.
-    { name: "Bulbs & Holders", pattern: /\bbulbs?\b/i },
-    { name: "Light Panels", pattern: /\bpanel\b/i },
+    { name: "Bulbs & Holders", pattern: /\bbulbs?\b/i, position: 5 },
   ],
   "Artificial Flowers & Greenery": [
-    { name: "Flower Bunch", pattern: /bunch/i },
-    { name: "Ready Panel", pattern: /panel|ready/i },
-    { name: "Hanging", pattern: /hanging|latta|wisteria/i },
-    { name: "Golden Sticks", pattern: /(golden|silver).*stick|stick.*(golden|silver)/i },
-    { name: "Sticks", pattern: /stick/i },
-    { name: "Leaf", pattern: /patta|pata|leave|leaf|money plant|satter/i },
-    { name: "Filler", pattern: /filler|pompas|gypsy|pops|poleen/i },
-    { name: "Loose Flowers", catchAll: true },
+    { name: "Flower Bunch", pattern: /bunch/i, position: 2 },
+    { name: "Ready Panel", pattern: /panel|ready/i, position: 4 },
+    { name: "Hanging", pattern: /hanging|latta|wisteria/i, position: 3 },
+    { name: "Golden Sticks", pattern: /(golden|silver).*stick|stick.*(golden|silver)/i, position: 7 },
+    { name: "Sticks", pattern: /stick/i, position: 6 },
+    { name: "Leaf", pattern: /patta|pata|leave|leaf|money plant|satter/i, position: 1 },
+    { name: "Filler", pattern: /filler|pompas|gypsy|pops|poleen/i, position: 5 },
+    { name: "Loose Flowers", catchAll: true, position: 0 },
   ],
   "Gift Boxes, Trays, Bags & Baskets": [
     { name: "Dry Fruit Box 2 Jar", pattern: /^2\s*jar/i },
     { name: "Dry Fruit Box 3 Jar", pattern: /^3\s*(\+\s*2\s*)?jar/i },
     { name: "Dry Fruit Box 4 Jar", pattern: /^4\s*jar|^4 khana/i },
     { name: "Dry Fruit Box 5, 6, 8 Jar", pattern: /^[568]\s*jar/i },
-    { name: "Dry Fruit Hamper Box", pattern: /hamper|dry fruit|premium \d+ jar|meva/i },
-    { name: "Potly, Grass & Jar", pattern: /potli|potly|tin jar|\bjar\b|grass/i },
-    { name: "Bags", pattern: /\bbag\b|purse|attachi|balti/i },
-    { name: "Fancy Basket", pattern: /basket|tokri/i },
-    { name: "Trays", pattern: /tray|platter/i },
-    { name: "Pine", pattern: /pine/i },
-    { name: "Cane", pattern: /cane/i },
-    { name: "Fancy Box", pattern: /\bbox\b/i },
+    // Before the hamper rule: six "Dry Fruit Tray (...)" products were being
+    // filed as hampers because "dry fruit" matched first. They are trays.
+    { name: "Trays", pattern: /tray|platter/i, position: 6 },
+    { name: "Dry Fruit Hamper Box", pattern: /hamper|dry fruit|premium \d+ jar|meva/i, position: 4 },
+    { name: "Potly, Grass & Jar", pattern: /potli|potly|tin jar|\bjar\b|grass/i, position: 11 },
+    { name: "Bags", pattern: /\bbag\b|purse|attachi|balti/i, position: 10 },
+    { name: "Fancy Basket", pattern: /basket|tokri/i, position: 5 },
+    { name: "Pine", pattern: /pine/i, position: 7 },
+    { name: "Cane", pattern: /cane/i, position: 8 },
+    { name: "Fancy Box", pattern: /\bbox\b/i, position: 9 },
   ],
   "Backdrops, Wall Panels & Cloths": [
     { name: "Wall", pattern: /wall/i },
     { name: "Ceiling", pattern: /ceiling/i },
     { name: "Passage", pattern: /passage/i },
-    { name: "Table - Chair Cover", pattern: /table cover|chair cover|counter table/i },
-    { name: "Selfie Cloths", pattern: /selfie/i },
-    { name: "Printed Cloth", pattern: /print/i },
-    { name: "Hanging Cloths & Backdrops", pattern: /hanging|jhaler|chindi|daman|panel|butta/i },
-    { name: "Plain Cloth", pattern: /lycra|velvet|roto|micro|galaxy|galexy|net|cloth|foil|mate|grass/i },
+    { name: "Table - Chair Cover", pattern: /table cover|chair cover|counter table/i, position: 4 },
+    { name: "Selfie Cloths", pattern: /selfie/i, position: 5 },
+    { name: "Printed Cloth", pattern: /print/i, position: 7 },
+    { name: "Hanging Cloths & Backdrops", pattern: /hanging|jhaler|chindi|daman|panel|butta/i, position: 6 },
+    { name: "Plain Cloth", pattern: /lycra|velvet|roto|micro|galaxy|galexy|net|cloth|foil|mate|grass/i, position: 3 },
   ],
   "Rajasthani & Haldi-Mehndi-Mayra Décor": [
     { name: "Kite", pattern: /kite/i },
@@ -125,9 +152,9 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Props", catchAll: true },
   ],
   "Packing & Bouquet Accessories": [
-    { name: "Ribbon", pattern: /ribbon|bow|lace/i },
-    { name: "Packing Net Mesh", pattern: /\bnet\b|mesh/i },
-    { name: "Cellophane Tissue n Packing Paper", pattern: /cellophane|tissue|paper|sheet/i },
+    { name: "Ribbon", pattern: /ribbon|bow|lace/i, position: 1 },
+    { name: "Packing Net Mesh", pattern: /\bnet\b|mesh/i, position: 2 },
+    { name: "Cellophane Tissue n Packing Paper", pattern: /cellophane|tissue|paper|sheet/i, position: 0 },
   ],
   "Pots & Vases": [
     { name: "Plastic Flower Pot", pattern: null },
@@ -139,12 +166,12 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
   "SFX & Special Effects": [
     { name: "Machine", pattern: /machine|wheel|booth/i },
     { name: "Pyro", pattern: /pyro|sparkular/i },
-    { name: "Paper & Jari Confetti", pattern: /confetti/i },
-    { name: "Liquid & Powder", pattern: /co2|gun/i },
+    { name: "Paper & Jari Confetti", pattern: /confetti/i, position: 3 },
+    { name: "Liquid & Powder", pattern: /co2|gun/i, position: 2 },
   ],  "Mirror Décor": [
-    { name: "Entry Gate", pattern: /gate|entry/i },
-    { name: "Mirror Ball n More", pattern: /ball/i },
-    { name: "Mirror Stage", pattern: /stage|wall|pillar|table|hexagon/i },
+    { name: "Entry Gate", pattern: /gate|entry/i, position: 2 },
+    { name: "Mirror Ball n More", pattern: /ball/i, position: 0 },
+    { name: "Mirror Stage", pattern: /stage|wall|pillar|table|hexagon/i, position: 1 },
   ],
   "Sofa & Chair": [
     // The shop's card reads "Divana"; every product spells it "Dewana"
