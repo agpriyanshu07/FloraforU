@@ -1354,3 +1354,21 @@ test("a category with no subcategories shows no filter row at all", async ({ pag
   await expect(page.getByRole("navigation", { name: "Filter by type" })).toHaveCount(0);
   expect(await page.locator('a[href^="/product/"]').count()).toBeGreaterThan(0);
 });
+
+test("a link to a renamed subcategory explains itself instead of lying", async ({ page }) => {
+  // This is what a link already sent on WhatsApp becomes the moment the shop
+  // renames or deletes that subcategory. It used to read "0 products in this
+  // category" on a category holding 183 of them.
+  await page.goto("/categories/gift-boxes-trays-bags-baskets?sub=no-such-grouping");
+
+  await expect(page.getByText(/0 products match that filter/)).toBeVisible();
+  await expect(page.getByText(/0 products in this category/)).toHaveCount(0);
+
+  // And there is a way out, not just an empty grid.
+  const all = page
+    .getByRole("navigation", { name: "Filter by type" })
+    .getByRole("link", { name: /^All/ });
+  await all.click();
+  await page.waitForURL("**/categories/gift-boxes-trays-bags-baskets");
+  expect(await page.locator('a[href^="/product/"]').count()).toBeGreaterThan(0);
+});

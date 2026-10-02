@@ -144,11 +144,19 @@ export default async function CategoryPage({
         carry={sp as Record<string, string | undefined>}
       />
 
+      {/* A `sub` that matches no chip is not a dead end to paper over: it is
+          what a link already sent on WhatsApp becomes the moment the shop
+          renames or deletes that subcategory. Saying "0 products in this
+          category" there is simply false — the category has 183 — so the
+          filtered case says it is the filter, and the empty state below
+          offers the way out. */}
       <p className="mb-4 text-sm text-ink-600" aria-live="polite">
         {result.total} {result.total === 1 ? "product" : "products"}
-        {sp.sub && chips.some((c) => c.slug === sp.sub)
-          ? ` in ${chips.find((c) => c.slug === sp.sub)!.name}`
-          : " in this category"}
+        {!sp.sub
+          ? " in this category"
+          : chips.some((c) => c.slug === sp.sub)
+            ? ` in ${chips.find((c) => c.slug === sp.sub)!.name}`
+            : " match that filter"}
       </p>
 
       {result.products.length > 0 ? (
