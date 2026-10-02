@@ -455,16 +455,20 @@ test("the download button follows the subcategory filter on screen", async ({ pa
   await page.goto("/categories/lights-lighting-decor");
   // Scoped to main: the footer carries a whole-catalogue link of its own.
   const link = page.getByRole("main").getByRole("link", { name: /Download this category/i });
-  expect(await link.getAttribute("href")).toBe(
-    "/api/catalogue-pdf?category=lights-lighting-decor",
-  );
+  await expect(link).toHaveAttribute("href", "/api/catalogue-pdf?category=lights-lighting-decor");
 
   const chip = page.locator('nav[aria-label="Filter by type"] a').nth(1);
   const sub = new URL((await chip.getAttribute("href"))!, "http://x").searchParams.get("sub")!;
   await chip.click();
 
+  // The chip is a <Link>, so click() returns before the navigation lands and
+  // the button is still the unfiltered one for a moment. Waiting for the URL
+  // and asserting with a retrying matcher is the difference between a test
+  // that passes locally and one that passes on a slower CI runner.
+  await page.waitForURL(new RegExp(`[?&]sub=${sub}(&|$)`));
   const filtered = page.getByRole("main").getByRole("link", { name: /^Download /i });
-  expect(await filtered.getAttribute("href")).toBe(
+  await expect(filtered).toHaveAttribute(
+    "href",
     `/api/catalogue-pdf?category=lights-lighting-decor&sub=${sub}`,
   );
 });
