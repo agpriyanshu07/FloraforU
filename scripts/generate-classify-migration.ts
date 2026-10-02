@@ -100,7 +100,7 @@ for (const [category, rules] of entries) {
   rules.forEach((rule, order) => {
     out.push(`
 INSERT INTO "Subcategory" ("id", "slug", "name", "description", "displayOrder", "categoryId", "createdAt", "updatedAt")
-SELECT md5(random()::text || clock_timestamp()::text), ${lit(subcategorySlug(rule.name))}, ${lit(rule.name)}, '', ${order}, c."id", NOW(), NOW()
+SELECT md5(random()::text || clock_timestamp()::text), ${lit(subcategorySlug(rule.name))}, ${lit(rule.name)}, '', ${rule.position ?? order}, c."id", NOW(), NOW()
 FROM "Category" c WHERE c."name" = ${lit(category)}
 ON CONFLICT ("categoryId", "slug") DO NOTHING;`);
   });

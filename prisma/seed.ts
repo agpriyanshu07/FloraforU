@@ -85,7 +85,7 @@ async function main() {
           categoryId: categoryIds.get(c.slug)!,
           name: rule.name,
           slug: subcategorySlug(rule.name),
-          displayOrder: order,
+          displayOrder: rule.position ?? order,
         },
       });
       subcategoryIds.set(`${c.slug}::${rule.name}`, row.id);
