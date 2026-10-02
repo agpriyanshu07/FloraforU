@@ -46,7 +46,11 @@ const nextConfig: NextConfig = {
     // The widths below are what the site actually renders. The widest slot on
     // any page is the 1160px offer banner; product cards are 280px, the
     // product gallery 520px, category cards 380px. Nothing needs 1920 and up.
-    deviceSizes: [640, 828, 1080, 1200],
+    // Tops out at 1440 because that is the widest source photograph in the
+    // catalogue — no product picture is ever downscaled below its own
+    // resolution. Nothing above it: the next rung up would only ever be an
+    // upscale of a file that does not have the pixels.
+    deviceSizes: [640, 828, 1080, 1200, 1440],
     imageSizes: [64, 128, 256, 384],
 
     // 31 days instead of 4 hours. These files are committed to the repository

@@ -7,6 +7,7 @@ import { PDFDocument } from "pdf-lib";
 import { photoJpeg } from "../src/lib/pdf-photos";
 import { brandFonts, brandLogoPng, BRAND } from "../src/lib/pdf-brand";
 import { sanitise } from "../src/lib/pdf-text";
+import { imageProps } from "../src/lib/image";
 
 /** Any real product photo on disk, for the converter test below. */
 function realPhotoFile(): string {
@@ -533,8 +534,8 @@ test("no page asks the image optimizer for a width it never displays", async ({ 
   // meter resets. That is what "sometimes the photos don't render" was, and
   // nothing about the product data was ever involved in it.
   //
-  // The widest slot on the site is the 1160px offer banner.
-  const MAX = 1200;
+  // The ceiling is the widest source photograph in the catalogue: 1440px.
+  const MAX = 1440;
 
   for (const route of ["/", "/catalogue", "/categories", "/categories/pots-vases", "/product/lace-pot"]) {
     await page.goto(route);
@@ -561,6 +562,42 @@ test("no page asks the image optimizer for a width it never displays", async ({ 
     const bigFallback = [...new Set(fallbacks.filter((w) => w > MAX))];
     expect(bigFallback, `${route} has a fallback src above ${MAX}px`).toEqual([]);
   }
+});
+
+test("a product photograph is shown whole, and at full quality", async ({ page }) => {
+  // Half this catalogue is photographed portrait — pots, light stands and
+  // garlands are tall things. Fitting a portrait photo into a landscape or
+  // square box with object-cover crops the top and bottom off the item:
+  // measured across all 920 photographs it was cutting away a median of 35% on
+  // the card and 25% on the product page, and more than 40% from 426 of them.
+  // The customer was deciding whether to enquire from the middle third of the
+  // product.
+  const fitOf = (selector: string) =>
+    page.locator(selector).first().evaluate((el) => getComputedStyle(el).objectFit);
+
+  await page.goto("/categories/pots-vases");
+  expect(
+    await fitOf("article .aspect-square img"),
+    "the product card is cropping the item again",
+  ).toBe("contain");
+
+  const href = await page.locator('a[href^="/product/"]').first().getAttribute("href");
+  await page.goto(href!);
+  expect(
+    await fitOf("main .aspect-square img"),
+    "the product page is cropping the item again",
+  ).toBe("contain");
+
+  // And the re-encode must not band the gradients. These are already-lossy
+  // webp files and most of the stock is glossy, so the optimizer's default 75
+  // is a visible second loss — obvious against the source at 2x on a card.
+  //
+  // Asserted on the helper rather than the rendered page: the seeded catalogue
+  // carries placeholder SVGs, which next/image serves untouched, so no product
+  // on a seeded page goes through the optimizer at all.
+  expect(imageProps("/img/products/3107.webp", 560).quality).toBe(90);
+  // A pasted remote URL is still passed through rather than proxied.
+  expect(imageProps("https://example.com/x.jpg", 560).unoptimized).toBe(true);
 });
 
 // -------------------------------------------------------------- sale visibility --
