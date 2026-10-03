@@ -155,6 +155,10 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     { name: "Ribbon", pattern: /ribbon|bow|lace/i, position: 1 },
     { name: "Packing Net Mesh", pattern: /\bnet\b|mesh/i, position: 2 },
     { name: "Cellophane Tissue n Packing Paper", pattern: /cellophane|tissue|paper|sheet/i, position: 0 },
+    // Not on the shop's own site; added for the tools and finishing supplies
+    // that otherwise sat unfiled under "All".
+    { name: "Tape & Glue", pattern: /tape|glue|dispenser/i, position: 3 },
+    { name: "Spray Paint & Moti", pattern: /spray|moti/i, position: 4 },
   ],
   "Pots & Vases": [
     { name: "Plastic Flower Pot", pattern: null },
@@ -179,6 +183,7 @@ export const SUBCATEGORY_RULES: Record<string, SubcategoryRule[]> = {
     // itself, and the chip keeps the shop's spelling.
     { name: "Divana", pattern: /dewana|divana|diwan|sofa/i },
     { name: "Chair", pattern: /chair/i },
+    { name: "Table", pattern: /table/i, position: 2 },
   ],
 };
 
