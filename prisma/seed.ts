@@ -40,6 +40,7 @@ async function main() {
   await db.review.deleteMany();
   await db.galleryItem.deleteMany();
   await db.adminUser.deleteMany();
+  await db.rateLimitHit.deleteMany();
 
   // --- Admin user -----------------------------------------------------------
   const email = process.env.SEED_ADMIN_EMAIL ?? "owner@floralforu.in";

@@ -19,6 +19,9 @@ model AdminUser {
   name         String
   passwordHash String
   role         String   @default("owner") // owner | staff
+  // Bumped whenever the password changes; a session cookie carrying an older
+  // number is refused, so a password reset signs out every open session.
+  sessionVersion Int    @default(0)
   createdAt    DateTime @default(now())
 }
 
@@ -237,4 +240,15 @@ model Enquiry {
 model Setting {
   key   String @id
   value String
+}
+
+// Shared counter behind src/lib/rate-limit.ts. One row per scope:client key,
+// reset when its window lapses. Lives in the database so every serverless
+// instance sees the same count.
+model RateLimitHit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }

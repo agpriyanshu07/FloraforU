@@ -9,7 +9,7 @@ import { db } from "./db";
  * customer-facing account system anywhere on this site — the only thing this
  * protects is /admin.
  */
-const COOKIE = "ffu_admin_session";
+import { SESSION_COOKIE as COOKIE } from "./session-cookie";
 const MAX_AGE = 60 * 60 * 8; // 8 hours
 
 function secret(): Uint8Array {
@@ -24,6 +24,8 @@ function secret(): Uint8Array {
 
 export type Session = { userId: string; email: string; name: string; role: string };
 
+type SessionClaims = { userId: string; sessionVersion: number };
+
 export async function verifyCredentials(
   email: string,
   password: string,
@@ -37,7 +39,15 @@ export async function verifyCredentials(
 }
 
 export async function createSession(session: Session) {
-  const token = await new SignJWT({ ...session })
+  const user = await db.adminUser.findUnique({
+    where: { id: session.userId },
+    select: { sessionVersion: true },
+  });
+  const claims: SessionClaims = {
+    userId: session.userId,
+    sessionVersion: user?.sessionVersion ?? 0,
+  };
+  const token = await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE}s`)
@@ -56,20 +66,33 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-export async function getSession(): Promise<Session | null> {
-  const token = (await cookies()).get(COOKIE)?.value;
+/**
+ * Checks a session token end to end: the signature, then that the admin still
+ * exists and their password hasn't changed since the token was issued. Name and
+ * role come from the database, so an edit takes effect without signing out.
+ *
+ * Shared by getSession() and src/proxy.ts so the two can't drift apart.
+ */
+export async function verifySessionToken(token: string | undefined): Promise<Session | null> {
   if (!token) return null;
+  let claims: SessionClaims;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return {
+    claims = {
       userId: String(payload.userId),
-      email: String(payload.email),
-      name: String(payload.name),
-      role: String(payload.role),
+      sessionVersion: Number(payload.sessionVersion ?? 0),
     };
   } catch {
     return null;
   }
+
+  const user = await db.adminUser.findUnique({ where: { id: claims.userId } });
+  if (!user || user.sessionVersion !== claims.sessionVersion) return null;
+  return { userId: user.id, email: user.email, name: user.name, role: user.role };
+}
+
+export async function getSession(): Promise<Session | null> {
+  return verifySessionToken((await cookies()).get(COOKIE)?.value);
 }
 
 export async function requireSession(): Promise<Session> {
@@ -78,4 +101,4 @@ export async function requireSession(): Promise<Session> {
   return session;
 }
 
-export const SESSION_COOKIE = COOKIE;
+export { COOKIE as SESSION_COOKIE };

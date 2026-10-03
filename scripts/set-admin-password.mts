@@ -63,8 +63,13 @@ async function main() {
   const user = await db.adminUser.findUnique({ where: { email } });
 
   if (user) {
-    await db.adminUser.update({ where: { email }, data: { passwordHash } });
-    console.log(`\nPassword updated for ${email}.`);
+    // Bumping sessionVersion signs out every browser still holding an old
+    // session — the point of a reset if the password may have leaked.
+    await db.adminUser.update({
+      where: { email },
+      data: { passwordHash, sessionVersion: { increment: 1 } },
+    });
+    console.log(`\nPassword updated for ${email}. Every existing session has been signed out.`);
   } else {
     await db.adminUser.create({
       data: { email, name: "FloralforU Admin", role: "owner", passwordHash },

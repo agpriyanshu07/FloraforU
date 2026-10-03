@@ -24,7 +24,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const limit = rateLimit(clientKey(request.headers, "contact"), {
+  const limit = await rateLimit(clientKey(request.headers, "contact"), {
     limit: 5,
     windowMs: 10 * 60_000,
   });
