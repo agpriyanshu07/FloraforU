@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import CatalogueControls from "@/components/CatalogueControls";
 import ProductGrid from "@/components/ProductGrid";
+import SubcategoryCards from "@/components/SubcategoryCards";
 import SubcategoryFilter from "@/components/SubcategoryFilter";
 import Pagination from "@/components/Pagination";
 import EmptyState from "@/components/EmptyState";
@@ -122,6 +123,17 @@ export default async function CategoryPage({
         </a>
       </header>
 
+      {/* Photo cards lead while nothing is picked; once a subcategory is, the
+          chips below do the switching and the products move up. */}
+      {!sp.sub && (
+        <SubcategoryCards
+          basePath={`/categories/${slug}`}
+          subcategories={chips}
+          carry={sp as Record<string, string | undefined>}
+        />
+      )}
+
+      <div id="products" className="scroll-mt-24" />
       <Suspense fallback={<div className="card mb-6 h-40 animate-pulse" />}>
         <CatalogueControls
           categories={categories}

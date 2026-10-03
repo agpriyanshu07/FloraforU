@@ -1,9 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
 import DeleteButton from "./DeleteButton";
+import ImageUploader from "./ImageUploader";
 import {
   deleteSubcategoryAction,
   moveSubcategoryAction,
   saveSubcategoryAction,
+  saveSubcategoryCardAction,
 } from "@/lib/admin-actions";
 
 export type SubcategoryRow = {
@@ -11,6 +14,8 @@ export type SubcategoryRow = {
   name: string;
   slug: string;
   productCount: number;
+  description: string;
+  imageUrl: string;
 };
 
 /**
@@ -34,6 +39,8 @@ export default function SubcategoryManager({
   subcategories,
   unfiledCount,
   error,
+  uploadsEnabled,
+  cardError,
 }: {
   categoryId: string;
   categoryName: string;
@@ -41,12 +48,15 @@ export default function SubcategoryManager({
   subcategories: SubcategoryRow[];
   unfiledCount: number;
   error?: string;
+  uploadsEnabled: boolean;
+  /** Id of the subcategory whose card form was rejected, if any. */
+  cardError?: string;
 }) {
   return (
     <section className="card p-5">
       <h2 className="font-display text-xl">Subcategories</h2>
       <p className="mt-1 text-sm text-ink-600">
-        These become the filter chips on{" "}
+        These become the photo cards and filter chips on{" "}
         <Link
           href={`/categories/${categorySlug}`}
           target="_blank"
@@ -54,8 +64,8 @@ export default function SubcategoryManager({
         >
           the {categoryName} page
         </Link>
-        . They narrow the list in place — customers still see every product in
-        the category until they pick one.
+        , in this order. Give each one a card photo and a short line below —
+        without a photo, the card borrows one from its own products.
       </p>
 
       {subcategories.length === 0 ? (
@@ -68,6 +78,11 @@ export default function SubcategoryManager({
         <ul className="mt-4 divide-y divide-line border-y border-line">
           {subcategories.map((s, i) => (
             <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+              <span className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md bg-rose-50">
+                {s.imageUrl && (
+                  <Image src={s.imageUrl} alt="" fill sizes="56px" className="object-cover" />
+                )}
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-medium">{s.name}</span>
                 <span className="block text-[12px] text-ink-600">
@@ -142,6 +157,48 @@ export default function SubcategoryManager({
                   }
                 />
               </span>
+
+              <details className="w-full" open={cardError === s.id}>
+                <summary className="cursor-pointer text-sm text-rose-600 hover:text-rose-700">
+                  {s.imageUrl || s.description ? "Edit card photo & description" : "Add card photo & description"}
+                </summary>
+                <form action={saveSubcategoryCardAction} className="mt-3 grid gap-3 rounded-lg bg-rose-50/50 p-3">
+                  <input type="hidden" name="id" value={s.id} />
+                  <input type="hidden" name="categoryId" value={categoryId} />
+                  <ImageUploader
+                    name={`cardImage-${s.id}`}
+                    defaultValue={s.imageUrl}
+                    uploadsEnabled={uploadsEnabled}
+                    label="Card photo"
+                    max={1}
+                    noun="card"
+                  />
+                  <div>
+                    <label htmlFor={`desc-${s.id}`} className="field-label">
+                      Line under the photo <span className="font-normal text-ink-600">(optional)</span>
+                    </label>
+                    <textarea
+                      id={`desc-${s.id}`}
+                      name="description"
+                      rows={2}
+                      maxLength={200}
+                      defaultValue={s.description}
+                      placeholder="e.g. Trays for hamper packing"
+                      className="field"
+                    />
+                    {cardError === s.id && (
+                      <span className="field-error">
+                        That photo link didn&apos;t work — upload a photo or paste an https:// link.
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <button type="submit" className="btn-primary btn-sm">
+                      Save card
+                    </button>
+                  </div>
+                </form>
+              </details>
             </li>
           ))}
         </ul>
