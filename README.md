@@ -82,7 +82,7 @@ Playwright-managed browser, point it at your own Chromium:
 
 **Why not NextAuth:** the plan suggested NextAuth, but only a single credentials provider
 guarding `/admin` was needed — no OAuth, no customer accounts, no adapters. A ~90-line
-signed-cookie session (`src/lib/auth.ts`) plus `src/middleware.ts` does the same job with
+signed-cookie session (`src/lib/auth.ts`) plus `src/proxy.ts` does the same job with
 one dependency instead of a framework. Swap it for NextAuth if you later add Google login
 or multiple providers.
 
@@ -104,7 +104,7 @@ src/
   components/            ProductCard, EnquireButton, CatalogueControls, …
   components/admin/      Admin-only forms, tables, delete guards
   lib/                   db · auth · settings · catalogue · import · whatsapp · rate-limit
-  middleware.ts          Redirects every unauthenticated /admin/* request to login
+  proxy.ts               Redirects every unauthenticated /admin/* request to login
 fixtures/
   sample-import.csv      46 rows / 9 categories, incl. 5 deliberately invalid rows
 scripts/

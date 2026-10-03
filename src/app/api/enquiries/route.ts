@@ -6,7 +6,7 @@ import { clientKey, rateLimit } from "@/lib/rate-limit";
 const schema = z.object({
   channel: z.enum(["whatsapp", "call", "instagram"]),
   productId: z.string().optional(),
-  pagePath: z.string().max(300).optional(),
+  pagePath: z.string().max(300).startsWith("/").optional(),
 });
 
 /**
@@ -15,8 +15,8 @@ const schema = z.object({
  * Deliberately fire-and-forget: a failure here must never block the customer.
  */
 export async function POST(request: Request) {
-  const limit = rateLimit(clientKey(request.headers, "enquiry"), {
-    limit: 60,
+  const limit = await rateLimit(clientKey(request.headers, "enquiry"), {
+    limit: 30,
     windowMs: 60_000,
   });
   if (!limit.ok) {

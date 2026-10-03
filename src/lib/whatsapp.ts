@@ -49,9 +49,9 @@ export function buildWhatsappUrl({
       ? message
       : productName && template
         ? template
-            .replace("{product}", productName)
-            .replace("{code}", productCode ? ` (code ${productCode})` : "")
-            .replace("{url}", productUrl ?? "")
+            .replaceAll("{product}", productName)
+            .replaceAll("{code}", productCode ? ` (code ${productCode})` : "")
+            .replaceAll("{url}", productUrl ?? "")
         : // No product to substitute in, so the admin template's {product}
           // tokens would render literally. A generic opener is the safe result.
           "Hi FloralforU! I'd like to enquire about your event décor items."
