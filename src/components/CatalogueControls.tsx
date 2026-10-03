@@ -90,9 +90,13 @@ export default function CatalogueControls({
               id="catalogue-category"
               value={category}
               onChange={(e) =>
-                push((p) =>
-                  e.target.value ? p.set("category", e.target.value) : p.delete("category"),
-                )
+                push((p) => {
+                  if (e.target.value) p.set("category", e.target.value);
+                  else p.delete("category");
+                  // A subcategory belongs to the category it came from; carried
+                  // into a new one it would match nothing and empty the grid.
+                  p.delete("sub");
+                })
               }
               className="field md:w-56"
             >

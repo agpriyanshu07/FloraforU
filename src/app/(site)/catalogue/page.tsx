@@ -7,7 +7,9 @@ import EmptyState from "@/components/EmptyState";
 import { DownloadIcon, SearchIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
+import SubcategoryFilter from "@/components/SubcategoryFilter";
 import { queryCatalogue, type CatalogueParams } from "@/lib/catalogue";
+import { getSubcategoryChips } from "@/lib/subcategory-chips";
 
 // Stays dynamic: the filter, sort and pagination searchParams make every
 // request a different page, so there is nothing stable to cache.
@@ -44,6 +46,13 @@ export default async function CataloguePage({
     ? (categories.find((c) => c.slug === params.category) ?? null)
     : null;
 
+  // Picking a category here should offer the same chips as arriving on that
+  // category's own page — the shopper is looking at the same list either way.
+  const { chips, total: publishedInCategory } = activeCategory
+    ? await getSubcategoryChips(activeCategory.slug)
+    : { chips: [], total: 0 };
+  const activeChip = params.sub ? chips.find((c) => c.slug === params.sub) : undefined;
+
   return (
     <div className="shell py-10">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -60,7 +69,9 @@ export default async function CataloguePage({
         <a
           href={
             activeCategory
-              ? `/api/catalogue-pdf?category=${activeCategory.slug}`
+              ? activeChip
+                ? `/api/catalogue-pdf?category=${activeCategory.slug}&sub=${activeChip.slug}`
+                : `/api/catalogue-pdf?category=${activeCategory.slug}`
               : "/api/catalogue-pdf"
           }
           className="btn-ghost max-w-full text-center sm:shrink-0"
@@ -70,7 +81,9 @@ export default async function CataloguePage({
               the label has to wrap — pinned at one line it pushed the whole
               page sideways on a phone. */}
           <span className="min-w-0">
-            {activeCategory ? `Download ${activeCategory.name} PDF` : "Download catalogue PDF"}
+            {activeCategory
+              ? `Download ${activeChip?.name ?? activeCategory.name} PDF`
+              : "Download catalogue PDF"}
           </span>
         </a>
       </header>
@@ -78,6 +91,16 @@ export default async function CataloguePage({
       <Suspense fallback={<div className="card mb-6 h-40 animate-pulse" />}>
         <CatalogueControls categories={categories} />
       </Suspense>
+
+      {activeCategory && (
+        <SubcategoryFilter
+          basePath="/catalogue"
+          subcategories={chips}
+          active={params.sub}
+          totalCount={publishedInCategory}
+          carry={params as Record<string, string | undefined>}
+        />
+      )}
 
       <p className="mb-4 text-sm text-ink-600" aria-live="polite">
         {result.total} {result.total === 1 ? "product" : "products"}
