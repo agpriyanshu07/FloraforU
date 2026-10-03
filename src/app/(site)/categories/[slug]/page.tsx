@@ -11,6 +11,7 @@ import { SearchIcon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { queryCatalogue, type CatalogueParams } from "@/lib/catalogue";
+import { getSubcategoryChips } from "@/lib/subcategory-chips";
 import { BreadcrumbJsonLd } from "@/components/JsonLd";
 import { DownloadIcon } from "@/components/icons";
 
@@ -47,43 +48,21 @@ export default async function CategoryPage({
   const category = await db.category.findUnique({ where: { slug } });
   if (!category) notFound();
 
-  const [settings, categories, subcategories, result] = await Promise.all([
-    getSettings(),
-    db.category.findMany({
-      orderBy: { displayOrder: "asc" },
-      select: { slug: true, name: true },
-    }),
-    // Counts are of PUBLISHED stock only, to match what the grid will show.
-    // Counting every row would put "Jar Hampers 78" on a chip that then opens
-    // a list of 74, and the first thing a shopper would conclude is that four
-    // products failed to load.
-    db.subcategory.findMany({
-      where: { category: { slug } },
-      orderBy: { displayOrder: "asc" },
-      select: {
-        slug: true,
-        name: true,
-        _count: { select: { products: { where: { published: true } } } },
-      },
-    }),
-    queryCatalogue(sp, slug),
-  ]);
-
-  const chips = subcategories
-    .map((s) => ({ slug: s.slug, name: s.name, count: s._count.products }))
-    .filter((s) => s.count > 0);
+  const [settings, categories, { chips, total: publishedInCategory }, result] =
+    await Promise.all([
+      getSettings(),
+      db.category.findMany({
+        orderBy: { displayOrder: "asc" },
+        select: { slug: true, name: true },
+      }),
+      getSubcategoryChips(slug),
+      queryCatalogue(sp, slug),
+    ]);
 
   // Only a chip that is really on screen counts as the active filter: an
   // unknown ?sub= already shows the whole category, and the download has to
   // agree with what the page is showing rather than 404 on its own link.
   const activeChip = sp.sub ? chips.find((c) => c.slug === sp.sub) : undefined;
-
-  // The "All" chip has to be the category total, not `result.total`, which is
-  // the count AFTER the current subcategory filter -- so once you picked a
-  // chip, "All" would have claimed the number you were already looking at.
-  const publishedInCategory = await db.product.count({
-    where: { published: true, category: { slug } },
-  });
 
   return (
     <div className="shell py-10">
