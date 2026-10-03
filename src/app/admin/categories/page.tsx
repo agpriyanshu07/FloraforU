@@ -5,7 +5,6 @@ import CategoryForm from "@/components/admin/CategoryForm";
 import DeleteCategory from "@/components/admin/DeleteCategory";
 import SubcategoryManager from "@/components/admin/SubcategoryManager";
 import { db } from "@/lib/db";
-import { isCloudinaryConfigured } from "@/lib/cloudinary";
 import { resolveCategoryImage } from "@/lib/category-image";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +34,6 @@ export default async function AdminCategoriesPage({
           id: true,
           name: true,
           slug: true,
-          description: true,
-          imageUrl: true,
           _count: { select: { products: true } },
         },
       })
@@ -172,11 +169,7 @@ export default async function AdminCategoriesPage({
                   name: s.name,
                   slug: s.slug,
                   productCount: s._count.products,
-                  description: s.description,
-                  imageUrl: s.imageUrl ?? "",
                 }))}
-                uploadsEnabled={isCloudinaryConfigured()}
-                cardError={sp.carderror}
                 unfiledCount={unfiledCount}
                 error={sp.suberror === "name" ? "Give the subcategory a name (2+ characters)." : undefined}
               />

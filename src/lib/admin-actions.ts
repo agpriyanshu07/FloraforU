@@ -1013,51 +1013,6 @@ export async function saveSubcategoryAction(formData: FormData) {
   redirect(`/admin/categories?edit=${categoryId}&subsaved=${encodeURIComponent(name)}`);
 }
 
-const subcategoryCardSchema = z.object({
-  id: z.string().min(1),
-  categoryId: z.string().min(1),
-  imageUrl: z
-    .string()
-    .trim()
-    .refine((v) => v === "" || v.startsWith("/") || /^https:\/\//.test(v), "Use an https:// link or an uploaded photo."),
-  description: z.string().trim().max(200, "Keep it under 200 characters — it sits under a photo."),
-});
-
-/**
- * The photo and line of text on a subcategory's card on the category page.
- * Both are optional: without a photo the card borrows one from its own
- * products, and without a description it just shows the item count.
- */
-export async function saveSubcategoryCardAction(formData: FormData) {
-  await guard();
-
-  const id = String(formData.get("id") ?? "");
-  const categoryId = String(formData.get("categoryId") ?? "");
-  // The uploader's field is named per row (two on one page cannot share an
-  // id), and it holds one URL per line; a card uses the first.
-  const rawImage = String(formData.get(`cardImage-${id}`) ?? "").split("\n")[0] ?? "";
-  const parsed = subcategoryCardSchema.safeParse({
-    id,
-    categoryId,
-    imageUrl: rawImage,
-    description: String(formData.get("description") ?? ""),
-  });
-  if (!parsed.success) {
-    redirect(`/admin/categories?edit=${categoryId}&carderror=${encodeURIComponent(id)}`);
-  }
-
-  const d = parsed.data;
-  const sub = await db.subcategory.update({
-    where: { id: d.id },
-    data: { imageUrl: d.imageUrl || null, description: d.description },
-    select: { name: true },
-  });
-
-  refreshPublicPages();
-  revalidatePath("/admin/categories");
-  redirect(`/admin/categories?edit=${categoryId}&subsaved=${encodeURIComponent(sub.name)}`);
-}
-
 export async function deleteSubcategoryAction(formData: FormData) {
   await guard();
 
