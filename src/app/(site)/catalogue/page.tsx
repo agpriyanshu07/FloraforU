@@ -33,6 +33,19 @@ export default async function CataloguePage({
   searchParams: Promise<CatalogueParams>;
 }) {
   const params = await searchParams;
+
+  // Whether anything is narrowing the list. `sort` and `page` are excluded:
+  // they cannot empty the catalogue. Without this, an unfiltered visit to an
+  // empty shop told the customer to clear filters they had never set, and
+  // offered a button that reloaded the same page.
+  const hasFilters = Boolean(
+    params.q ||
+      params.category ||
+      params.sub ||
+      params.new ||
+      params.offer ||
+      params.limited,
+  );
   const [settings, categories, result] = await Promise.all([
     getSettings(),
     db.category.findMany({
@@ -125,10 +138,14 @@ export default async function CataloguePage({
         </>
       ) : (
         <EmptyState
-          title="No products match those filters"
-          body="Try a shorter search term, pick a different category, or clear the quick filters. If you're after something specific, just ask us on WhatsApp — we stock more than we can list."
-          actionLabel="Clear filters and start again"
-          actionHref="/catalogue"
+          title={hasFilters ? "No products match those filters" : "Nothing online yet"}
+          body={
+            hasFilters
+              ? "Try a shorter search term, pick a different category, or clear the quick filters. If you're after something specific, just ask us on WhatsApp — we stock more than we can list."
+              : "We haven't put the catalogue online yet. Message us on WhatsApp and we'll send you what's in the shop."
+          }
+          actionLabel={hasFilters ? "Clear filters and start again" : undefined}
+          actionHref={hasFilters ? "/catalogue" : undefined}
           icon={<SearchIcon className="h-8 w-8" />}
         />
       )}
