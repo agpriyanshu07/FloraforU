@@ -1641,3 +1641,51 @@ test("a subcategory from another category is refused, not filed", async ({ page 
   await expect(page.getByText(/Nothing changed/)).toBeVisible();
   await expect(tiles, "a foreign subcategory was accepted").toHaveCount(before);
 });
+
+test("an empty category tells the customer it is empty, not to clear filters", async ({
+  page,
+}) => {
+  // The public empty state said "...matches your filters. Clear them to see the
+  // whole category" to every visitor, including the ones who had set no filter
+  // at all -- and handed them a Clear filters button that reloaded the same
+  // empty page. On a live shop that reads as broken, not as an empty shelf.
+  //
+  // A category the shop has just added and not stocked yet is exactly that
+  // case, so the test creates one rather than asserting against copy.
+  await signIn(page);
+  await page.goto("/admin/categories");
+  await page.fill("#cat-name", "QA Empty Shelf");
+  await page.fill("#cat-description", "A category with nothing in it yet.");
+  await page.getByRole("button", { name: /Add category|Save/ }).first().click();
+
+  const slug = "qa-empty-shelf";
+  await page.goto(`/categories/${slug}`);
+
+  await expect(page.getByRole("heading", { name: "Nothing here yet" })).toBeVisible();
+  await expect(page.getByText(/matches your filters/)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Clear filters" })).toHaveCount(0);
+
+  // And the way out goes somewhere that actually has stock.
+  const out = page.getByRole("link", { name: "Browse all categories" });
+  await expect(out).toHaveAttribute("href", "/categories");
+
+  // The filtered case must still say it is the filter, and still offer the
+  // reset -- that branch is the one this change could have broken.
+  await page.goto("/categories/gift-boxes-trays-bags-baskets?sub=no-such-grouping");
+  await expect(page.getByRole("heading", { name: "No matches" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+    "href",
+    "/categories/gift-boxes-trays-bags-baskets",
+  );
+
+  // Put the catalogue back the way the seed made it.
+  await page.goto("/admin/categories");
+  // Nothing is filed under it, so this is the straight delete behind a native
+  // window.confirm -- the reassign-products dialog only appears for a category
+  // that still holds stock. Playwright dismisses native dialogs unless told
+  // otherwise, which silently cancels the delete.
+  page.on("dialog", (d) => d.accept());
+  const row = page.locator("table tbody tr", { hasText: "QA Empty Shelf" });
+  await row.getByRole("button", { name: "Delete" }).click();
+  await expect(page.locator("table tbody tr", { hasText: "QA Empty Shelf" })).toHaveCount(0);
+});

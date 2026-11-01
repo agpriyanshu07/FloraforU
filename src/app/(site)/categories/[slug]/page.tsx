@@ -64,6 +64,18 @@ export default async function CategoryPage({
   // agree with what the page is showing rather than 404 on its own link.
   const activeChip = sp.sub ? chips.find((c) => c.slug === sp.sub) : undefined;
 
+  // Whether anything is actually narrowing the list. `sort` and `page` are not
+  // filters -- they cannot empty a category -- so they are deliberately left
+  // out. An unknown `sub` IS counted: it narrows to nothing, and clearing it is
+  // exactly the way out.
+  //
+  // This matters because the empty state used to say "clear your filters" to
+  // every visitor who opened a category the shop has not stocked yet, with a
+  // Clear filters button that reloaded the same empty page. Telling a customer
+  // to undo something they never did, and handing them a button that visibly
+  // does nothing, reads as a broken site rather than an empty shelf.
+  const hasFilters = Boolean(sp.sub || sp.q || sp.new || sp.offer || sp.limited);
+
   return (
     <div className="shell py-10">
       <BreadcrumbJsonLd
@@ -171,10 +183,14 @@ export default async function CategoryPage({
         </>
       ) : (
         <EmptyState
-          title="Nothing here yet"
-          body={`We haven't listed anything under ${category.name} that matches your filters. Clear them to see the whole category, or message us — we may have it in the shop even if it isn't online yet.`}
-          actionLabel="Clear filters"
-          actionHref={`/categories/${slug}`}
+          title={hasFilters ? "No matches" : "Nothing here yet"}
+          body={
+            hasFilters
+              ? `We haven't listed anything under ${category.name} that matches your filters. Clear them to see the whole category, or message us — we may have it in the shop even if it isn't online yet.`
+              : `We haven't put anything under ${category.name} online yet. Message us on WhatsApp and we'll send you what's in the shop — there is usually more than the website shows.`
+          }
+          actionLabel={hasFilters ? "Clear filters" : "Browse all categories"}
+          actionHref={hasFilters ? `/categories/${slug}` : "/categories"}
           icon={<SearchIcon className="h-8 w-8" />}
         />
       )}
