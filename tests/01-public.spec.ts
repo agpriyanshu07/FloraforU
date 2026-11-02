@@ -485,6 +485,30 @@ test("a bad subcategory download is a bad link, not a catalogue of nothing", asy
   ).toBe(404);
 });
 
+test("the catalogue PDF is cacheable, so one download is not one CPU burn", async ({
+  request,
+}) => {
+  // The shop is on a plan that meters CPU time. Generating the whole catalogue
+  // decodes and re-encodes every photograph in it -- about twelve seconds of
+  // CPU -- and this URL is linked from every category page. While the response
+  // was `no-store`, every customer, every refresh and every bot paid that cost
+  // again; Vercel paused deployments on 30 Oct 2026 for exceeding the Hobby
+  // Fluid Active CPU fair-use limit.
+  //
+  // So the header is the fix, and it is the thing to protect: a future tidy-up
+  // that puts `no-store` back would silently restore the outage.
+  const res = await request.get("/api/catalogue-pdf?category=lights-lighting-decor");
+  expect(res.status()).toBe(200);
+
+  const cc = res.headers()["cache-control"] ?? "";
+  expect(cc, "the CDN must be allowed to hold this").not.toContain("no-store");
+  expect(cc).toContain("s-maxage=3600");
+  expect(cc).toContain("stale-while-revalidate");
+  // The browser is deliberately excluded: the customer's copy is the downloaded
+  // file, and re-requesting the URL should give them the current catalogue.
+  expect(cc).toContain("max-age=0");
+});
+
 test("the catalogue PDF carries the shop's own fonts and logo", async () => {
   // These are read off disk at request time. If they are ever missing from the
   // deployed bundle the route still returns a valid PDF — it just quietly

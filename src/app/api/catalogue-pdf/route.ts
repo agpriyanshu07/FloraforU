@@ -476,7 +476,31 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
+      // This response used to be `no-store`, which meant every single download
+      // re-ran the whole thing: decode, resize, flatten and re-encode every
+      // photograph in the selection, then assemble the PDF. For the whole
+      // catalogue that is roughly twelve seconds of pure CPU (see maxDuration
+      // above), and the shop is on a plan that meters CPU time rather than
+      // requests. Vercel paused deployments on 30 Oct 2026 for exceeding the
+      // Hobby Fluid Active CPU fair-use limit, and an uncacheable twelve-second
+      // CPU burn on a URL linked from every category page is the obvious way to
+      // get there: two customers downloading the same category pay for it
+      // twice, and so does every refresh and every bot that ignores
+      // robots.txt.
+      //
+      // The PDF is a pure function of the catalogue, so it is safe for the CDN
+      // to hold. One hour matches the `revalidate` on the product and category
+      // pages, so the download is never more stale than the pages it was
+      // offered from -- that is the staleness contract the rest of the site
+      // already makes. stale-while-revalidate then serves the held copy for up
+      // to a day while one request refreshes it in the background, so a cold
+      // cache costs one generation rather than one per customer.
+      //
+      // max-age=0 keeps the browser out of it: the customer's own copy is a
+      // downloaded file, and re-requesting the URL should give them the current
+      // catalogue rather than whatever their browser kept.
+      "Cache-Control":
+        "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
     },
   });
 }
