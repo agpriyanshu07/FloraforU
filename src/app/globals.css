@@ -322,6 +322,13 @@
   .admin-table td[data-label="Select"]::before,
   .admin-table td[data-label="Actions"]::before { content: none; }
 
+  /* A cell with nothing in it must not print its label. Most products carry no
+     flag, so every card on the phone said "FLAGS" followed by nothing -- a
+     heading for an absence, twenty-five times a page. `:has` rather than
+     `:empty` because the cell always holds its wrapper span; it is the wrapper
+     that is empty. */
+  .admin-table td:has(> span:only-child:empty) { display: none; }
+
   /* A colspan cell is an empty state, not a field. */
   .admin-table td[colspan] { @apply block py-8 text-center; }
   .admin-table td[colspan]::before { content: none; }

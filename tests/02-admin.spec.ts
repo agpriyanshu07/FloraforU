@@ -1689,3 +1689,27 @@ test("an empty category tells the customer it is empty, not to clear filters", a
   await row.getByRole("button", { name: "Delete" }).click();
   await expect(page.locator("table tbody tr", { hasText: "QA Empty Shelf" })).toHaveCount(0);
 });
+
+test("a phone product card does not print a label for a field with nothing in it", async ({
+  page,
+}) => {
+  // Below `sm` each table cell announces itself from its data-label. Most
+  // products carry no flag, so every card said "FLAGS" followed by nothing.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await page.goto("/admin/products");
+  const flags = page.locator('table tbody td[data-label="Flags"]');
+  const n = await flags.count();
+  expect(n).toBeGreaterThan(0);
+  let empty = 0;
+  for (let i = 0; i < n; i++) {
+    const cell = flags.nth(i);
+    if (((await cell.innerText()).trim()) === "") {
+      empty++;
+      await expect(cell, "an empty flags cell is not shown").toBeHidden();
+    } else {
+      await expect(cell, "a real flag still shows").toBeVisible();
+    }
+  }
+  expect(empty, "the seed has unflagged products to prove this on").toBeGreaterThan(0);
+});

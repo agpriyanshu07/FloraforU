@@ -1748,3 +1748,30 @@ test("a link to a renamed subcategory explains itself instead of lying", async (
   await page.waitForURL("**/categories/gift-boxes-trays-bags-baskets");
   expect(await page.locator('a[href^="/product/"]').count()).toBeGreaterThan(0);
 });
+
+test("on a phone, categories sit two to a row and cards do not repeat the page title", async ({
+  page,
+}) => {
+  // One category card per row, each with its full description, made the eight
+  // on the homepage a 2,700px scroll -- more than three screens of a 390x844
+  // phone -- before the first product, and /categories an 8,000px page.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/categories");
+  const cards = page.locator("main ul > li article");
+  const [a, b] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
+  expect(a && b, "two category cards to measure").toBeTruthy();
+  expect(Math.abs(a!.y - b!.y), "the first two cards share a row").toBeLessThan(2);
+  expect(b!.x, "and sit side by side").toBeGreaterThan(a!.x + a!.width - 1);
+
+  // Inside a category, every card used to carry that category's name above the
+  // product's own -- the page title, repeated twenty-four times.
+  await page.goto("/categories/pots-vases");
+  const first = page.locator("main ul > li article").first();
+  await expect(first).toBeVisible();
+  await expect(first.getByText("Pots & Vases", { exact: true })).toHaveCount(0);
+  // ...while the mixed catalogue, where it tells cards apart, keeps it.
+  await page.goto("/catalogue?category=pots-vases");
+  await expect(
+    page.locator("main ul > li article").first().getByText("Pots & Vases", { exact: true }),
+  ).toHaveCount(1);
+});
