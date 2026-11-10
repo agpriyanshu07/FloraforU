@@ -9,6 +9,7 @@ export default function ProductGrid({
   offerTerms,
   priorityCount = 0,
   heading,
+  hideCategory,
 }: {
   products: ProductCardData[];
   settings: SiteSettings;
@@ -16,6 +17,12 @@ export default function ProductGrid({
   offerTerms?: Map<string, OfferTerms>;
   priorityCount?: number;
   heading?: string;
+  /**
+   * Drop the category line from each card. On a category's own page it repeats
+   * the page title on every card -- two wrapped lines of "PACKING & BOUQUET
+   * ACCESSORIES" above each of twenty-four names on a phone.
+   */
+  hideCategory?: boolean;
 }) {
   return (
     <>
@@ -31,6 +38,7 @@ export default function ProductGrid({
               settings={settings}
               offer={offerTerms?.get(product.id)}
               priority={i < priorityCount}
+              hideCategory={hideCategory}
             />
           </li>
         ))}

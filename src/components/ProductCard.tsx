@@ -16,9 +16,11 @@ type Props = {
   /** Present when a live campaign covers this product. */
   offer?: OfferTerms | null;
   priority?: boolean;
+  /** See ProductGrid: set on a category's own page, where it only repeats the title. */
+  hideCategory?: boolean;
 };
 
-export default function ProductCard({ product, settings, offer, priority }: Props) {
+export default function ProductCard({ product, settings, offer, priority, hideCategory }: Props) {
   const onOffer = Boolean(offer);
   const pricing = pricingFor(product.price, product.priceOnEnquiry, offer);
   const isNew = isProductNew(product);
@@ -68,7 +70,7 @@ export default function ProductCard({ product, settings, offer, priority }: Prop
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
-        <CategoryTag>{product.category.name}</CategoryTag>
+        {!hideCategory && <CategoryTag>{product.category.name}</CategoryTag>}
 
         <h3 className="line-clamp-3 font-display text-[17px] leading-snug">
           <Link

@@ -31,7 +31,7 @@ export default async function CategoriesPage() {
       </header>
 
       {categories.length > 0 ? (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           {categories.map((c, i) => (
             <li key={c.id} className="flex">
               <CategoryCard

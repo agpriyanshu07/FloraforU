@@ -24,21 +24,26 @@ export default function CategoryCard({
             src={imageUrl}
             alt=""
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
+            sizes="(max-width: 1024px) 50vw, 380px"
             className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             priority={priority}
           />
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="font-display text-xl leading-snug">
+      {/* Two to a row on a phone, so the copy is cut to what fits a 170px
+          column: the name and the count. One card per row with its full
+          description made the homepage's eight categories a 2,700px scroll --
+          more than three screens -- before the first product. The description
+          is still in the page for search engines and returns from `sm` up. */}
+      <div className="flex flex-1 flex-col gap-1 p-3 sm:gap-2 sm:p-4">
+        <h3 className="font-display text-base leading-snug sm:text-xl">
           <Link href={`/categories/${slug}`} className="after:absolute after:inset-0 hover:text-rose-600">
             {name}
           </Link>
         </h3>
-        <p className="text-sm leading-relaxed text-ink-600">{description}</p>
+        <p className="hidden text-sm leading-relaxed text-ink-600 sm:block">{description}</p>
         {typeof count === "number" && (
-          <p className="mt-auto pt-2 text-[13px] font-semibold text-rose-600">
+          <p className="mt-auto pt-1 text-[13px] font-semibold text-rose-600 sm:pt-2">
             {count} {count === 1 ? "item" : "items"}
           </p>
         )}

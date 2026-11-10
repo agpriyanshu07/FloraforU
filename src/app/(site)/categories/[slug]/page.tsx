@@ -173,6 +173,7 @@ export default async function CategoryPage({
             offerTerms={result.offerTerms}
             priorityCount={4}
             heading="Products in this category"
+            hideCategory
           />
           <Pagination
             page={result.page}

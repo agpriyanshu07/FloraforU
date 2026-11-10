@@ -168,7 +168,7 @@ export default async function HomePage() {
           </div>
         </Reveal>
 
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {categories.slice(0, 8).map((c, i) => (
             <li key={c.id} className="flex">
               {/* Staggered by column, not by index: the delay restarts on each
