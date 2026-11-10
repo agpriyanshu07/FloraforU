@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { PUBLIC_ROUTES, loadLazyImages, reseed } from "./helpers";
+import { PUBLIC_ROUTES, loadLazyImages, renameFirstProductIn, reseed } from "./helpers";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -507,6 +507,32 @@ test("the catalogue PDF is cacheable, so one download is not one CPU burn", asyn
   // The browser is deliberately excluded: the customer's copy is the downloaded
   // file, and re-requesting the URL should give them the current catalogue.
   expect(cc).toContain("max-age=0");
+
+  // Vercel rewrites Cache-Control on the way out, so a live check of it cannot
+  // show whether the CDN is holding the file. Its own header is unambiguous.
+  expect(res.headers()["vercel-cdn-cache-control"]).toContain("max-age=3600");
+});
+
+test("a repeat download is served from memory, and an edit is never stale", async ({
+  request,
+}) => {
+  // The second line of defence against the CPU bill: even where no CDN holds
+  // the file, the function keeps the finished PDF and hands it back.
+  const url = "/api/catalogue-pdf?category=pots-vases";
+  await request.get(url);
+  const again = await request.get(url);
+  expect(again.status()).toBe(200);
+  expect(again.headers()["x-catalogue-cache"]).toBe("hit");
+
+  // A cache that served yesterday's names after an edit in /admin would be
+  // worse than no cache. The key fingerprints the catalogue, so it cannot.
+  const restore = renameFirstProductIn("pots-vases", "Aaa Cache Probe Pot");
+  try {
+    const edited = await request.get(url);
+    expect(edited.headers()["x-catalogue-cache"], "an edit must rebuild").toBe("miss");
+  } finally {
+    restore();
+  }
 });
 
 test("the catalogue PDF carries the shop's own fonts and logo", async () => {
