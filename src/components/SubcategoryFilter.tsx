@@ -51,7 +51,7 @@ export default function SubcategoryFilter({
   };
 
   const chip = (isActive: boolean) =>
-    `inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-medium transition-colors duration-200 ${
+    `inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-medium transition-colors duration-200 ${
       isActive
         ? "border-rose-600 bg-rose-600 text-white"
         : "border-line bg-surface text-ink-900 hover:border-rose-300 hover:bg-rose-50"
@@ -59,7 +59,17 @@ export default function SubcategoryFilter({
 
   return (
     <nav aria-label="Filter by type" className="mb-6">
-      <ul className="flex flex-wrap gap-2">
+      {/* One swipeable row on a phone, wrapping grid from `md` up.
+          Wrapping on a 390px screen turned a category's chips into three or
+          four stacked rows -- 160px of filters that a customer had to scroll
+          past before reaching a single product, on the page WhatsApp links
+          send them to. A single scrollable row is also what the shop's own
+          reference site does, so it is the pattern their customers already
+          know. The chips stay real links, so nothing about sharing or
+          no-JavaScript use changes.
+          `overflow-x-auto` scrolls THIS strip, not the document, so the
+          "no sideways page scroll at 320px" guarantee is unaffected. */}
+      <ul className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-x-visible md:pb-0">
         <li>
           <Link
             href={href()}
