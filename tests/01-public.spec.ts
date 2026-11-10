@@ -1193,6 +1193,62 @@ test("the longest category name does not push the catalogue sideways", async ({
   }
 });
 
+test("products start on the first screen of a phone, not below the filters", async ({
+  page,
+}) => {
+  // Nearly all this shop's traffic arrives from a WhatsApp link straight onto a
+  // category page. The controls used to push the first product to 893px on
+  // Lights and 982px on Gift Boxes -- past a full 844px screen of offer banner,
+  // title, description, download button, search, sort, three quick filters and
+  // three wrapped rows of subcategory chips. The customer's first impression of
+  // a shop was a screenful of filters.
+  //
+  // The admin products list was fixed for exactly this in an earlier round
+  // ("the work has to start above the fold"); the public page, which is the one
+  // customers use, had the same fault and never got the same fix.
+  //
+  // The number is the contract, so it is what the test measures.
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  for (const slug of ["lights-lighting-decor", "gift-boxes-trays-bags-baskets"]) {
+    await page.goto(`/categories/${slug}`);
+    const top = await page.evaluate(() => {
+      const first = document.querySelector('a[href^="/product/"]');
+      return first
+        ? Math.round(first.getBoundingClientRect().top + window.scrollY)
+        : null;
+    });
+    expect(top, `no product found on ${slug}`).not.toBeNull();
+    expect(
+      top!,
+      `the first product on ${slug} starts at ${top}px, below the 844px fold`,
+    ).toBeLessThan(844);
+  }
+});
+
+test("the phone filter panel is collapsed but reachable, and desktop is untouched", async ({
+  page,
+}) => {
+  // Collapsing is only acceptable if nothing becomes unreachable. The sort and
+  // the quick filters must still be one tap away on a phone, and the desktop
+  // layout -- where there is room for all of it -- must not change at all.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/categories/lights-lighting-decor");
+
+  await expect(page.locator("#catalogue-sort")).toBeHidden();
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  await expect(page.locator("#catalogue-sort")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Limited stock" })).toBeVisible();
+
+  // Desktop: everything visible, and the toggle is not even in the
+  // accessibility tree -- a screen reader there must not be offered a control
+  // that does nothing.
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/categories/lights-lighting-decor");
+  await expect(page.locator("#catalogue-sort")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Filters/ })).toHaveCount(0);
+});
+
 test("the contact actions stay on one row at every width", async ({ page }) => {
   // They used to wrap, dropping the last button onto a line of its own. The row
   // has to hold together on a 320px phone and a desktop card alike, and no label
