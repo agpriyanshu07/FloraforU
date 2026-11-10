@@ -113,3 +113,18 @@ export function addPendingReview(): string {
 export function deleteReview(id: string) {
   dbEval(`await db.review.delete({ where: { id: ${JSON.stringify(id)} } });`);
 }
+
+/**
+ * Renames one product in a category, the way an admin edit would, and returns
+ * a function that puts the name back.
+ */
+export function renameFirstProductIn(categorySlug: string, name: string): () => void {
+  const before = dbEval(
+    `const p = await db.product.findFirst({ where: { published: true, category: { slug: ${JSON.stringify(categorySlug)} } }, orderBy: { name: "asc" } });
+     await db.product.update({ where: { id: p!.id }, data: { name: ${JSON.stringify(name)} } });
+     process.stdout.write(JSON.stringify({ id: p!.id, name: p!.name }));`,
+  );
+  const { id, name: original } = JSON.parse(before) as { id: string; name: string };
+  return () =>
+    dbEval(`await db.product.update({ where: { id: ${JSON.stringify(id)} }, data: { name: ${JSON.stringify(original)} } });`);
+}

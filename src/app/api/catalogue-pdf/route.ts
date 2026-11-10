@@ -47,7 +47,7 @@ const M = 48;
  * about dry fruit trays is the same as sending nothing. A subcategory download
  * has to contain that subcategory and nothing else.
  */
-export async function GET(request: Request) {
+async function buildPdf(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const categorySlug = url.searchParams.get("category") ?? undefined;
   const subSlug = url.searchParams.get("sub") ?? undefined;
@@ -501,6 +501,88 @@ export async function GET(request: Request) {
       // catalogue rather than whatever their browser kept.
       "Cache-Control":
         "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+      // Vercel's own instruction to its CDN, read by Vercel alone and never
+      // passed on. Cache-Control is shared with every proxy and browser on the
+      // way, and the platform rewrites it on the way out, so a live check of
+      // that header cannot show whether the CDN is holding the file. This one
+      // is unambiguous about it.
+      "Vercel-CDN-Cache-Control": "max-age=3600, stale-while-revalidate=86400",
     },
+  });
+}
+
+// ---------------------------------------------------------------- caching ---
+//
+// The CDN headers above are the first line. This is the second, and it does
+// not depend on any proxy honouring anything: a finished PDF is kept in the
+// function's memory and handed straight back to the next request for the same
+// list, so the photographs are decoded and re-encoded once per instance rather
+// than once per download. That rebuild is what exhausted the Hobby plan's CPU
+// allowance and paused the site on 30 Oct 2026.
+//
+// The key carries a fingerprint of everything that appears in the PDF, so an
+// edit in /admin produces a fresh file on the very next download instead of
+// waiting out a timer. The fingerprint is three aggregate queries -- a few
+// milliseconds, against roughly twelve seconds of CPU for the full catalogue.
+
+const PDF_CACHE_LIMIT = 64 * 1024 * 1024;
+const pdfCache = new Map<string, { body: ArrayBuffer; headers: [string, string][] }>();
+let pdfCacheSize = 0;
+
+async function catalogueFingerprint(): Promise<string> {
+  const [products, categories, subcategories, images, settings] = await Promise.all([
+    db.product.aggregate({ _max: { updatedAt: true }, _count: true }),
+    db.category.aggregate({ _max: { updatedAt: true }, _count: true }),
+    db.subcategory.aggregate({ _max: { updatedAt: true }, _count: true }),
+    db.productImage.count(),
+    getSettings(),
+  ]);
+  return [
+    products._max.updatedAt?.getTime(), products._count,
+    categories._max.updatedAt?.getTime(), categories._count,
+    subcategories._max.updatedAt?.getTime(), subcategories._count,
+    images,
+    // Phone, address and footer are printed on every page.
+    JSON.stringify(settings),
+    // The filename carries the date.
+    new Date().toISOString().slice(0, 10),
+  ].join("|");
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const params = new URLSearchParams();
+  for (const k of ["category", "sub"]) {
+    const v = url.searchParams.get(k);
+    if (v) params.set(k, v);
+  }
+  const key = `${params.toString()}#${await catalogueFingerprint()}`;
+
+  const hit = pdfCache.get(key);
+  if (hit) {
+    // Re-insert so the Map's order stays least-recently-used first.
+    pdfCache.delete(key);
+    pdfCache.set(key, hit);
+    return new NextResponse(hit.body.slice(0), {
+      headers: [...hit.headers, ["X-Catalogue-Cache", "hit"]],
+    });
+  }
+
+  const response = await buildPdf(request);
+  if (response.status !== 200) return response;
+
+  const body = await response.arrayBuffer();
+  const headers = [...response.headers.entries()];
+  if (body.byteLength <= PDF_CACHE_LIMIT / 4) {
+    pdfCache.set(key, { body, headers });
+    pdfCacheSize += body.byteLength;
+    for (const [k, v] of pdfCache) {
+      if (pdfCacheSize <= PDF_CACHE_LIMIT) break;
+      pdfCache.delete(k);
+      pdfCacheSize -= v.body.byteLength;
+    }
+  }
+  return new NextResponse(body.slice(0), {
+    headers: [...headers, ["X-Catalogue-Cache", "miss"]],
   });
 }
