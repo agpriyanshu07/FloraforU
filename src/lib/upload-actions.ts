@@ -45,7 +45,8 @@ export async function createUploadTicket(): Promise<UploadTicket> {
 
   return {
     ok: true,
-    url: `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`,
+    // Overridable so the test suite can stand in for Cloudinary locally.
+    url: `${process.env.CLOUDINARY_UPLOAD_BASE?.trim() || "https://api.cloudinary.com"}/v1_1/${config.cloudName}/image/upload`,
     apiKey: config.apiKey,
     timestamp,
     folder: CLOUDINARY_FOLDER,

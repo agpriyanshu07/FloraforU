@@ -27,8 +27,7 @@ import {
  * nav does not scroll away on Products (5144px) or the homepage editor
  * (7168px) -- previously you scrolled to the top to change section.
  *
- * Below `lg` this is not rendered at all; AdminNav's pill row takes over,
- * which fits a phone and is already covered by the suite.
+ * Below `xl` this is not rendered at all; AdminTabBar's bottom bar takes over.
  */
 export default function AdminSidebar({
   email,
@@ -44,7 +43,7 @@ export default function AdminSidebar({
     <div className="hidden xl:flex xl:h-screen xl:flex-col xl:border-r xl:border-line xl:bg-surface">
       <Link
         href="/admin"
-        className="flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-4"
+        className="flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-3"
       >
         <Image
           src="/img/brand/logo-ffu-mark.svg"
@@ -63,9 +62,9 @@ export default function AdminSidebar({
 
       {/* The nav itself scrolls if the viewport is short; the account block
           below stays put, so Sign out is always reachable. */}
-      <nav aria-label="Admin sections" className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+      <nav aria-label="Admin sections" className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         {NAV_GROUPS.map((group, gi) => (
-          <div key={group.title ?? `ungrouped-${gi}`} className={gi > 0 ? "mt-5" : undefined}>
+          <div key={group.title ?? `ungrouped-${gi}`} className={gi > 0 ? "mt-3" : undefined}>
             {group.title && (
               <h2 className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-600">
                 {group.title}

@@ -34,7 +34,9 @@ export type IconName =
   | "instagram"
   | "reviews"
   | "enquiries"
-  | "settings";
+  | "settings"
+  | "add"
+  | "more";
 
 function Dashboard() {
   return (
@@ -137,7 +139,26 @@ const ICONS: Record<IconName, () => React.ReactElement> = {
   reviews: Reviews,
   enquiries: Enquiries,
   settings: Settings,
+  add: Add,
+  more: More,
 };
+
+function Add() {
+  return (
+    <svg {...BASE}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v8M8 12h8" />
+    </svg>
+  );
+}
+
+function More() {
+  return (
+    <svg {...BASE}>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
 
 export function NavIcon({ name }: { name: IconName }) {
   const Glyph = ICONS[name];
