@@ -86,15 +86,23 @@ export default async function AdminProductsPage({
         description={`${total} product${total === 1 ? "" : "s"} matching the current filters.`}
         action={
           <div className="flex flex-wrap gap-2">
-            <Link href="/admin/products/filing" className="btn-ghost">
-              File by photo
+            <Link href="/admin/products/import-pdf" className="btn-primary">
+              Add from PDF
             </Link>
-            <Link href="/admin/products/import" className="btn-ghost">
-              Bulk import (CSV / Excel)
+            <Link href="/admin/products/new" className="btn-ghost">
+              Add one product
             </Link>
-            <Link href="/admin/products/new" className="btn-primary">
-              Add a product
-            </Link>
+            <details className="relative">
+              <summary className="btn-ghost cursor-pointer list-none">More ▾</summary>
+              <div className="absolute right-0 z-20 mt-2 w-60 space-y-1 rounded-xl border border-line bg-surface p-2 shadow-lg">
+                <Link href="/admin/products/filing" className="block rounded-lg px-3 py-2 text-sm hover:bg-rose-50">
+                  File by photo
+                </Link>
+                <Link href="/admin/products/import" className="block rounded-lg px-3 py-2 text-sm hover:bg-rose-50">
+                  Bulk import (CSV / Excel)
+                </Link>
+              </div>
+            </details>
           </div>
         }
       />

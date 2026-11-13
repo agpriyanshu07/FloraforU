@@ -11,6 +11,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 const PORT = Number(process.env.PORT ?? 3000);
 const baseURL = `http://127.0.0.1:${PORT}`;
+const STUB_PORT = Number(process.env.STUB_PORT ?? 3999);
 
 export default defineConfig({
   testDir: "./tests",
@@ -35,12 +36,34 @@ export default defineConfig({
 
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 
-  webServer: {
-    command: "npm run start",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+  webServer: [
+    // Stands in for the Claude API and Cloudinary (tests/stubs/server.mjs), so
+    // "Add products from a PDF" is tested end to end with no key, no cost and
+    // nothing written to the shop's photo account.
+    {
+      command: `node tests/stubs/server.mjs`,
+      url: `http://127.0.0.1:${STUB_PORT}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      stdout: "ignore",
+      stderr: "pipe",
+      env: { STUB_PORT: String(STUB_PORT) },
+    },
+    {
+      command: "npm run start",
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: "ignore",
+      stderr: "pipe",
+      env: {
+        ANTHROPIC_BASE_URL: `http://127.0.0.1:${STUB_PORT}`,
+        ANTHROPIC_API_KEY: "stub-key",
+        CLOUDINARY_UPLOAD_BASE: `http://127.0.0.1:${STUB_PORT}`,
+        CLOUDINARY_CLOUD_NAME: "stub",
+        CLOUDINARY_API_KEY: "stub",
+        CLOUDINARY_API_SECRET: "stub-cloudinary-secret",
+      },
+    },
+  ],
 });

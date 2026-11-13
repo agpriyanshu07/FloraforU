@@ -1077,6 +1077,12 @@ test("the Instagram list never claims a row is live that the homepage skips", as
 
   // Add a real photo, and it should flip to Live and reach the homepage.
   await page.fill("#f-title", "Shop counter, real photo");
+  // With uploads switched on (the suite runs against a stand-in Cloudinary),
+  // the paste-a-URL box sits inside a closed <details>; open it if so.
+  const urlBox = page.locator("details:has(#imageUrl)");
+  if ((await urlBox.count()) > 0 && (await urlBox.getAttribute("open")) === null) {
+    await urlBox.locator("summary").click();
+  }
   await page.fill("#imageUrl", "/img/instagram/rose-bunches.webp");
   await page.click('button:has-text("Add item")');
   await page.waitForURL(/gallery\?saved=1/);
@@ -1712,4 +1718,95 @@ test("a phone product card does not print a label for a field with nothing in it
     }
   }
   expect(empty, "the seed has unflagged products to prove this on").toBeGreaterThan(0);
+});
+
+test("a catalogue PDF becomes products on the site after one review", async ({ page, request }) => {
+  // The whole of "Add products from a PDF", against tests/stubs/server.mjs in
+  // place of Claude and Cloudinary: the PDF is opened in this browser, its
+  // photos picked out, each page read, the result reviewed, photos uploaded,
+  // and the products published -- then checked on the public site.
+  test.setTimeout(180_000);
+  const logBefore = (await (await request.get("http://127.0.0.1:3999/__log")).json()) as {
+    messages: unknown[];
+  };
+
+  await signIn(page);
+  await page.goto("/admin/products/import-pdf");
+  await page.setInputFiles("#pdf-file", path.join(process.cwd(), "fixtures", "sample-catalogue.pdf"));
+  await page.getByRole("button", { name: "Read this PDF" }).click();
+
+  // Cover page: no product. Three product pages: three drafts.
+  await expect(page.getByRole("heading", { name: "Check before adding" })).toBeVisible({ timeout: 90_000 });
+  const drafts = page.getByTestId("pdf-draft");
+  await expect(drafts).toHaveCount(3);
+
+  // The photo picker kept the products and dropped the border, the sprays
+  // placed twice, the WhatsApp icon and the page-sized background.
+  const first = drafts.nth(0);
+  await expect(first.getByLabel("Name")).toHaveValue("Test Rose Bunch");
+  await expect(first.getByLabel("Code")).toHaveValue("9901");
+  await expect(first.getByLabel("Price (₹)")).toHaveValue("120");
+  await expect(first.locator("img")).toHaveCount(1);
+  const second = drafts.nth(1);
+  await expect(second.getByLabel("Name")).toHaveValue("Test Velvet Panel");
+  await expect(second.locator("img"), "both photos of the panel, nothing else").toHaveCount(2);
+  const third = drafts.nth(2);
+  await expect(third.locator("img"), "the page background is not a photo").toHaveCount(1);
+  // No price on the page: left blank and flagged, never guessed.
+  await expect(third.getByLabel("Price (₹)")).toHaveValue("");
+  await expect(third.getByText("No price printed on the page.")).toBeVisible();
+
+  // What went to the reader: the shop's categories in the prompt, the page
+  // picture plus thumbnails, the default model with server-side fallbacks.
+  const log = (await (await request.get("http://127.0.0.1:3999/__log")).json()) as {
+    messages: { model: string; system: string; images: number; fallbacks: unknown; effort: string }[];
+  };
+  const sent = log.messages.slice(logBefore.messages.length);
+  expect(sent).toHaveLength(4);
+  expect(sent[0].system).toContain("pots-vases");
+  expect(sent.every((m) => m.model === "claude-opus-5-5" && m.fallbacks === "default")).toBe(true);
+  // Page picture + one per photo: cover 1, rose 2, panel 3, haldi 2.
+  expect(sent.map((m) => m.images).sort()).toEqual([1, 2, 2, 3]);
+
+  // A review edit is what gets published, and an unticked product is not.
+  await first.getByLabel("Price (₹)").fill("125");
+  await third.getByLabel("Add this product").uncheck();
+  await page.getByRole("button", { name: "Add 2 to the site" }).click();
+  await expect(page.getByText(/2\s+new products added/)).toBeVisible({ timeout: 60_000 });
+
+  await page.goto("/catalogue?q=Test+Rose+Bunch");
+  await page.getByRole("link", { name: "Test Rose Bunch" }).first().click();
+  await expect(page.getByText("₹125").first()).toBeVisible();
+  const hero = page.locator("main img").first();
+  await expect(hero).toHaveAttribute("src", /127\.0\.0\.1:3999\/u\//);
+  expect(await hero.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+
+  await page.goto("/catalogue?q=Taiwan+Panel+Haldi");
+  await expect(page.getByText("Taiwan Panel Haldi")).toHaveCount(0);
+});
+
+test("on a phone the admin is a bottom bar, and every section is two taps away", async ({ page }) => {
+  // Replaced three rows of nine wrapping pills at the top of every page.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  const bar = page.getByRole("navigation", { name: "Admin menu" });
+  await expect(bar).toBeInViewport();
+  const box = (await bar.boundingBox())!;
+  expect(box.y + box.height, "pinned to the bottom of the screen").toBeGreaterThan(830);
+
+  // Content starts near the top now that the pills are gone.
+  const h1 = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+  expect(h1.y, "the page title sits below a single slim bar").toBeLessThan(120);
+
+  // Add goes straight to the PDF import.
+  await bar.getByRole("link", { name: "Add" }).click();
+  await page.waitForURL("**/admin/products/import-pdf");
+
+  // Everything else is under More, with Sign out.
+  await bar.getByRole("button", { name: /^More/ }).click();
+  const sheet = page.getByRole("dialog", { name: "More admin sections" });
+  await expect(sheet.getByRole("link", { name: /^Settings/ })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
 });

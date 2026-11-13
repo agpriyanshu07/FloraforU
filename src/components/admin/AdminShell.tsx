@@ -1,9 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { logoutAction } from "@/app/admin/actions";
 import type { Session } from "@/lib/auth";
 import { getAdminCounts } from "@/lib/admin-counts";
-import AdminNav from "./AdminNav";
+import AdminTabBar from "./AdminTabBar";
 import AdminSidebar from "./AdminSidebar";
 
 /**
@@ -15,8 +14,8 @@ import AdminSidebar from "./AdminSidebar";
  * footer, so the content starts at the top of the window instead of below
  * 104px of chrome that repeated on every page.
  *
- * Below `lg` the sidebar is not rendered and the old header returns: a brand
- * bar plus AdminNav's wrapping pill row, which is what fits a 390px screen.
+ * Below `xl` the sidebar is not rendered: a slim brand bar sits on top and
+ * AdminTabBar puts the sections along the bottom, where a thumb reaches them.
  *
  * `minmax(0,1fr)` on the content column is not optional. A grid item will not
  * shrink below its content by default, so a wide table inside it widens the
@@ -41,36 +40,28 @@ export default async function AdminShell({
       </div>
 
       <div className="min-w-0">
+        {/* Phone and tablet: a slim brand bar on top, sections in AdminTabBar
+            along the bottom. Sign out lives in its "More" sheet. */}
         <header className="border-b border-line bg-surface xl:hidden">
-          <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center gap-3 px-4 py-3">
+          <div className="mx-auto flex w-full max-w-[1320px] items-center gap-3 px-4 py-2.5">
             <Link href="/admin" className="flex items-center gap-2">
               <Image
                 src="/img/brand/logo-ffu-mark.svg"
                 alt=""
                 width={41}
                 height={36}
-                className="h-9 w-auto"
+                className="h-8 w-auto"
               />
               <span className="font-display text-lg">Admin</span>
             </Link>
-
-            <div className="ml-auto flex items-center gap-3 text-sm">
-              <Link href="/" target="_blank" className="text-ink-600 hover:text-rose-700">
-                View site ↗
-              </Link>
-              <span className="hidden text-ink-600 sm:inline">{session.email}</span>
-              <form action={logoutAction}>
-                <button type="submit" className="btn-ghost btn-sm">
-                  Sign out
-                </button>
-              </form>
-            </div>
+            <Link href="/" target="_blank" className="ml-auto text-sm text-ink-600 hover:text-rose-700">
+              View site ↗
+            </Link>
           </div>
-
-          <AdminNav counts={counts} />
         </header>
+        <AdminTabBar counts={counts} />
 
-        <main className="@container mx-auto w-full max-w-[1280px] px-4 py-8 xl:px-8">{children}</main>
+        <main className="@container mx-auto w-full max-w-[1280px] px-4 pb-28 pt-6 xl:px-8 xl:py-8">{children}</main>
       </div>
     </div>
   );

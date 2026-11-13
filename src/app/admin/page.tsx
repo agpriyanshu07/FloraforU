@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PageHeader, StatTile, TableShell, EmptyRow } from "@/components/admin/ui";
+import { PageHeader, StatTile } from "@/components/admin/ui";
+import { NavIcon } from "@/components/admin/icons";
 import { getSettings, placeholderSettings } from "@/lib/settings";
 import { db } from "@/lib/db";
 import { daysAgo, formatPrice } from "@/lib/format";
@@ -72,6 +73,7 @@ export default async function AdminDashboard() {
       select: {
         id: true, name: true, slug: true, price: true, priceOnEnquiry: true,
         published: true, updatedAt: true, category: { select: { name: true } },
+        images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { url: true } },
       },
     }),
     db.product.count({ where: { images: { none: {} } } }),
@@ -155,19 +157,9 @@ export default async function AdminDashboard() {
     });
   }
 
-  return (
-    <>
-      <PageHeader
-        title="Dashboard"
-        description="Everything waiting on you, then the numbers."
-        action={
-          <Link href="/admin/products/new" className="btn-primary">
-            Add a product
-          </Link>
-        }
-      />
-
-      <section aria-labelledby="jobs-heading">
+  const urgent = jobs.some((j) => j.tone === "blocking");
+  const jobsSection = (
+      <section aria-labelledby="jobs-heading" className="mb-8">
         <h2 id="jobs-heading" className="sr-only">
           What needs doing
         </h2>
@@ -218,6 +210,55 @@ export default async function AdminDashboard() {
           </ul>
         )}
       </section>
+  );
+
+  return (
+    <>
+      <PageHeader title="Dashboard" description="What you can do here, and anything waiting on you." />
+
+      {/* Something actively breaking the site -- an unset WhatsApp number
+          sends every enquiry nowhere -- outranks the quick actions. Otherwise
+          the jobs wait below them. */}
+      {urgent && jobsSection}
+
+      {/* The four things the shop does most, as big targets. The dashboard
+          used to offer one small "Add a product" button and leave everything
+          else to the menu; most visits are one of these. */}
+      <section aria-labelledby="actions-heading" className="mb-8">
+        <h2 id="actions-heading" className="sr-only">Quick actions</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/admin/products/import-pdf"
+            className="flex flex-col gap-1 rounded-2xl bg-rose-600 p-5 text-white shadow-sm transition-colors duration-200 hover:bg-rose-700"
+          >
+            <NavIcon name="add" />
+            <span className="mt-1 font-display text-xl">Add products from a PDF</span>
+            <span className="text-sm text-rose-100">Upload your catalogue. Names, prices and photos are filled in for you to check.</span>
+          </Link>
+          <Link href="/admin/products/new" className="card flex flex-col gap-1 p-5 transition-colors duration-200 hover:bg-rose-50">
+            <span className="text-rose-600"><NavIcon name="products" /></span>
+            <span className="mt-1 font-display text-xl">Add one product</span>
+            <span className="text-sm text-ink-600">Type it in yourself, with photos from your phone.</span>
+          </Link>
+          <form action="/admin/products" className="card flex flex-col gap-2 p-5">
+            <label htmlFor="dash-q" className="font-display text-xl">Find a product</label>
+            <span className="text-sm text-ink-600">To change a price, photo or stock.</span>
+            <div className="mt-auto flex gap-2">
+              <input id="dash-q" name="q" className="field min-w-0 flex-1" placeholder="Name or code" />
+              <button type="submit" className="btn-primary btn-sm shrink-0">Go</button>
+            </div>
+          </form>
+          <Link href="/admin/offers" className="card flex flex-col gap-1 p-5 transition-colors duration-200 hover:bg-rose-50">
+            <span className="text-rose-600"><NavIcon name="offers" /></span>
+            <span className="mt-1 font-display text-xl">Run an offer</span>
+            <span className="text-sm text-ink-600">
+              {activeOffers > 0 ? `${activeOffers} running now. Start or change one.` : "A sale with start and end dates."}
+            </span>
+          </Link>
+        </div>
+      </section>
+
+      {!urgent && jobsSection}
 
       <section aria-labelledby="numbers-heading" className="mt-8">
         <h2 id="numbers-heading" className="mb-3 font-display text-xl">
@@ -250,47 +291,40 @@ export default async function AdminDashboard() {
         <h2 id="recent-heading" className="mb-3 font-display text-xl">
           Recently edited
         </h2>
-        <TableShell
-          head={
-            <tr>
-              <th scope="col" className="px-4 py-3">Product</th>
-              <th scope="col" className="px-4 py-3">Category</th>
-              <th scope="col" className="px-4 py-3">Price</th>
-              <th scope="col" className="px-4 py-3">Status</th>
-              <th scope="col" className="px-4 py-3">Updated</th>
-            </tr>
-          }
-        >
-          {recent.length === 0 ? (
-            <EmptyRow colSpan={5}>
-              Nothing yet — <Link href="/admin/products/new" className="text-rose-600">add your first product</Link>.
-            </EmptyRow>
-          ) : (
-            recent.map((p) => (
-              <tr key={p.id}>
-                <td data-label="" className="px-4 py-3 font-medium">
-                  <Link href={`/admin/products/${p.id}`} className="hover:text-rose-700">
-                    {p.name}
-                  </Link>
-                </td>
-                <td data-label="Category" className="px-4 py-3 text-ink-600">{p.category.name}</td>
-                <td data-label="Price" className="px-4 py-3">{formatPrice(p.price, p.priceOnEnquiry)}</td>
-                <td data-label="Status" className="px-4 py-3">
+        {recent.length === 0 ? (
+          <p className="card p-5 text-sm">
+            Nothing yet — <Link href="/admin/products/import-pdf" className="text-rose-600">add your first products</Link>.
+          </p>
+        ) : (
+          <ul className="card divide-y divide-line overflow-hidden">
+            {recent.map((p) => (
+              <li key={p.id}>
+                <Link href={`/admin/products/${p.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors duration-200 hover:bg-rose-50">
+                  <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-rose-50">
+                    {p.images[0] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.images[0].url} alt="" className="h-full w-full object-contain" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{p.name}</span>
+                    <span className="block truncate text-[13px] text-ink-600">
+                      {p.category.name} · {formatPrice(p.price, p.priceOnEnquiry)} ·{" "}
+                      {p.updatedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </span>
+                  </span>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
                       p.published ? "bg-sage-100 text-sage-700" : "bg-marigold-100 text-marigold-700"
                     }`}
                   >
                     {p.published ? "Live" : "Draft"}
                   </span>
-                </td>
-                <td data-label="Updated" className="px-4 py-3 text-ink-600">
-                  {p.updatedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                </td>
-              </tr>
-            ))
-          )}
-        </TableShell>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   );
